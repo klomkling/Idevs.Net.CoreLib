@@ -570,8 +570,18 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         Guard.Against.Null(model,
             nameof(model));
 
-        options ??= PdfOptionsBuilder.CreateBusiness();
-        
+        if (options is null)
+        {
+            if (!string.IsNullOrEmpty(headerTemplatePath) || !string.IsNullOrEmpty(footerTemplatePath))
+            {
+                options = PdfOptionsBuilder.CreateWithTemplates(headerTemplate: headerTemplatePath, footerTemplate: footerTemplatePath);
+            }
+            else
+            {
+                options = PdfOptionsBuilder.CreateBusiness();
+            }
+        }
+
         config ??= new PaginationConfig
         {
             FirstPageSize = 25,

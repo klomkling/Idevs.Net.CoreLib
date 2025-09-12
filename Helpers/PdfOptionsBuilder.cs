@@ -64,8 +64,8 @@ public static class PdfOptionsBuilder
             PrintBackground = true,
             PreferCSSPageSize = true,
             DisplayHeaderFooter = hasHeader || hasFooter,
-            HeaderTemplate = headerTemplate ?? string.Empty,
-            FooterTemplate = footerTemplate ?? string.Empty,
+            HeaderTemplate = hasHeader ? headerTemplate : " ",
+            FooterTemplate = hasFooter ? footerTemplate : " ",
             MarginOptions = new MarginOptions
             {
                 Top = hasHeader ? headerHeight : "0mm",

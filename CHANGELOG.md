@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.2.9 (2025-01-12)
+
+### Fixed
+
+- **PDF Template Handling**: Improved template processing in PdfOptionsBuilder
+    - Fixed empty template handling by using single space `" "` instead of `string.Empty`
+    - Better compatibility with PuppeteerSharp template rendering
+    - Prevents potential issues with completely empty header/footer templates
+
+- **PDF Export Logic**: Corrected conditional logic in IdevsPdfExporter
+    - Fixed boolean logic error in template path checking condition
+    - Changed `||` (OR) to correct logic for proper template selection
+    - Removed redundant null coalescing assignment that was unreachable
+    - Improved automatic PdfOptions selection based on header/footer presence
+
+### Improved
+
+- **Header/Footer Margin Handling**: Enhanced automatic margin calculation
+    - Better detection of when header/footer templates should be applied
+    - Improved logic for choosing between CreateWithTemplates vs CreateBusiness options
+    - More reliable PDF generation without header cutoff issues
+
+### Developer Experience
+
+- **Cleaner Code Logic**: Simplified conditional flows in PDF export methods
+- **Better Template Detection**: More accurate automatic template handling
+- **Reduced Code Duplication**: Eliminated unreachable code paths
+
 ## 0.2.8 (2025-01-12)
 
 ### Enhanced

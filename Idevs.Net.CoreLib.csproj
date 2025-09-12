@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Idevs.Net.CoreLib</PackageId>
-    <Version>0.2.8</Version>
+    <Version>0.2.9</Version>
     <Authors>Sarawut Phaekuntod</Authors>
     <Product>Idevs.Net.CoreLib</Product>
     <PackageTags>Idevs; CoreLib; Serenity; Extended</PackageTags>
