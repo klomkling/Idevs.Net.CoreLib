@@ -1,5 +1,94 @@
 # Changelog
 
+## 0.2.7 (2025-09-12)
+
+### Added
+
+- **Smart Pagination System**: Comprehensive pagination utility for multi-page PDF reports
+    - New `SmartPagination` class with intelligent page distribution algorithms
+    - Support for different page capacities (first page, regular pages, last page)
+    - Automatic calculation of optimal page distribution with reserved footer rows
+    - Built-in logging for pagination analysis and debugging
+    - Line number tracking across pages for professional document formatting
+    - Filler row generation for consistent page heights
+
+- **IReportBaseModel Interface**: Type-safe contract for paginated report models
+    - Generic `IReportBaseModel<T>` interface for strong typing
+    - Eliminates reflection-based pagination detection
+    - Clean separation between model structure and pagination logic
+    - Support for any detail item type through generics
+
+- **Advanced PDF Template System**: Enhanced template compilation with automatic pagination
+    - New `CreateResponseAsync<TModel, TDetail>()` with built-in pagination support
+    - Automatic header and footer template compilation from file paths
+    - Model-first API design for better developer experience
+    - Configurable pagination settings with sensible defaults
+    - Extended model creation that merges original data with pagination metadata
+
+### Enhanced
+
+- **IdevsPdfExporter API Improvements**: Modernized method signatures and parameter ordering
+    - Model-first parameter ordering for more intuitive usage
+    - Optional `PaginationConfig` parameter with smart defaults (25/29/9 configuration)
+    - Enhanced error handling with detailed context information
+    - Better separation of concerns between templating and PDF generation
+
+- **Template File Support**: Robust template file handling and compilation
+    - Automatic template file existence validation
+    - Template content validation with meaningful error messages
+    - Template caching for improved performance
+    - Support for optional header and footer templates
+
+### Changed
+
+- **Breaking API Changes**: Improved method signatures for better usability
+    - `CreateResponseAsync` now uses model-first parameter order
+    - Added generic type constraints for type safety
+    - Enhanced parameter naming and documentation
+    - Removed need for manual pagination data creation
+
+### Performance
+
+- **Template Caching**: Improved performance through intelligent template caching
+    - `ConcurrentDictionary` for thread-safe template storage
+    - Automatic template compilation and reuse
+    - Reduced file I/O operations for frequently used templates
+
+### Developer Experience
+
+- **Simplified API Usage**: Streamlined workflow for paginated PDF generation
+    - Single method call replaces multiple manual steps
+    - Automatic model extension with pagination data
+    - Built-in template compilation eliminates boilerplate code
+    - Type-safe contracts prevent runtime errors
+
+### Migration Guide
+
+**Before (Manual Pagination):**
+```csharp
+// Manual pagination and template compilation
+var paginatedData = SmartPagination.CreatePaginatedData(items, 25, 29, 9);
+var extendedModel = /* manual model creation */;
+var headerHtml = /* manual template compilation */;
+var response = await exporter.CreateResponseAsync(templatePath, extendedModel, headerHtml, footerHtml);
+```
+
+**After (Automatic Pagination):**
+```csharp
+// Automatic pagination and template compilation
+var response = await exporter.CreateResponseAsync<MyModel, MyDetailItem>(
+    model, templatePath, headerTemplatePath, footerTemplatePath);
+```
+
+**Model Implementation:**
+```csharp
+public class MyReportModel : IReportBaseModel<MyDetailItem>
+{
+    public IEnumerable<MyDetailItem> Details { get; set; }
+    // ... other properties
+}
+```
+
 ## 0.2.6 (2025-08-28)
 
 ### Fixed

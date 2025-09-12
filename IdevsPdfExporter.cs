@@ -19,7 +19,9 @@ public interface IIdevsPdfExporter
     /// <param name="header">HTML template for page header</param>
     /// <param name="footer">HTML template for page footer</param>
     /// <returns>PDF file as a byte array</returns>
-    byte[] ExportByteArray(string html, string? header = null, string? footer = null) =>
+    byte[] ExportByteArray(string html,
+        string? header = null,
+        string? footer = null) =>
         Task.Run(async () => await ExportByteArrayAsync(html, header, footer)).GetAwaiter().GetResult();
 
     /// <summary>
@@ -30,7 +32,9 @@ public interface IIdevsPdfExporter
     /// <param name="footer">HTML template for page footer</param>
     /// <param name="cancellationToken"></param>
     /// <returns>Task containing a PDF file as a byte array</returns>
-    Task<byte[]> ExportByteArrayAsync(string html, string? header = null, string? footer = null,
+    Task<byte[]> ExportByteArrayAsync(string html,
+        string? header = null,
+        string? footer = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -42,8 +46,11 @@ public interface IIdevsPdfExporter
     /// <param name="downloadName"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<IdevsContentResponse> CreateResponseAsync(string html, string? header = null, string? footer = null,
-        string? downloadName = null, CancellationToken cancellationToken = default);
+    Task<IdevsContentResponse> CreateResponseAsync(string html,
+        string? header = null,
+        string? footer = null,
+        string? downloadName = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Register custom helpers for Handlebars.NET
@@ -52,31 +59,26 @@ public interface IIdevsPdfExporter
     void RegisterCustomHelpers(Action<IHandlebars, CultureInfo> registerHelper);
 
     /// <summary>
-    /// Exports data to a PDF format using a template file
+    /// Exports data to a PDF format using template files with automatic pagination support and creates a response for download
     /// </summary>
-    /// <param name="templatePath"></param>
-    /// <param name="model"></param>
-    /// <param name="header"></param>
-    /// <param name="footer"></param>
-    /// <param name="cancellationToken"></param>
-    /// <typeparam name="TModel"></typeparam>
-    /// <returns></returns>
-    Task<byte[]> CompileTemplateAsync<TModel>(string templatePath, TModel model, string? header = null,
-        string? footer = null, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Exports data to a PDF format using a template file and creates a response for download
-    /// </summary>
-    /// <param name="templatePath"></param>
-    /// <param name="model"></param>
-    /// <param name="header"></param>
-    /// <param name="footer"></param>
-    /// <param name="downloadName"></param>
-    /// <param name="cancellationToken"></param>
-    /// <typeparam name="TModel"></typeparam>
-    /// <returns></returns>
-    Task<IdevsContentResponse> CreateResponseAsync<TModel>(string templatePath, TModel model, string? header = null,
-        string? footer = null, string? downloadName = null, CancellationToken cancellationToken = default);
+    /// <param name="model">Data model that implements IReportBaseModel (pagination will be applied to Details property)</param>
+    /// <param name="templatePath">Path to the main template file</param>
+    /// <param name="headerTemplatePath">Path to the header template file (optional)</param>
+    /// <param name="footerTemplatePath">Path to the footer template file (optional)</param>
+    /// <param name="downloadName">Name for the downloaded file (optional)</param>
+    /// <param name="config">Pagination config (optional)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <typeparam name="TModel">Type of the data model that implements IReportBaseModel</typeparam>
+    /// <typeparam name="TDetail">Type of the detail items in the Details collection</typeparam>
+    /// <returns>PDF response ready for download</returns>
+    Task<IdevsContentResponse> CreateResponseAsync<TModel, TDetail>(
+        TModel model,
+        string templatePath,
+        string? headerTemplatePath = null,
+        string? footerTemplatePath = null,
+        string? downloadName = null,
+        PaginationConfig? config = null,
+        CancellationToken cancellationToken = default) where TModel : IReportBaseModel<TDetail>;
 }
 
 /// <summary>
@@ -420,8 +422,13 @@ public class IdevsPdfExporter : IIdevsPdfExporter
     }
 
     /// <inheritdoc />
-    public async Task<byte[]> CompileTemplateAsync<TModel>(string templatePath, TModel model, string? header = null, string? footer = null,
-        CancellationToken cancellationToken = default)
+    public async Task<byte[]> CompileTemplateAsync<TModel>(
+        TModel model,
+        string templatePath,
+        string? header = null,
+        string? footer = null,
+        CancellationToken cancellationToken = default
+    )
     {
         Guard.Against.NullOrEmpty(templatePath, nameof(templatePath));
         Guard.Against.Null(model, nameof(model));
@@ -448,13 +455,55 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         return await ExportByteArrayAsync(html, header, footer, cancellationToken);
     }
 
-    public async Task<IdevsContentResponse> CreateResponseAsync<TModel>(string templatePath, TModel model, string? header = null, string? footer = null,
-        string? downloadName = null, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<IdevsContentResponse> CreateResponseAsync<TModel, TDetail>(
+        TModel model,
+        string templatePath,
+        string? headerTemplatePath = null,
+        string? footerTemplatePath = null,
+        string? downloadName = null,
+        PaginationConfig? config = null,
+        CancellationToken cancellationToken = default
+    ) where TModel : IReportBaseModel<TDetail>
     {
-        Guard.Against.NullOrEmpty(templatePath, nameof(templatePath));
-        Guard.Against.Null(model, nameof(model));
+        Guard.Against.NullOrEmpty(templatePath,
+            nameof(templatePath));
+        Guard.Against.Null(model,
+            nameof(model));
 
-        var bytes = await CompileTemplateAsync(templatePath, model, header, footer, cancellationToken);
+        config ??= new PaginationConfig
+        {
+            FirstPageSize = 25,
+            RegularPageSize = 29,
+            LastPageReserveRows = 9
+        };
+
+        // Create pagination data with default configuration (can be made configurable later)
+        var detailsList = model.Details.ToList();
+        var paginatedData = SmartPagination.CreatePaginatedData(
+            detailsList,
+            config.FirstPageSize,
+            config.RegularPageSize,
+            config.LastPageReserveRows
+        );
+        
+        // Create extended model with pagination data
+        var extendedModel = CreateExtendedModel<TModel, TDetail>(model,
+            paginatedData);
+        
+        // Compile header and footer templates if provided
+        var headerHtml = await CompileTemplateFileAsync(headerTemplatePath,
+            extendedModel,
+            cancellationToken);
+        var footerHtml = await CompileTemplateFileAsync(footerTemplatePath,
+            extendedModel,
+            cancellationToken);
+        
+        var bytes = await CompileTemplateAsync(extendedModel,
+            templatePath,
+            headerHtml,
+            footerHtml,
+            cancellationToken);
 
         if (bytes == null || bytes.Length == 0)
         {
@@ -469,12 +518,70 @@ public class IdevsPdfExporter : IIdevsPdfExporter
                 Content = base64Content,
                 ContentType = "application/pdf",
                 DownloadName = downloadName ??
-                               "report" + DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture) + ".pdf"
+                               "report" + DateTime.Now.ToString("yyyyMMddHHmmss",
+                                   CultureInfo.InvariantCulture) + ".pdf"
             };
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to convert PDF content to Base64: {ex.Message}", ex);
+            throw new InvalidOperationException($"Failed to convert PDF content to Base64: {ex.Message}",
+                ex);
         }
+    }
+    
+    /// <summary>
+    /// Compiles a template file if the path is provided
+    /// </summary>
+    /// <param name="templatePath">Path to template file (can be null)</param>
+    /// <param name="model">Data model for compilation</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Compiled HTML string or null if no template path provided</returns>
+    private async Task<string?> CompileTemplateFileAsync<T>(string? templatePath, T model, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(templatePath))
+            return null;
+            
+        if (!File.Exists(templatePath))
+        {
+            throw new FileNotFoundException($"Template file not found: {templatePath}");
+        }
+
+        var templateContent = await File.ReadAllTextAsync(templatePath, cancellationToken);
+        if (string.IsNullOrEmpty(templateContent))
+        {
+            throw new InvalidOperationException($"Template file is empty: {templatePath}");
+        }
+
+        var compiled = _compiledTemplates.GetOrAdd(templatePath, _ => _handlebars.Compile(templateContent));
+        return compiled(model);
+    }
+    
+    /// <summary>
+    /// Creates an extended model that includes both the original model properties and pagination data
+    /// </summary>
+    /// <param name="originalModel">Original model data</param>
+    /// <param name="paginatedData">Pagination data from SmartPagination</param>
+    /// <returns>Extended model with pagination data</returns>
+    private object CreateExtendedModel<TModel, TDetail>(TModel originalModel, object paginatedData) where TModel : IReportBaseModel<TDetail>
+    {
+        // Create anonymous object that merges original model properties with pagination data
+        var originalType = originalModel.GetType();
+        var properties = originalType.GetProperties();
+        
+        var extendedData = new Dictionary<string, object?>();
+        
+        // Copy all properties from original model except Details (which will be replaced with paginated data)
+        foreach (var prop in properties)
+        {
+            if (prop.Name != "Details")
+            {
+                extendedData[prop.Name] = prop.GetValue(originalModel);
+            }
+        }
+        
+        // Add pagination data
+        extendedData["Pagination"] = paginatedData;
+        
+        return extendedData;
     }
 }
