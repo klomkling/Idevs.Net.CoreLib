@@ -606,15 +606,16 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         var headerHtml = await CompileTemplateFileAsync(headerTemplatePath,
             extendedModel,
             cancellationToken);
+
         var footerHtml = await CompileTemplateFileAsync(footerTemplatePath,
             extendedModel,
             cancellationToken);
-        
+
         var bytes = await CompileTemplateAsync(
             extendedModel,
             templatePath,
-            headerHtml,
-            footerHtml,
+            string.IsNullOrEmpty(headerHtml) ? "." : headerHtml,
+            string.IsNullOrEmpty(footerHtml) ? "." : footerHtml,
             options,
             cancellationToken
         );

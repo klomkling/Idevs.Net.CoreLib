@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.10 (2025-01-12)
+
+### Improved
+
+- **Template Placeholder Enhancement**: Refined template handling in PDF generation
+    - Use single dot `"."` placeholder instead of empty strings for null/empty header/footer templates
+    - Better template processing compatibility with Handlebars compilation
+    - More consistent template rendering behavior across different scenarios
+    - Improved reliability when templates are conditionally empty
+
+### Developer Experience
+
+- **Cleaner Template Logic**: Simplified conditional template assignment with better fallback handling
+- **Enhanced Reliability**: More predictable PDF generation when templates are missing or empty
+
 ## 0.2.9 (2025-01-12)
 
 ### Fixed
