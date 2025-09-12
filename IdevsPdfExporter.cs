@@ -208,8 +208,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         {
             PreferCSSPageSize = true,
             PrintBackground = true,
-            HeaderTemplate = header ?? string.Empty,
-            FooterTemplate = footer ?? string.Empty,
+            HeaderTemplate = header ?? ".",
+            FooterTemplate = footer ?? ".",
             DisplayHeaderFooter = !string.IsNullOrEmpty(header) || !string.IsNullOrEmpty(footer),
             MarginOptions = new MarginOptions
             {
@@ -570,18 +570,6 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         Guard.Against.Null(model,
             nameof(model));
 
-        if (options is null)
-        {
-            if (!string.IsNullOrEmpty(headerTemplatePath) || !string.IsNullOrEmpty(footerTemplatePath))
-            {
-                options = PdfOptionsBuilder.CreateWithTemplates(headerTemplate: headerTemplatePath, footerTemplate: footerTemplatePath);
-            }
-            else
-            {
-                options = PdfOptionsBuilder.CreateBusiness();
-            }
-        }
-
         config ??= new PaginationConfig
         {
             FirstPageSize = 25,
@@ -614,8 +602,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         var bytes = await CompileTemplateAsync(
             extendedModel,
             templatePath,
-            string.IsNullOrEmpty(headerHtml) ? "." : headerHtml,
-            string.IsNullOrEmpty(footerHtml) ? "." : footerHtml,
+            headerHtml,
+            footerHtml,
             options,
             cancellationToken
         );

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.11 (2025-01-12)
+
+### Simplified
+
+- **Code Simplification**: Streamlined PDF export logic for better maintainability
+    - Simplified template handling by using single dot `"."` placeholders consistently
+    - Removed complex conditional PdfOptions assignment logic for cleaner code flow
+    - Reverted to direct template usage in template compilation for better predictability
+    - Reduced code complexity while maintaining full functionality
+
+- **Template Processing**: Enhanced template handling consistency
+    - Uniform placeholder handling across all template scenarios
+    - More predictable template compilation behavior
+    - Simplified debugging and maintenance workflows
+
+### Developer Experience
+
+- **Cleaner Codebase**: Reduced complexity for easier understanding and maintenance
+- **Consistent Behavior**: More predictable PDF generation across different use cases
+- **Improved Readability**: Streamlined logic flows for better code comprehension
+
 ## 0.2.10 (2025-01-12)
 
 ### Improved
