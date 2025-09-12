@@ -1,5 +1,77 @@
 # Changelog
 
+## 0.2.8 (2025-01-12)
+
+### Enhanced
+
+- **Advanced PDF Options Support**: Comprehensive PdfOptions integration for flexible PDF generation
+    - All `ExportByteArrayAsync()` and `CreateResponseAsync()` methods now accept optional `PdfOptions` parameter
+    - New dedicated `ExportByteArrayAsync(string html, PdfOptions pdfOptions)` overload with required PdfOptions
+    - Enhanced default options with dynamic margins based on header/footer presence
+    - Better error handling with descriptive exceptions for failed PDF generation
+
+- **PdfOptionsBuilder Helper Class**: New utility class for creating common PdfOptions configurations
+    - `CreateClean()`: Generates PDFs without default browser headers/footers and minimal margins
+    - `CreateBusiness()`: Standard business document format with 10mm margins
+    - `CreateWithTemplates()`: Custom header/footer template support with dynamic margin calculation
+    - Support for custom paper formats, margins, and template configurations
+
+- **Improved Header/Footer Handling**: Smart margin and template management
+    - **Automatic Margin Adjustment**: 20mm margins when header/footer present, 0mm when absent
+    - **Default Footer Removal**: Eliminates browser-generated page numbers and URLs by default
+    - **Clean PDF Generation**: `DisplayHeaderFooter = false` when no custom templates provided
+    - Better template validation and error reporting
+
+### Added
+
+- **Documentation**: Comprehensive PDF Footer Removal Guide
+    - Step-by-step instructions for removing unwanted default browser footers
+    - Migration guide from previous versions with code examples
+    - Troubleshooting section for common footer-related issues
+    - CSS-based footer control techniques and best practices
+
+### Changed
+
+- **Enhanced Method Signatures**: All PDF export methods now support PdfOptions
+    - `ExportByteArrayAsync()` enhanced with optional `PdfOptions` parameter
+    - `CreateResponseAsync()` methods support custom PDF generation options
+    - `CreateResponseAsync<TModel, TDetail>()` uses `PdfOptionsBuilder.CreateBusiness()` as default
+    - Backward compatibility maintained through optional parameters
+
+- **Improved Default Behavior**: Better out-of-the-box PDF generation
+    - Automatic detection of header/footer presence for margin calculation
+    - Enhanced error handling with null checks and descriptive exception messages
+    - Better resource management in PDF generation process
+
+### Developer Experience
+
+- **Simplified Clean PDF Generation**: Easy removal of unwanted browser footers
+    ```csharp
+    // Automatic clean generation (no default footers)
+    var response = await exporter.CreateResponseAsync<MyModel, MyDetail>(model, templatePath);
+    
+    // Explicit clean options
+    var cleanOptions = PdfOptionsBuilder.CreateClean();
+    var bytes = await exporter.ExportByteArrayAsync(htmlContent, cleanOptions);
+    ```
+
+- **Flexible Configuration**: Multiple ways to customize PDF generation
+    ```csharp
+    // Business documents with standard margins
+    var businessOptions = PdfOptionsBuilder.CreateBusiness();
+    
+    // Custom configuration
+    var customOptions = PdfOptionsBuilder.CreateClean(
+        format: PaperFormat.A4,
+        margins: ("5mm", "5mm", "10mm", "10mm")
+    );
+    ```
+
+### Performance
+
+- **Better Resource Management**: Enhanced browser instance handling in PDF generation
+- **Improved Error Handling**: More descriptive error messages and validation
+
 ## 0.2.7 (2025-09-12)
 
 ### Added

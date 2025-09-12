@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Ardalis.GuardClauses;
 using HandlebarsDotNet;
+using Idevs.Helpers;
 using Idevs.Models;
 using PuppeteerSharp;
+using PuppeteerSharp.Media;
 
 namespace Idevs;
 
@@ -30,11 +32,14 @@ public interface IIdevsPdfExporter
     /// <param name="html">HTML content to convert to PDF</param>
     /// <param name="header">HTML template for page header</param>
     /// <param name="footer">HTML template for page footer</param>
+    /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns>Task containing a PDF file as a byte array</returns>
-    Task<byte[]> ExportByteArrayAsync(string html,
+    Task<byte[]> ExportByteArrayAsync(
+        string html,
         string? header = null,
         string? footer = null,
+        PdfOptions? options = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -44,12 +49,14 @@ public interface IIdevsPdfExporter
     /// <param name="header"></param>
     /// <param name="footer"></param>
     /// <param name="downloadName"></param>
+    /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<IdevsContentResponse> CreateResponseAsync(string html,
         string? header = null,
         string? footer = null,
         string? downloadName = null,
+        PdfOptions? options = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -66,6 +73,7 @@ public interface IIdevsPdfExporter
     /// <param name="headerTemplatePath">Path to the header template file (optional)</param>
     /// <param name="footerTemplatePath">Path to the footer template file (optional)</param>
     /// <param name="downloadName">Name for the downloaded file (optional)</param>
+    /// <param name="pdfOptions"></param>
     /// <param name="config">Pagination config (optional)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <typeparam name="TModel">Type of the data model that implements IReportBaseModel</typeparam>
@@ -77,6 +85,7 @@ public interface IIdevsPdfExporter
         string? headerTemplatePath = null,
         string? footerTemplatePath = null,
         string? downloadName = null,
+        PdfOptions? pdfOptions = null,
         PaginationConfig? config = null,
         CancellationToken cancellationToken = default) where TModel : IReportBaseModel<TDetail>;
 }
@@ -107,18 +116,44 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         string html,
         string? header = null,
         string? footer = null,
+        PdfOptions? options = null,
         CancellationToken cancellationToken = default
     )
     {
         Guard.Against.NullOrEmpty(html, nameof(html));
 
-        return await DoGeneratePdfAsync(html, header, footer, cancellationToken);
+        return await DoGeneratePdfAsync(html, header, footer, options, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Exports HTML content to PDF format with custom PdfOptions
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF</param>
+    /// <param name="pdfOptions">Custom PDF generation options</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task containing a PDF file as a byte array</returns>
+    public async Task<byte[]> ExportByteArrayAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken = default
+    )
+    {
+        Guard.Against.NullOrEmpty(html, nameof(html));
+        Guard.Against.Null(pdfOptions, nameof(pdfOptions));
+
+        return await DoGeneratePdfWithOptionsAsync(html, pdfOptions, cancellationToken);
     }
 
-    public async Task<IdevsContentResponse> CreateResponseAsync(string html, string? header = null, string? footer = null,
-        string? downloadName = null, CancellationToken cancellationToken = default)
+    public async Task<IdevsContentResponse> CreateResponseAsync(
+        string html,
+        string? header = null,
+        string? footer = null,
+        string? downloadName = null,
+        PdfOptions? options = null,
+        CancellationToken cancellationToken = default
+    )
     {
-        var bytes = await ExportByteArrayAsync(html, header, footer, cancellationToken);
+        var bytes = await ExportByteArrayAsync(html, header, footer, options, cancellationToken);
         return new IdevsContentResponse
         {
             Content = Convert.ToBase64String(bytes),
@@ -132,6 +167,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         string html,
         string? header = null,
         string? footer = null,
+        PdfOptions? options = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -168,14 +204,76 @@ public class IdevsPdfExporter : IIdevsPdfExporter
 
         await page.SetContentAsync(html, new NavigationOptions { WaitUntil = [WaitUntilNavigation.Networkidle0] });
 
-        var pdfData = await page.PdfDataAsync(new PdfOptions
+        options ??= new PdfOptions
         {
             PreferCSSPageSize = true,
             PrintBackground = true,
             HeaderTemplate = header ?? string.Empty,
             FooterTemplate = footer ?? string.Empty,
-            DisplayHeaderFooter = !string.IsNullOrEmpty(header) || !string.IsNullOrEmpty(footer)
-        });
+            DisplayHeaderFooter = !string.IsNullOrEmpty(header) || !string.IsNullOrEmpty(footer),
+            MarginOptions = new MarginOptions
+            {
+                Top = string.IsNullOrEmpty(header) ? "0mm" : "20mm",
+                Bottom = string.IsNullOrEmpty(footer) ? "0mm" : "20mm",
+                Left = "0mm",
+                Right = "0mm"
+            },
+            OmitBackground = false,
+            Scale = 1.0m,
+            Format = PaperFormat.A4
+        };
+
+        var pdfData = await page.PdfDataAsync(options);
+
+        if (pdfData == null || pdfData.Length == 0)
+        {
+            throw new InvalidOperationException("PDF generation failed - no data returned");
+        }
+
+        return pdfData;
+    }
+    
+    private static async Task<byte[]> DoGeneratePdfWithOptionsAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken = default
+    )
+    {
+        Guard.Against.NullOrEmpty(html, nameof(html));
+        Guard.Against.Null(pdfOptions, nameof(pdfOptions));
+
+        // Use per-request browser instance for better reliability
+        var chromePath = ChromeHelper.GetChromePath();
+        var launchOption = new LaunchOptions
+        {
+            Headless = true,
+            IgnoredDefaultArgs = ["--disable-extensions"],
+            Args =
+            [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-web-security",
+                "--allow-running-insecure-content"
+            ],
+            ExecutablePath = chromePath
+        };
+
+        await using var browser = await Puppeteer.LaunchAsync(launchOption);
+        if (browser == null)
+        {
+            throw new InvalidOperationException("Failed to initialize browser instance");
+        }
+
+        await using var page = await browser.NewPageAsync();
+        if (page == null)
+        {
+            throw new InvalidOperationException("Failed to create new page in browser");
+        }
+
+        await page.SetContentAsync(html, new NavigationOptions { WaitUntil = [WaitUntilNavigation.Networkidle0] });
+
+        var pdfData = await page.PdfDataAsync(pdfOptions);
 
         if (pdfData == null || pdfData.Length == 0)
         {
@@ -421,12 +519,12 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         registerHelper(_handlebars, _defaultCulture);
     }
 
-    /// <inheritdoc />
-    public async Task<byte[]> CompileTemplateAsync<TModel>(
+    private async Task<byte[]> CompileTemplateAsync<TModel>(
         TModel model,
         string templatePath,
         string? header = null,
         string? footer = null,
+        PdfOptions? options = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -452,7 +550,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter
             throw new InvalidOperationException("Template compilation resulted in empty HTML");
         }
 
-        return await ExportByteArrayAsync(html, header, footer, cancellationToken);
+        return await ExportByteArrayAsync(html, header, footer, options, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -462,6 +560,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         string? headerTemplatePath = null,
         string? footerTemplatePath = null,
         string? downloadName = null,
+        PdfOptions? options = null,
         PaginationConfig? config = null,
         CancellationToken cancellationToken = default
     ) where TModel : IReportBaseModel<TDetail>
@@ -471,6 +570,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter
         Guard.Against.Null(model,
             nameof(model));
 
+        options ??= PdfOptionsBuilder.CreateBusiness();
+        
         config ??= new PaginationConfig
         {
             FirstPageSize = 25,
@@ -499,11 +600,14 @@ public class IdevsPdfExporter : IIdevsPdfExporter
             extendedModel,
             cancellationToken);
         
-        var bytes = await CompileTemplateAsync(extendedModel,
+        var bytes = await CompileTemplateAsync(
+            extendedModel,
             templatePath,
             headerHtml,
             footerHtml,
-            cancellationToken);
+            options,
+            cancellationToken
+        );
 
         if (bytes == null || bytes.Length == 0)
         {
