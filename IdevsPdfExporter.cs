@@ -5,8 +5,11 @@ using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Idevs.Helpers;
 using Idevs.Models;
+using Microsoft.Playwright;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
+using PuppeteerBrowser = PuppeteerSharp.IBrowser;
+using PuppeteerPaperFormat = PuppeteerSharp.Media.PaperFormat;
 
 namespace Idevs;
 
@@ -24,8 +27,9 @@ public interface IIdevsPdfExporter
     /// <returns>PDF file as a byte array</returns>
     byte[] ExportByteArray(string html,
         string? header = null,
-        string? footer = null) =>
-        Task.Run(async () => await ExportByteArrayAsync(html, header, footer)).GetAwaiter().GetResult();
+        string? footer = null,
+        PdfExportEngine engine = PdfExportEngine.PuppeteerSharp) =>
+        Task.Run(async () => await ExportByteArrayAsync(html, header, footer, null, engine)).GetAwaiter().GetResult();
 
     /// <summary>
     /// Exports HTML content to PDF format asynchronously
@@ -41,6 +45,52 @@ public interface IIdevsPdfExporter
         string? header = null,
         string? footer = null,
         PdfOptions? options = null,
+        CancellationToken cancellationToken = default) =>
+        ExportByteArrayAsync(html, header, footer, options, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    /// <summary>
+    /// Exports HTML content to PDF format asynchronously using the specified rendering engine
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF</param>
+    /// <param name="header">HTML template for page header</param>
+    /// <param name="footer">HTML template for page footer</param>
+    /// <param name="options">Optional PDF rendering options</param>
+    /// <param name="engine">PDF rendering engine to use</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task containing a PDF file as a byte array</returns>
+    Task<byte[]> ExportByteArrayAsync(
+        string html,
+        string? header,
+        string? footer,
+        PdfOptions? options,
+        PdfExportEngine engine,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exports HTML content to PDF using pre-configured PdfOptions.
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF</param>
+    /// <param name="pdfOptions">Custom PDF generation options</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task containing the generated PDF file as a byte array</returns>
+    Task<byte[]> ExportByteArrayAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken = default) =>
+        ExportByteArrayAsync(html, pdfOptions, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    /// <summary>
+    /// Exports HTML content to PDF using pre-configured PdfOptions and the specified rendering engine.
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF</param>
+    /// <param name="pdfOptions">Custom PDF generation options</param>
+    /// <param name="engine">PDF rendering engine to use</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task containing the generated PDF file as a byte array</returns>
+    Task<byte[]> ExportByteArrayAsync(
+        string html,
+        PdfOptions pdfOptions,
+        PdfExportEngine engine,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -58,6 +108,26 @@ public interface IIdevsPdfExporter
         string? footer = null,
         string? downloadName = null,
         PdfOptions? options = null,
+        CancellationToken cancellationToken = default) =>
+        CreateResponseAsync(html, header, footer, downloadName, options, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    /// <summary>
+    /// Creates a response containing the PDF file for download using the specified rendering engine
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF</param>
+    /// <param name="header">HTML template for page header</param>
+    /// <param name="footer">HTML template for page footer</param>
+    /// <param name="downloadName">Optional filename for downloads</param>
+    /// <param name="options">Optional PDF rendering options</param>
+    /// <param name="engine">PDF rendering engine to use</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task containing the file response</returns>
+    Task<IdevsContentResponse> CreateResponseAsync(string html,
+        string? header,
+        string? footer,
+        string? downloadName,
+        PdfOptions? options,
+        PdfExportEngine engine,
         CancellationToken cancellationToken = default);
 }
 
@@ -68,7 +138,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
 {
     private readonly SemaphoreSlim _browserLock = new(1, 1);
     private readonly LaunchOptions _launchOptions;
-    private IBrowser? _browser;
+    private PuppeteerBrowser? _browser;
     private bool _disposed;
 
     public IdevsPdfExporter()
@@ -78,14 +148,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
         {
             Headless = true,
             IgnoredDefaultArgs = ["--disable-extensions"],
-            Args =
-            [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-web-security",
-                "--allow-running-insecure-content"
-            ],
+            Args = ChromeHelper.GetDefaultBrowserArgs(),
             ExecutablePath = chromePath
         };
     }
@@ -99,18 +162,38 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async Task<byte[]> ExportByteArrayAsync(
+    public Task<byte[]> ExportByteArrayAsync(
         string html,
         string? header = null,
         string? footer = null,
         PdfOptions? options = null,
+        CancellationToken cancellationToken = default
+    ) =>
+        ExportByteArrayAsync(html, header, footer, options, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    /// <summary>
+    /// Exports HTML content to PDF format using the requested rendering engine.
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF.</param>
+    /// <param name="header">Optional header template.</param>
+    /// <param name="footer">Optional footer template.</param>
+    /// <param name="options">Optional PDF configuration.</param>
+    /// <param name="engine">Rendering engine to use.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Task containing the generated PDF bytes.</returns>
+    public async Task<byte[]> ExportByteArrayAsync(
+        string html,
+        string? header,
+        string? footer,
+        PdfOptions? options,
+        PdfExportEngine engine,
         CancellationToken cancellationToken = default
     )
     {
         EnsureNotDisposed();
         Guard.Against.NullOrEmpty(html, nameof(html));
         var pdfOptions = BuildPdfOptions(header, footer, options);
-        return await GeneratePdfAsync(html, pdfOptions, cancellationToken);
+        return await GeneratePdfAsync(html, pdfOptions, engine, cancellationToken).ConfigureAwait(false);
     }
     
     /// <summary>
@@ -120,9 +203,25 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
     /// <param name="pdfOptions">Custom PDF generation options</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task containing a PDF file as a byte array</returns>
+    public Task<byte[]> ExportByteArrayAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken = default
+    ) =>
+        ExportByteArrayAsync(html, pdfOptions, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    /// <summary>
+    /// Exports HTML content to PDF using explicit PdfOptions and rendering engine.
+    /// </summary>
+    /// <param name="html">HTML content to convert to PDF.</param>
+    /// <param name="pdfOptions">Pre-configured PDF options.</param>
+    /// <param name="engine">Rendering engine to use.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Task containing the generated PDF bytes.</returns>
     public async Task<byte[]> ExportByteArrayAsync(
         string html,
         PdfOptions pdfOptions,
+        PdfExportEngine engine,
         CancellationToken cancellationToken = default
     )
     {
@@ -130,20 +229,31 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
         Guard.Against.NullOrEmpty(html, nameof(html));
         Guard.Against.Null(pdfOptions, nameof(pdfOptions));
         var safeOptions = ClonePdfOptions(pdfOptions);
-        return await GeneratePdfAsync(html, safeOptions, cancellationToken);
+        return await GeneratePdfAsync(html, safeOptions, engine, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<IdevsContentResponse> CreateResponseAsync(
+    public Task<IdevsContentResponse> CreateResponseAsync(
         string html,
         string? header = null,
         string? footer = null,
         string? downloadName = null,
         PdfOptions? options = null,
         CancellationToken cancellationToken = default
+    ) =>
+        CreateResponseAsync(html, header, footer, downloadName, options, PdfExportEngine.PuppeteerSharp, cancellationToken);
+
+    public async Task<IdevsContentResponse> CreateResponseAsync(
+        string html,
+        string? header,
+        string? footer,
+        string? downloadName,
+        PdfOptions? options,
+        PdfExportEngine engine,
+        CancellationToken cancellationToken = default
     )
     {
         EnsureNotDisposed();
-        var bytes = await ExportByteArrayAsync(html, header, footer, options, cancellationToken);
+        var bytes = await ExportByteArrayAsync(html, header, footer, options, engine, cancellationToken).ConfigureAwait(false);
         return new IdevsContentResponse
         {
             Content = Convert.ToBase64String(bytes),
@@ -156,6 +266,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
     private async Task<byte[]> GeneratePdfAsync(
         string html,
         PdfOptions pdfOptions,
+        PdfExportEngine engine,
         CancellationToken cancellationToken = default
     )
     {
@@ -164,6 +275,20 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        return engine switch
+        {
+            PdfExportEngine.PuppeteerSharp => await GeneratePuppeteerPdfAsync(html, pdfOptions, cancellationToken).ConfigureAwait(false),
+            PdfExportEngine.Playwright => await GeneratePlaywrightPdfAsync(html, pdfOptions, cancellationToken).ConfigureAwait(false),
+            _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unsupported PDF export engine")
+        };
+    }
+
+    private async Task<byte[]> GeneratePuppeteerPdfAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken
+    )
+    {
         var browser = await GetBrowserAsync(cancellationToken).ConfigureAwait(false);
         await using var page = await browser.NewPageAsync().ConfigureAwait(false);
         await page.SetContentAsync(html, new NavigationOptions { WaitUntil = [WaitUntilNavigation.Networkidle0] })
@@ -179,7 +304,92 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
         return pdfData;
     }
 
-    private async Task<IBrowser> GetBrowserAsync(CancellationToken cancellationToken)
+    private async Task<byte[]> GeneratePlaywrightPdfAsync(
+        string html,
+        PdfOptions pdfOptions,
+        CancellationToken cancellationToken
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        using var playwright = await Microsoft.Playwright.Playwright.CreateAsync().ConfigureAwait(false);
+        var launchOptions = ChromeHelper.CreatePlaywrightLaunchOptions(
+            headless: _launchOptions.Headless,
+            args: _launchOptions.Args,
+            executablePath: _launchOptions.ExecutablePath,
+            ignoredDefaultArgs: _launchOptions.IgnoredDefaultArgs);
+        await using var browser = await playwright.Chromium.LaunchAsync(launchOptions).ConfigureAwait(false);
+        await using var context = await browser.NewContextAsync().ConfigureAwait(false);
+        var page = await context.NewPageAsync().ConfigureAwait(false);
+        await page.SetContentAsync(html, new PageSetContentOptions { WaitUntil = WaitUntilState.NetworkIdle }).ConfigureAwait(false);
+
+        var playwrightOptions = ConvertToPlaywrightOptions(pdfOptions);
+        var pdfData = await page.PdfAsync(playwrightOptions).ConfigureAwait(false);
+
+        if (pdfData == null || pdfData.Length == 0)
+        {
+            throw new InvalidOperationException("PDF generation failed - no data returned");
+        }
+
+        return pdfData;
+    }
+
+    private static PagePdfOptions ConvertToPlaywrightOptions(PdfOptions pdfOptions)
+    {
+        var options = new PagePdfOptions
+        {
+            DisplayHeaderFooter = pdfOptions.DisplayHeaderFooter,
+            FooterTemplate = pdfOptions.FooterTemplate,
+            HeaderTemplate = pdfOptions.HeaderTemplate,
+            PrintBackground = pdfOptions.PrintBackground,
+            PreferCSSPageSize = pdfOptions.PreferCSSPageSize,
+            Landscape = pdfOptions.Landscape,
+            PageRanges = pdfOptions.PageRanges,
+            Width = NormalizeMarginValue(pdfOptions.Width),
+            Height = NormalizeMarginValue(pdfOptions.Height),
+            Format = pdfOptions.Format?.ToString()
+        };
+
+        options.Scale = (float)pdfOptions.Scale;
+
+        if (pdfOptions.MarginOptions is { } marginOptions)
+        {
+            options.Margin = new Margin
+            {
+                Top = NormalizeMarginValue(marginOptions.Top),
+                Bottom = NormalizeMarginValue(marginOptions.Bottom),
+                Left = NormalizeMarginValue(marginOptions.Left),
+                Right = NormalizeMarginValue(marginOptions.Right)
+            };
+        }
+
+        return options;
+    }
+
+    private static string? NormalizeMarginValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (value is string stringValue)
+        {
+            return string.IsNullOrWhiteSpace(stringValue) ? null : stringValue;
+        }
+
+        return value switch
+        {
+            decimal decimalValue => decimalValue.ToString(CultureInfo.InvariantCulture),
+            double doubleValue => doubleValue.ToString(CultureInfo.InvariantCulture),
+            float floatValue => floatValue.ToString(CultureInfo.InvariantCulture),
+            int intValue => intValue.ToString(CultureInfo.InvariantCulture),
+            long longValue => longValue.ToString(CultureInfo.InvariantCulture),
+            _ => value.ToString()
+        };
+    }
+
+    private async Task<PuppeteerBrowser> GetBrowserAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -215,11 +425,11 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
         }
     }
 
-    private static bool IsBrowserUsable(IBrowser? browser) => browser is not null && !browser.IsClosed;
+    private static bool IsBrowserUsable(PuppeteerBrowser? browser) => browser is not null && !browser.IsClosed;
 
     private void BrowserOnDisconnected(object? sender, EventArgs e)
     {
-        if (sender is not IBrowser browser)
+        if (sender is not PuppeteerBrowser browser)
         {
             return;
         }
@@ -251,7 +461,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
                 },
                 OmitBackground = false,
                 Scale = 1.0m,
-                Format = PaperFormat.A4
+                Format = PuppeteerPaperFormat.A4
             };
         }
 

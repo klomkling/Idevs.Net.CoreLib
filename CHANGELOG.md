@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 (2025-01-14)
+
+### Added
+
+- **Playwright Export Option**: `IIdevsPdfExporter` now supports Microsoft.Playwright alongside PuppeteerSharp through the new `PdfExportEngine` flag.
+- **Playwright Dependency**: Bundled `Microsoft.Playwright` to enable browser automation without external setup.
+
+### Improved
+
+- **Shared Browser Settings**: Centralized Chromium launch configuration in `ChromeHelper` so PuppeteerSharp and Playwright reuse the same executable and sandbox settings.
+
 ## 0.3.0 (2025-01-13)
 
 ### Breaking

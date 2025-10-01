@@ -1,11 +1,14 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Playwright;
 using PuppeteerSharp;
 
 namespace Idevs;
 
 /// <summary>
-/// Usage: It should call ChromeHelper.DownloadChrome()
-/// before using PuppeteerSharp to ensure the Chromium browser is downloaded.
+/// Usage: Call ChromeHelper.DownloadChrome()
+/// before using PuppeteerSharp or Playwright to ensure the Chromium browser is downloaded.
 /// The best way is to call on Program.cs Main method.
 /// Example:
 /// public static void Main(string[] args)
@@ -18,6 +21,14 @@ namespace Idevs;
 public static class ChromeHelper
 {
     private static string BasePath => Path.Combine(AppContext.BaseDirectory, "Idevs", "chromium");
+    private static readonly string[] DefaultBrowserArgs =
+    [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-web-security",
+        "--allow-running-insecure-content"
+    ];
 
     public static bool IsChromeDownloaded()
     {
@@ -59,7 +70,7 @@ public static class ChromeHelper
         }
     }
 
-    public static string GetChromePath()
+    public static string? GetChromePath()
     {
         var basePath = BasePath;
         if (!Directory.Exists(basePath))
@@ -68,7 +79,7 @@ public static class ChromeHelper
             return null;
         }
 
-        string chromiumPath = null;
+        string? chromiumPath = null;
         if (OperatingSystem.IsWindows())
         {
             basePath = Path.Combine(basePath, "Chrome");
@@ -139,5 +150,43 @@ public static class ChromeHelper
         {
             await browserFetcher.DownloadAsync();
         }).GetAwaiter().GetResult();
+    }
+
+    public static string[] GetDefaultBrowserArgs() => DefaultBrowserArgs.ToArray();
+
+    public static BrowserTypeLaunchOptions CreatePlaywrightLaunchOptions(
+        bool? headless = null,
+        IEnumerable<string>? args = null,
+        string? executablePath = null,
+        IEnumerable<string>? ignoredDefaultArgs = null)
+    {
+        var launchOptions = new BrowserTypeLaunchOptions
+        {
+            Headless = headless ?? true
+        };
+
+        var resolvedArgs = args?.Where(a => !string.IsNullOrWhiteSpace(a)).ToArray();
+        if (resolvedArgs is { Length: > 0 })
+        {
+            launchOptions.Args = resolvedArgs;
+        }
+        else
+        {
+            launchOptions.Args = GetDefaultBrowserArgs();
+        }
+
+        var resolvedIgnored = ignoredDefaultArgs?.Where(a => !string.IsNullOrWhiteSpace(a)).ToArray();
+        if (resolvedIgnored is { Length: > 0 })
+        {
+            launchOptions.IgnoreDefaultArgs = resolvedIgnored;
+        }
+
+        var resolvedExecutablePath = string.IsNullOrWhiteSpace(executablePath) ? GetChromePath() : executablePath;
+        if (!string.IsNullOrWhiteSpace(resolvedExecutablePath))
+        {
+            launchOptions.ExecutablePath = resolvedExecutablePath;
+        }
+
+        return launchOptions;
     }
 }
