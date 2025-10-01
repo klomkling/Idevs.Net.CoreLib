@@ -49,7 +49,7 @@ public class IdevsContentResult
             FileDownloadName = fileName
         };
         response.Headers.Clear();
-        response.Headers.Add("Content-Disposition", "inline; filename=" + fileName);
+        response.Headers.Append("Content-Disposition", "inline; filename=" + fileName);
         return result;
     }
 

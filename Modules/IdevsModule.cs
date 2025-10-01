@@ -75,41 +75,42 @@ public class IdevsModule : Autofac.Module
                     return ex.Types.Where(t => t != null);
                 }
             })
-            .Where(type => !type.IsInterface && !type.IsAbstract)
+            .Where(type => type is { IsInterface: false, IsAbstract: false })
             .Where(type =>
                 // Legacy attributes
-                type.IsDefined(legacyScopedRegistration, false) ||
-                type.IsDefined(legacySingletonRegistration, false) ||
-                type.IsDefined(legacyTransientRegistration, false) ||
-                // Standard attributes
-                type.IsDefined(scopedAttribute, false) ||
-                type.IsDefined(singletonAttribute, false) ||
-                type.IsDefined(transientAttribute, false))
+                type != null && (
+                    type.IsDefined(legacyScopedRegistration, false) ||
+                    type.IsDefined(legacySingletonRegistration, false) ||
+                    type.IsDefined(legacyTransientRegistration, false) ||
+                    // Standard attributes
+                    type.IsDefined(scopedAttribute, false) ||
+                    type.IsDefined(singletonAttribute, false) ||
+                    type.IsDefined(transientAttribute, false)
+                )
+            )
             .ToList();
 
-        foreach (var implementationType in types)
+        foreach (var implementationType in types.Where(implementationType => !HandleLegacyAttributes(builder,
+                     implementationType, legacyScopedRegistration, legacySingletonRegistration,
+                     legacyTransientRegistration)))
         {
-            // Handle legacy attributes first (for backward compatibility)
-            if (HandleLegacyAttributes(builder, implementationType, legacyScopedRegistration, legacySingletonRegistration, legacyTransientRegistration))
-            {
-                continue;
-            }
-
             // Handle standard attributes
-            HandleStandardAttributes(builder, implementationType, scopedAttribute, singletonAttribute, transientAttribute);
+            if (implementationType != null)
+                HandleStandardAttributes(builder, implementationType, scopedAttribute, singletonAttribute,
+                    transientAttribute);
         }
     }
 
     /// <summary>
     /// Handles legacy registration attributes
     /// </summary>
-    private static bool HandleLegacyAttributes(ContainerBuilder builder, Type implementationType, 
+    private static bool HandleLegacyAttributes(ContainerBuilder builder, Type? implementationType,
         Type legacyScoped, Type legacySingleton, Type legacyTransient)
     {
-        var interfaceType = implementationType.GetInterface($"I{implementationType.Name}");
+        var interfaceType = implementationType?.GetInterface($"I{implementationType.Name}");
         if (interfaceType == null) return false;
 
-        if (implementationType.IsDefined(legacyScoped, false))
+        if (implementationType != null && implementationType.IsDefined(legacyScoped, false))
         {
             builder.RegisterType(implementationType)
                 .As(interfaceType)
@@ -117,7 +118,7 @@ public class IdevsModule : Autofac.Module
             return true;
         }
 
-        if (implementationType.IsDefined(legacyTransient, false))
+        if (implementationType != null && implementationType.IsDefined(legacyTransient, false))
         {
             builder.RegisterType(implementationType)
                 .As(interfaceType)
@@ -125,15 +126,13 @@ public class IdevsModule : Autofac.Module
             return true;
         }
 
-        if (implementationType.IsDefined(legacySingleton, false))
-        {
-            builder.RegisterType(implementationType)
-                .As(interfaceType)
-                .SingleInstance();
-            return true;
-        }
+        if (implementationType == null || !implementationType.IsDefined(legacySingleton, false)) return false;
 
-        return false;
+        builder.RegisterType(implementationType)
+            .As(interfaceType)
+            .SingleInstance();
+        return true;
+
     }
 
     /// <summary>

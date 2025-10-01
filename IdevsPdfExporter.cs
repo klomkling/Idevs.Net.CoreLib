@@ -1,9 +1,6 @@
 using System.Globalization;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Ardalis.GuardClauses;
-using Idevs.Helpers;
 using Idevs.Models;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;

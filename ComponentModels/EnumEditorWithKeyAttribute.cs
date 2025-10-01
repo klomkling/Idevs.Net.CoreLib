@@ -29,8 +29,8 @@ public partial class EnumEditorWithKeyAttribute : CustomEditorAttribute
     /// </value>
     public bool AllowClear
     {
-        get { return GetOption<bool>("allowClear"); }
-        set { SetOption("allowClear", value); }
+        get => GetOption<bool>("allowClear");
+        set => SetOption("allowClear", value);
     }
 
     /// <summary>
@@ -38,8 +38,8 @@ public partial class EnumEditorWithKeyAttribute : CustomEditorAttribute
     /// </summary>
     public bool Delimited
     {
-        get { return GetOption<bool>("delimited"); }
-        set { SetOption("delimited", value); }
+        get => GetOption<bool>("delimited");
+        set => SetOption("delimited", value);
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public partial class EnumEditorWithKeyAttribute : CustomEditorAttribute
         set => SetOption("multiple", value);
     }
 
-    public string EnumKey
+    public string? EnumKey
     {
         get => GetOption<string>("enumKey");
         set => SetOption("enumKey", value);

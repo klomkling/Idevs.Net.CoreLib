@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.3.3 (2025-10-02)
+
+### Rollback to PuppeteerSharp Only
+
+- Removed Microsoft.Playwright dependency and related code
+- Simplified `IdevsPdfExporter` to use only PuppeteerSharp for PDF generation
+- Ensured all previous Playwright features are either removed or adapted to PuppeteerSharp
+- Updated documentation to reflect the change back to PuppeteerSharp only
+
+~~## 0.3.2 (2025-01-15)~~
+
+~~### Fixed~~
+
+~~- **Playwright Driver Self-Heal**: `ChromeHelper.EnsurePlaywrightBrowsersInstalled()` now validates the node driver, reinstalls Chromium when missing, and wires the required Playwright environment variables so PDF exports no longer fail with "Driver not found" errors.~~
+
+~~### Improved~~
+
+~~- **Runtime Setup**: `IdevsPdfExporter` reuses the enhanced helper ensuring Playwright's runtime is ready before each export, removing manual setup requirements in consuming applications.~~
+
+~~## 0.3.1 (2025-01-14)~~
+
+~~### Added~~
+
+~~- **Playwright Export Option**: `IIdevsPdfExporter` now supports Microsoft.Playwright alongside PuppeteerSharp through the new `PdfExportEngine` flag.~~
+~~- **Playwright Dependency**: Bundled `Microsoft.Playwright` to enable browser automation without external setup.~~
+
+~~### Improved~~
+
+~~- **Shared Browser Settings**: Centralized Chromium launch configuration in `ChromeHelper` so PuppeteerSharp and Playwright reuse the same executable and sandbox settings.~~
+
 ## 0.3.0 (2025-01-13)
 
 ### Breaking

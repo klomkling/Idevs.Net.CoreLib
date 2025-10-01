@@ -46,7 +46,7 @@ public static class ChromeHelper
             };
 
             process.Start();
-            string output = process.StandardOutput.ReadToEnd().Trim();
+            var output = process.StandardOutput.ReadToEnd().Trim();
             process.WaitForExit();
 
             return output == "1";
@@ -59,7 +59,7 @@ public static class ChromeHelper
         }
     }
 
-    public static string GetChromePath()
+    public static string? GetChromePath()
     {
         var basePath = BasePath;
         if (!Directory.Exists(basePath))
@@ -68,7 +68,7 @@ public static class ChromeHelper
             return null;
         }
 
-        string chromiumPath = null;
+        string chromiumPath = null!;
         if (OperatingSystem.IsWindows())
         {
             basePath = Path.Combine(basePath, "Chrome");
@@ -82,42 +82,39 @@ public static class ChromeHelper
         {
             basePath = Path.Combine(basePath, "Chrome");
             var directories = Directory.GetDirectories(basePath, "Mac*");
-            if (directories.Length > 0)
+            if (directories.Length <= 0) return chromiumPath;
+
+            var chromeFolder = IsAppleSilicon()
+                ? "chrome-mac-arm64"
+                : "chrome-mac-x64";
+
+            chromiumPath = Path.Combine(basePath, directories[0], chromeFolder, "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing");
+
+            // Fallback: if the detected folder doesn't exist, try the other one
+            if (File.Exists(chromiumPath)) return chromiumPath;
+
+            var alternateChromeFolder = IsAppleSilicon()
+                ? "chrome-mac-x64"
+                : "chrome-mac-arm64";
+
+            var alternateChromePath = Path.Combine(basePath, directories[0], alternateChromeFolder, "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing");
+
+            if (File.Exists(alternateChromePath))
             {
-                var chromeFolder = IsAppleSilicon()
-                    ? "chrome-mac-arm64"
-                    : "chrome-mac-x64";
-
-                chromiumPath = Path.Combine(basePath, directories[0], chromeFolder, "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing");
-
-                // Fallback: if the detected folder doesn't exist, try the other one
-                if (!File.Exists(chromiumPath))
-                {
-                    string alternateChromeFolder = IsAppleSilicon()
-                        ? "chrome-mac-x64"
-                        : "chrome-mac-arm64";
-
-                    string alternateChromePath = Path.Combine(basePath, directories[0], alternateChromeFolder, "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing");
-
-                    if (File.Exists(alternateChromePath))
-                    {
-                        chromiumPath = alternateChromePath;
-                    }
-                }
+                chromiumPath = alternateChromePath;
             }
         }
         else if (OperatingSystem.IsLinux())
         {
             basePath = Path.Combine(basePath, "Chrome");
             var directories = Directory.GetDirectories(basePath, "Linux*");
-            if (directories.Length > 0)
-            {
-                // Detect if we're on ARM64 or x64
-                var isArm64 = RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
-                var chromeFolder = isArm64 ? "chrome-linux-arm64" : "chrome-linux64";
+            if (directories.Length <= 0) return chromiumPath;
 
-                chromiumPath = Path.Combine(basePath, directories[0], chromeFolder, "chrome");
-            }
+            // Detect if we're on ARM64 or x64
+            var isArm64 = RuntimeInformation.ProcessArchitecture == Architecture.Arm64;
+            var chromeFolder = isArm64 ? "chrome-linux-arm64" : "chrome-linux64";
+
+            chromiumPath = Path.Combine(basePath, directories[0], chromeFolder, "chrome");
         }
 
         return chromiumPath;

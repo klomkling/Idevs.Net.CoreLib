@@ -288,7 +288,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         
         foreach (var obj in rows)
         {
-            var data = new object[colCount];
+            var data = new object?[colCount];
             var row = obj as IRow;
             
             // Initialize field mappings for IRow objects
@@ -311,7 +311,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
                 data[c] = ExtractColumnValue(obj, row, columns[c], c, fields, accessor, invalidProperty);
             }
             
-            dataList.Add(data);
+            dataList.Add(data!);
         }
         
         return dataList;

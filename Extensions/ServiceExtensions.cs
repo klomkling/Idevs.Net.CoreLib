@@ -105,26 +105,25 @@ public static class ServiceExtensions
                     return ex.Types.Where(t => t != null);
                 }
             })
-            .Where(type => !type.IsInterface && !type.IsAbstract)
+            .Where(type => type is { IsInterface: false, IsAbstract: false })
             .Where(type =>
                 // Legacy attributes
-                type.IsDefined(legacyScopedRegistration, false) ||
-                type.IsDefined(legacySingletonRegistration, false) ||
-                type.IsDefined(legacyTransientRegistration, false) ||
-                // Standard attributes
-                type.IsDefined(scopedAttribute, false) ||
-                type.IsDefined(singletonAttribute, false) ||
-                type.IsDefined(transientAttribute, false))
+                type != null && (
+                    type.IsDefined(legacyScopedRegistration, false) ||
+                    type.IsDefined(legacySingletonRegistration, false) ||
+                    type.IsDefined(legacyTransientRegistration, false) ||
+                    // Standard attributes
+                    type.IsDefined(scopedAttribute, false) ||
+                    type.IsDefined(singletonAttribute, false) ||
+                    type.IsDefined(transientAttribute, false)
+                    )
+                )
             .ToList();
 
-        foreach (var implementationType in types)
+        foreach (var implementationType in types.Where(implementationType =>
+                     !HandleLegacyAttributesForServiceCollection(services, implementationType, legacyScopedRegistration,
+                         legacySingletonRegistration, legacyTransientRegistration)))
         {
-            // Handle legacy attributes first (for backward compatibility)
-            if (HandleLegacyAttributesForServiceCollection(services, implementationType, legacyScopedRegistration, legacySingletonRegistration, legacyTransientRegistration))
-            {
-                continue;
-            }
-
             // Handle standard attributes
             HandleStandardAttributesForServiceCollection(services, implementationType);
         }
@@ -133,40 +132,37 @@ public static class ServiceExtensions
     /// <summary>
     /// Handles legacy registration attributes for service collection
     /// </summary>
-    private static bool HandleLegacyAttributesForServiceCollection(IServiceCollection services, Type implementationType,
+    private static bool HandleLegacyAttributesForServiceCollection(IServiceCollection services, Type? implementationType,
         Type legacyScoped, Type legacySingleton, Type legacyTransient)
     {
-        var interfaceType = implementationType.GetInterface($"I{implementationType.Name}");
+        var interfaceType = implementationType?.GetInterface($"I{implementationType.Name}");
         if (interfaceType == null) return false;
 
-        if (implementationType.IsDefined(legacyScoped, false))
+        if (implementationType != null && implementationType.IsDefined(legacyScoped, false))
         {
             services.AddScoped(interfaceType, implementationType);
             return true;
         }
 
-        if (implementationType.IsDefined(legacyTransient, false))
+        if (implementationType != null && implementationType.IsDefined(legacyTransient, false))
         {
             services.AddTransient(interfaceType, implementationType);
             return true;
         }
 
-        if (implementationType.IsDefined(legacySingleton, false))
-        {
-            services.AddSingleton(interfaceType, implementationType);
-            return true;
-        }
+        if (implementationType == null || !implementationType.IsDefined(legacySingleton, false)) return false;
 
-        return false;
+        services.AddSingleton(interfaceType, implementationType);
+        return true;
     }
 
     /// <summary>
     /// Handles standard registration attributes for service collection
     /// </summary>
-    private static void HandleStandardAttributesForServiceCollection(IServiceCollection services, Type implementationType)
+    private static void HandleStandardAttributesForServiceCollection(IServiceCollection services, Type? implementationType)
     {
         // Check for Scoped attribute
-        var scopedAttr = implementationType.GetCustomAttribute<ScopedAttribute>();
+        var scopedAttr = implementationType?.GetCustomAttribute<ScopedAttribute>();
         if (scopedAttr != null)
         {
             RegisterWithStandardAttributeForServiceCollection(services, implementationType, scopedAttr.ServiceType, scopedAttr.ServiceKey, scopedAttr.AllowSelfRegistration, ServiceLifetime.Scoped);
@@ -174,7 +170,7 @@ public static class ServiceExtensions
         }
 
         // Check for Transient attribute
-        var transientAttr = implementationType.GetCustomAttribute<TransientAttribute>();
+        var transientAttr = implementationType?.GetCustomAttribute<TransientAttribute>();
         if (transientAttr != null)
         {
             RegisterWithStandardAttributeForServiceCollection(services, implementationType, transientAttr.ServiceType, transientAttr.ServiceKey, transientAttr.AllowSelfRegistration, ServiceLifetime.Transient);
@@ -182,7 +178,7 @@ public static class ServiceExtensions
         }
 
         // Check for Singleton attribute
-        var singletonAttr = implementationType.GetCustomAttribute<SingletonAttribute>();
+        var singletonAttr = implementationType?.GetCustomAttribute<SingletonAttribute>();
         if (singletonAttr != null)
         {
             RegisterWithStandardAttributeForServiceCollection(services, implementationType, singletonAttr.ServiceType, singletonAttr.ServiceKey, singletonAttr.AllowSelfRegistration, ServiceLifetime.Singleton);
@@ -192,17 +188,17 @@ public static class ServiceExtensions
     /// <summary>
     /// Registers a service with standard attribute configuration for service collection
     /// </summary>
-    private static void RegisterWithStandardAttributeForServiceCollection(IServiceCollection services, Type implementationType,
+    private static void RegisterWithStandardAttributeForServiceCollection(IServiceCollection services, Type? implementationType,
         Type? serviceType, string? serviceKey, bool allowSelfRegistration, ServiceLifetime lifetime)
     {
         // Determine the service type
-        var targetServiceType = serviceType ?? implementationType.GetInterface($"I{implementationType.Name}");
+        var targetServiceType = serviceType ?? implementationType?.GetInterface($"I{implementationType.Name}");
         
         // If no interface found and self-registration is not allowed, try to find any interface
         if (targetServiceType == null && !allowSelfRegistration)
         {
-            var interfaces = implementationType.GetInterfaces();
-            targetServiceType = interfaces.FirstOrDefault();
+            var interfaces = implementationType?.GetInterfaces();
+            if (interfaces != null) targetServiceType = interfaces.FirstOrDefault();
         }
 
         // If still no service type and self-registration is allowed, use the implementation type
@@ -218,13 +214,13 @@ public static class ServiceExtensions
         switch (lifetime)
         {
             case ServiceLifetime.Scoped:
-                services.AddScoped(targetServiceType, implementationType);
+                if (implementationType != null) services.AddScoped(targetServiceType, implementationType);
                 break;
             case ServiceLifetime.Transient:
-                services.AddTransient(targetServiceType, implementationType);
+                if (implementationType != null) services.AddTransient(targetServiceType, implementationType);
                 break;
             case ServiceLifetime.Singleton:
-                services.AddSingleton(targetServiceType, implementationType);
+                if (implementationType != null) services.AddSingleton(targetServiceType, implementationType);
                 break;
         }
     }
