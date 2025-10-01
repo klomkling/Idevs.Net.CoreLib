@@ -34,7 +34,7 @@ public class IdevsModule : Autofac.Module
 
         builder.RegisterType<IdevsPdfExporter>()
             .As<IIdevsPdfExporter>()
-            .InstancePerLifetimeScope();
+            .SingleInstance();
 
         builder.RegisterType<IdevsExcelExporter>()
             .As<IIdevsExcelExporter>()

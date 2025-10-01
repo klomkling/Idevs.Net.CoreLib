@@ -169,7 +169,7 @@ public class ReportController : ServiceEndpoint
         var html = await _viewRenderer.RenderViewAsync("Reports/OrderReport", model);
         
         // Convert to PDF
-        var pdfBytes = await _pdfExporter.ExportAsync(
+        var pdfBytes = await _pdfExporter.ExportByteArrayAsync(
             html,
             "<div style='text-align: center;'>Order Report</div>", // Header
             "<div style='text-align: center;'>Page <span class='pageNumber'></span></div>" // Footer
@@ -179,6 +179,9 @@ public class ReportController : ServiceEndpoint
     }
 }
 ```
+
+> **Note**
+> From version 0.3.0 onward the PDF exporter expects pre-rendered HTML. Use your preferred templating solution (e.g., Razor via `IViewPageRenderer`) before calling `ExportByteArrayAsync` or `CreateResponseAsync`.
 
 ### UI Components
 

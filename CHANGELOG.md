@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 (2025-01-13)
+
+### Breaking
+
+- **Handlebars Removal**: Dropped all template compilation helpers and generic response APIs; the PDF exporter now accepts only pre-rendered HTML plus optional header/footer markup.
+
+### Performance
+
+- **Shared Browser Lifecycle**: Reworked `IdevsPdfExporter` into a singleton that reuses a single Puppeteer browser instance, cutting per-export startup time after the initial warm-up.
+
+### Dependency Injection
+
+- **Singleton Registration**: Updated Autofac and default service registrations so `IIdevsPdfExporter` is provided as a singleton matching the new lifecycle.
+
 ## 0.2.11 (2025-01-12)
 
 ### Simplified

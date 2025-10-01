@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.Reflection;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -41,7 +40,7 @@ public static class ServiceExtensions
         // Register core services directly for non-Autofac scenarios
         services.AddScoped<IViewPageRenderer, ViewPageRenderer>();
         services.AddScoped<IIdevsExcelExporter, IdevsExcelExporter>();
-        services.AddScoped<IIdevsPdfExporter>(_ => new IdevsPdfExporter(CultureInfo.CurrentCulture));
+        services.AddSingleton<IIdevsPdfExporter>(_ => new IdevsPdfExporter());
 
         // Register attribute-based services
         RegisterAttributeBasedServices(services);

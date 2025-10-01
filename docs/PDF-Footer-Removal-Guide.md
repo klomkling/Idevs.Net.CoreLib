@@ -1,170 +1,116 @@
 # PDF Footer Removal Guide
 
-This guide explains how to remove default browser footers (like "Page 1 of 2" or URL) from PDF generation using IdevsPdfExporter.
+This guide explains how to remove default browser headers and footers (such as “Page 1 of 2”, URLs, or timestamps) when generating PDFs with `IdevsPdfExporter`.
 
-## Problem
+## Background
 
-When generating PDFs with PuppeteerSharp, browsers often add default headers/footers showing:
-- Page numbers ("Page 1 of 2")
-- URL/File path
-- Date/Time stamps
-- Browser-generated content
+Puppeteer- or Chrome-based PDF generation adds browser headers/footers unless explicit settings say otherwise. Starting with **Idevs.Net.CoreLib 0.3.0**, the PDF exporter no longer performs template compilation; instead, you pass it pre-rendered HTML plus optional header/footer fragments. The exporter now defaults to clean output when you omit custom header/footer content.
 
-## Solution
-
-The updated `IdevsPdfExporter` (v0.2.7+) now provides better control over PDF generation to eliminate unwanted default footers.
-
-## Methods to Remove Default Footers
-
-### 1. **Automatic Footer Removal (Default Behavior)**
-
-The standard methods now automatically remove default footers when no custom header/footer is provided:
+## Quick Start: Clean Output
 
 ```csharp
-// This will generate PDF WITHOUT default browser footers
-var response = await pdfExporter.CreateResponseAsync<MyModel, MyDetail>(
-    model, 
-    "template.hbs"
-    // No header/footer = No default browser header/footer
-);
+var html = await viewRenderer.RenderViewAsync("Reports/Order", model);
+var bytes = await pdfExporter.ExportByteArrayAsync(html);
 ```
 
-**Key Changes:**
-- `DisplayHeaderFooter = false` when no templates provided
-- `MarginOptions` set to `0mm` when no custom templates
-- `HeaderTemplate` and `FooterTemplate` set to empty strings
+With no header/footer arguments, the exporter internally sets `DisplayHeaderFooter = false` and zero margins, so Chrome does not inject its own footer.
 
-### 2. **Using PdfOptionsBuilder for Complete Control**
+If you need an `IdevsContentResponse` for direct HTTP responses:
 
-Use the new `PdfOptionsBuilder` helper class for precise control:
+```csharp
+var response = await pdfExporter.CreateResponseAsync(html);
+```
+
+## Custom Header/Footer Still Without Chrome Footers
+
+Provide your header/footer markup and let the exporter build sane defaults:
+
+```csharp
+var header = "<div class='report-header'>Order Report</div>";
+var footer = "<div class='report-footer'>Page <span class='pageNumber'></span></div>";
+
+var bytes = await pdfExporter.ExportByteArrayAsync(html, header, footer);
+```
+
+Under the hood the exporter enables `DisplayHeaderFooter` and applies `20mm` top/bottom margins when content is supplied, keeping Chrome’s defaults disabled.
+
+## Fine-Grained Control with PdfOptionsBuilder
+
+Use `PdfOptionsBuilder` for common scenarios while preserving footer suppression:
 
 ```csharp
 using Idevs.Helpers;
+using PuppeteerSharp.Media;
 
-// Option A: Completely clean PDF (no headers, no footers, no margins)
-var cleanOptions = PdfOptionsBuilder.CreateClean();
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, cleanOptions);
-
-// Option B: Business document with standard margins but no default footers
-var businessOptions = PdfOptionsBuilder.CreateBusiness();
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, businessOptions);
-
-// Option C: Custom margins but no default footers
-var customOptions = PdfOptionsBuilder.CreateClean(
+var clean = PdfOptionsBuilder.CreateClean();
+var business = PdfOptionsBuilder.CreateBusiness();
+var custom = PdfOptionsBuilder.CreateClean(
     format: PaperFormat.A4,
-    margins: ("5mm", "5mm", "10mm", "10mm") // top, bottom, left, right
+    margins: ("5mm", "5mm", "10mm", "10mm")
 );
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, customOptions);
+
+var bytes = await pdfExporter.ExportByteArrayAsync(html, custom);
 ```
 
-### 3. **Custom PdfOptions for Advanced Control**
+Even when you pass `PdfOptions`, the exporter clones the instance and fills in safe defaults (blank templates, zero margins) for any missing values.
 
-Create your own `PdfOptions` for maximum flexibility:
+## DIY PdfOptions
+
+You can still create options manually:
 
 ```csharp
-var customOptions = new PdfOptions
+var options = new PdfOptions
 {
     Format = PaperFormat.A4,
     PrintBackground = true,
     PreferCSSPageSize = true,
-    DisplayHeaderFooter = false,  // ← KEY: This removes default headers/footers
+    DisplayHeaderFooter = false,
     HeaderTemplate = string.Empty,
     FooterTemplate = string.Empty,
     MarginOptions = new MarginOptions
     {
-        Top = "0mm",     // No top margin = no header space
-        Bottom = "0mm",  // No bottom margin = no footer space
+        Top = "0mm",
+        Bottom = "0mm",
         Left = "5mm",
         Right = "5mm"
     },
     Scale = 1.0m
 };
 
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, customOptions);
+var bytes = await pdfExporter.ExportByteArrayAsync(html, options);
 ```
 
-## Key Properties for Footer Control
+## Migration from Template-Based APIs
 
-| Property | Value | Effect |
-|----------|-------|---------|
-| `DisplayHeaderFooter` | `false` | **Primary control** - removes all default browser headers/footers |
-| `HeaderTemplate` | `string.Empty` | Ensures no header content |
-| `FooterTemplate` | `string.Empty` | Ensures no footer content |
-| `MarginOptions.Top` | `"0mm"` | Eliminates header space |
-| `MarginOptions.Bottom` | `"0mm"` | Eliminates footer space |
+| Before 0.3.0 | After 0.3.0 |
+|--------------|-------------|
+| `CreateResponseAsync<MyModel, TDetail>(model, templatePath, ...)` | Render HTML yourself (e.g., Razor) and call `CreateResponseAsync(html, ...)`. |
+| `CompileTemplateAsync(templatePath, model)` | Use your preferred templating engine outside the exporter, then pass the resulting HTML. |
 
-## Migration from Previous Versions
+### Example Migration
 
-### Before (v0.2.6 and earlier)
 ```csharp
-// Old way - might show default footers
-var response = await pdfExporter.CreateResponseAsync(
-    templatePath, 
-    model
-);
-```
+// Old
+var response = await pdfExporter.CreateResponseAsync(model, "Templates/Report.hbs");
 
-### After (v0.2.7+)
-```csharp
-// New way - automatically removes default footers
-var response = await pdfExporter.CreateResponseAsync<MyModel, MyDetail>(
-    model,
-    templatePath
-);
-
-// Or with explicit clean options
-var cleanOptions = PdfOptionsBuilder.CreateClean();
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, cleanOptions);
+// New
+var html = await viewRenderer.RenderViewAsync("Reports/Report", model);
+var response = await pdfExporter.CreateResponseAsync(html);
 ```
 
 ## Troubleshooting
 
-### Still seeing footers?
+- **Still seeing Chrome footers?** Ensure you are not forcing `DisplayHeaderFooter = true` without supplying templates, and that your margins are `0mm` when you want completely clean output.
+- **Need per-page content?** Provide HTML fragments for `header` and `footer`; Chrome placeholders such as `<span class='pageNumber'></span>` still work.
+- **Want additional styling?** Use CSS `@page` rules and print media queries in your HTML to control margins and visibility.
 
-1. **Check if you're passing header/footer templates:**
-   ```csharp
-   // This might still show default footers if templates are invalid
-   var response = await pdfExporter.CreateResponseAsync<MyModel, MyDetail>(
-       model, templatePath, 
-       headerPath,  // If this file doesn't exist or is empty
-       footerPath   // Default browser footer might appear
-   );
-   ```
-
-2. **Ensure you're using the updated methods:**
-   ```csharp
-   // Old method - may not have footer removal
-   var bytes = await pdfExporter.CompileTemplateAsync(templatePath, model);
-   
-   // New method - has footer removal
-   var response = await pdfExporter.CreateResponseAsync<MyModel, MyDetail>(
-       model, templatePath);
-   ```
-
-3. **Use explicit clean options:**
-   ```csharp
-   var cleanOptions = PdfOptionsBuilder.CreateClean();
-   var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, cleanOptions);
-   ```
-
-## CSS-based Footer Control
-
-You can also control footers through CSS in your HTML templates:
+## Helpful CSS Snippets
 
 ```css
 @page {
-    margin: 0;  /* Remove all margins */
+    margin: 0;      /* Edge-to-edge */
 }
 
-/* Or specific margins */
-@page {
-    margin-top: 0;
-    margin-bottom: 0;
-    margin-left: 10mm;
-    margin-right: 10mm;
-}
-
-/* Hide any print-specific elements */
 @media print {
     .no-print {
         display: none;
@@ -172,32 +118,4 @@ You can also control footers through CSS in your HTML templates:
 }
 ```
 
-## Examples
-
-### Clean Business Document
-```csharp
-// Perfect for invoices, purchase orders, reports
-var options = PdfOptionsBuilder.CreateBusiness(); // 10mm margins, no default footers
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, options);
-```
-
-### Edge-to-Edge Design
-```csharp
-// Perfect for certificates, flyers, artistic layouts
-var options = PdfOptionsBuilder.CreateClean(); // 0mm margins, no footers
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, options);
-```
-
-### Custom Layout
-```csharp
-// Perfect for specific business requirements
-var options = PdfOptionsBuilder.CreateClean(
-    format: PaperFormat.Letter,
-    margins: ("15mm", "10mm", "20mm", "20mm")
-);
-var bytes = await pdfExporter.ExportByteArrayAsync(htmlContent, options);
-```
-
-## Result
-
-Following this guide, your PDFs will be generated **without** any default browser footers, giving you complete control over the document appearance.
+These settings complement the exporter’s defaults to keep output free of unwanted browser-generated footers.
