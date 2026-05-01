@@ -101,4 +101,14 @@ public class RepositoryBaseTKeyTests
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => repo.UpdateAsync(null!));
     }
+
+    [Fact]
+    public async Task DeleteByIdAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.DeleteByIdAsync(7);
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
 }

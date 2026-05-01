@@ -62,4 +62,24 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
             return Task.FromResult(affected > 0);
         }, uow, ct);
     }
+
+    /// <summary>
+    /// Delete the row whose Id equals <paramref name="id"/>. Returns true when at
+    /// least one row was affected.
+    /// </summary>
+    public virtual Task<bool> DeleteByIdAsync(
+        TKey id,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        return ExecuteAsync((c, _) =>
+        {
+            var template = new TRow();
+            var idField = ((IIdRow)template).IdField;
+            var affected = SqlDelete(template.Table)
+                .Where(new BinaryCriteria(new Criteria(idField), CriteriaOperator.EQ, new ValueCriteria(id)))
+                .Execute(c);
+            return Task.FromResult(affected > 0);
+        }, uow, ct);
+    }
 }
