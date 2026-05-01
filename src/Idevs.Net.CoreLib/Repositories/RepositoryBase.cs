@@ -99,4 +99,24 @@ public class RepositoryBase<TRow> : SqlServiceBase
             .WhereEqual(keyField, value),
             uow, ct);
     }
+
+    private const string ObsoleteSyncMessage =
+        "Sync wrapper kept for migration. Prefer the *Async variant. " +
+        "Will be removed once underlying SQL APIs become real-async (~1.0).";
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual TRow? First(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        FirstAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual List<TRow> List(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        ListAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual TRow? GetBy<TValue>(Field keyField, TValue value, IUnitOfWork? uow = null) =>
+        GetByAsync(keyField, value, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual long Create(TRow row, IUnitOfWork? uow = null) =>
+        CreateAsync(row, uow).GetAwaiter().GetResult();
 }
