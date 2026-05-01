@@ -490,6 +490,31 @@ var service = StaticServiceLocator.Resolve<IMyService>();
 - **Scoped Resolution**: Support for creating service scopes
 - **Singleton Cache**: Optional caching for services known to be registered as singletons
 
+## Repositories
+
+`Idevs.Net.CoreLib` ships a focused class hierarchy for data access:
+
+- **`SqlServiceBase`** — base for services that need raw SQL access without
+  being a typed-row repository. Provides `ISqlConnections`, lazy `Dialect`,
+  `SqlQuery()`/`SqlInsert(t)`/`SqlUpdate(t)`/`SqlDelete(t)` factories, and a
+  uniform `ExecuteAsync<T>` template that manages connection lifetime and
+  composes with an optional `UnitOfWork`.
+
+- **`RepositoryBase<TRow>`** — typed read/list/getby/create on a Serenity
+  `IRow`. Methods: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
+  `CreateAsync`. `[Obsolete]` sync wrappers for migration.
+
+- **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`:
+  `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
+
+Connection key is configurable via the virtual `ConnectionKey` property or
+the `[ConnectionKey("Warehouse")]` attribute.
+
+For caching, see `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers
+around Serenity `ITwoLevelCache`.
+
+**Migrating from 0.5.0:** see [docs/migrations/0.6.0-repositorybase.md](docs/migrations/0.6.0-repositorybase.md).
+
 ## Cloud Upload Storage
 
 `Idevs.Net.CoreLib` can replace Serenity upload storage with S3-compatible object storage.

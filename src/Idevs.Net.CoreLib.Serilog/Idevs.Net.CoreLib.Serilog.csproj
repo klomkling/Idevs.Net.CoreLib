@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Idevs.Net.CoreLib.Serilog</PackageId>
-    <Version>0.5.0</Version>
+    <Version>0.6.0</Version>
     <Description>Optional Serilog integration for Idevs.Net.CoreLib.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>

@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.6.0 (2026-05-01)
+
+### Breaking Changes
+
+- **Removed `Idevs.RepositoryBase<T>`.** Replaced by three new classes under
+  `Idevs.Repositories`: `SqlServiceBase` (DB plumbing only), `RepositoryBase<TRow>`
+  (typed Serenity row CRUD), `RepositoryBase<TRow, TKey>` (Id-keyed CRUD on `IIdRow`).
+- **Constructor signature changed.** Old: `(IServiceProvider, ILogger<T>)`.
+  New: `(ISqlConnections)`. Consumers inject `ILogger<T>`, `ITextLocalizer`, etc.
+  themselves.
+- **`ExceptionLog`, `Localizer`, `ServiceProvider`, `Connection` properties removed.**
+- **Auto-detect `Save` removed.** Use `CreateAsync` (insert) and `UpdateAsync`
+  (update by Id) explicitly — mirrors Serenity's endpoint convention.
+- **`SqlQuery` is now a method**, not a property.
+- The `uow` parameter on every method is `IUnitOfWork?` (interface) so derived
+  consumers can pass any unit-of-work implementation; Serenity's concrete
+  `UnitOfWork` class implements `IUnitOfWork`.
+
+### Added
+
+- Async-first typed CRUD: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
+  `CreateAsync`, `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
+- `[Obsolete]` sync wrappers for each, transitional until ~1.0.
+- Optional `IUnitOfWork? uow = null` parameter on every CRUD method for
+  transaction composition.
+- `[ConnectionKey("...")]` attribute and virtual `ConnectionKey` property on
+  `SqlServiceBase`.
+- Lazy thread-safe `Dialect` cache via `Lazy<ISqlDialect>`.
+- `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers around Serenity
+  `ITwoLevelCache` (read-through `GetLocalCachedAsync` and `GetGloballyCachedAsync`
+  for reference types).
+
+### Migration
+
+See [docs/migrations/0.6.0-repositorybase.md](docs/migrations/0.6.0-repositorybase.md).
+
 ## 0.5.0 (2026-05-01)
 
 ### Breaking Changes

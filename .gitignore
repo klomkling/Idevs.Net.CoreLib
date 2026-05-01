@@ -529,5 +529,8 @@ $RECYCLE.BIN/
 # Local documentation (plans, specs, scratch notes)
 docs/*
 
+# Consumer-facing migration guides — tracked in repo
+!docs/migrations/
+
 # Claude Code session/workspace files
 .claude/
