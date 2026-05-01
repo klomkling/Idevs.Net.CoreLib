@@ -1,5 +1,123 @@
 # Changelog
 
+## 0.6.1 (2026-05-01)
+
+### Changed (internal modernization, no public API change)
+
+- Adopt C# 12 primary constructors on `RepositoryBase<TRow>` and
+  `RepositoryBase<TRow, TKey>`.
+- Adopt collection expressions (`[]`) for empty/static lists and arrays
+  throughout `src/`.
+- Standardise on `ArgumentNullException.ThrowIfNull(x)` everywhere the
+  classic `if (x is null) throw …` pattern remained — completes the
+  Ardalis-removal sweep.
+- Use C# 14 `extension(T receiver) { … }` declarations to group related
+  extension methods in `NumberExtensions`, `TextLocalizerExtensions`,
+  `WebApplicationExtensions`, and (Autofac) `WebApplicationBuilderExtensions`.
+  Compiled IL is unchanged; existing call sites continue to work.
+- Rename internal `LogManager.loggerFactory` field to `_loggerFactory` to
+  match the underscore-prefix convention (private; no API impact).
+- Minor refactors in `IdevsPdfExporter`, `SmartPagination`, `CloudUploadStorage`,
+  `IdevsExcelExporter` for readability (early-return inversions, ternary
+  `throw` patterns).
+
+
+
+### Breaking Changes
+
+- **Removed `Idevs.RepositoryBase<T>`.** Replaced by three new classes under
+  `Idevs.Repositories`: `SqlServiceBase` (DB plumbing only), `RepositoryBase<TRow>`
+  (typed Serenity row CRUD), `RepositoryBase<TRow, TKey>` (Id-keyed CRUD on `IIdRow`).
+- **Constructor signature changed.** Old: `(IServiceProvider, ILogger<T>)`.
+  New: `(ISqlConnections)`. Consumers inject `ILogger<T>`, `ITextLocalizer`, etc.
+  themselves.
+- **`ExceptionLog`, `Localizer`, `ServiceProvider`, `Connection` properties removed.**
+- **Auto-detect `Save` removed.** Use `CreateAsync` (insert) and `UpdateAsync`
+  (update by Id) explicitly — mirrors Serenity's endpoint convention.
+- **`SqlQuery` is now a method**, not a property.
+- The `uow` parameter on every method is `IUnitOfWork?` (interface) so derived
+  consumers can pass any unit-of-work implementation; Serenity's concrete
+  `UnitOfWork` class implements `IUnitOfWork`.
+
+### Added
+
+- Async-first typed CRUD: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
+  `CreateAsync`, `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
+- `[Obsolete]` sync wrappers for each, transitional until ~1.0.
+- Optional `IUnitOfWork? uow = null` parameter on every CRUD method for
+  transaction composition.
+- `[ConnectionKey("...")]` attribute and virtual `ConnectionKey` property on
+  `SqlServiceBase`.
+- Lazy thread-safe `Dialect` cache via `Lazy<ISqlDialect>`.
+- `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers around Serenity
+  `ITwoLevelCache` (read-through `GetLocalCachedAsync` and `GetGloballyCachedAsync`
+  for reference types).
+
+### Migration
+
+See [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
+
+## 0.5.0 (2026-05-01)
+
+### Breaking Changes
+
+- Restructured repository projects under `src/` and `tests/`.
+- Removed `StaticServiceProvider`; use constructor DI or `StaticServiceLocator`.
+- Moved Autofac integration to `Idevs.Net.CoreLib.Autofac`.
+- Removed Autofac dependencies from `Idevs.Net.CoreLib`.
+
+### Added
+
+- Added optional `Idevs.Net.CoreLib.Autofac` package.
+- Added optional `Idevs.Net.CoreLib.Serilog` package.
+- Added CloudUploadStorage support for AWS S3 and Cloudflare R2.
+- Added provider-neutral `LogManager` based on `Microsoft.Extensions.Logging`.
+- Consolidated registration attributes into `ComponentModels/ServiceRegistrationAttributes.cs`
+  with a new `IServiceRegistrationAttribute` interface implemented by
+  `ScopedAttribute`, `SingletonAttribute`, and `TransientAttribute`. Legacy
+  `ScopedRegistrationAttribute`, `SingletonRegiatrationAttribute`, and
+  `TransientRegistrationAttribute` types remain available under
+  `ComponentModels/Obsolete/` and are still recognised by the DI scanner.
+- Initial test scaffolding under `tests/Idevs.Net.CoreLib.Tests/` covering
+  `ChromeHelper`, `IdevsContentResult`, `ServiceExtensions`, and the
+  attribute-namespace contract.
+
+### Build & Tooling
+
+- Adopted Central Package Management via `Directory.Packages.props` and shared
+  build defaults via `Directory.Build.props`.
+- Added a repo-local `nuget.config` with explicit `nuget.org` source mapping;
+  removed the intermittently-unavailable `serenity.is` private feed
+  (Serenity packages also publish to nuget.org).
+- Hardened the `build/Idevs.Net.CoreLib.targets` `NpmInstall` step:
+  cross-platform paths, npm presence detection, opt-out documentation,
+  explicit `WorkingDirectory`.
+- Bumped `Serenity.Net.Services` to `8.8.9` (net8.0) and `10.3.1` (net10.0).
+
+### Fixed
+
+- `ChromeHelper.DownloadChrome` no longer wraps the async fetch in a redundant
+  `Task.Run(...).GetAwaiter().GetResult()`. Added a true async overload
+  `DownloadChromeAsync(CancellationToken)`.
+- `RepositoryBase<T>.Dialect` is now lazy-cached; it no longer opens and
+  disposes a connection on every access.
+- `ServiceExtensions.AddIdevsCorelibServices` now logs a `Trace` warning when
+  an assembly type-load fails (instead of silently dropping types) and warns
+  when a legacy-attributed type is skipped because it lacks the conventional
+  `I{ClassName}` interface.
+- `IdevsContentResult.CreatePdfViewResult` accepts `string? downloadName = null`
+  with a guard against empty/whitespace input; eliminates a dead null-check on
+  the previously non-nullable parameter.
+
+### Migration
+
+- Replace direct `StaticServiceProvider` usage with constructor DI or `StaticServiceLocator`.
+- Add `Idevs.Net.CoreLib.Autofac` if the app uses `UseIdevsAutofac`, `IdevsModule`, or keyed service registration.
+- Add `Idevs.Net.CoreLib.Serilog` if the app wants Serilog-specific CoreLib logging setup.
+- Replace `[ScopedRegistration]` / `[SingletonRegiatration]` / `[TransientRegistration]`
+  with the new `[Scoped]` / `[Singleton]` / `[Transient]` attributes from
+  `Idevs.ComponentModels`. The legacy attributes still work but are marked obsolete.
+
 ## 0.3.3 (2025-10-02)
 
 ### Rollback to PuppeteerSharp Only

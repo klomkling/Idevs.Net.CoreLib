@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Inherits from the repo-root Directory.Build.props, then enables XML
+    documentation file generation for every project under src/. Only src/
+    is affected — projects under tests/ continue to use the root default
+    (no XML output).
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      Many existing public types do not yet have XML doc comments.
+      Suppressing CS1591 keeps the build green while consumers still receive
+      the .xml file alongside the .dll/.nupkg for the types that ARE documented.
+      Drop this suppression once full doc coverage is achieved.
+    -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

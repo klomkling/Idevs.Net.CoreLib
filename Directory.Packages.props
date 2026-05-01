@@ -1,0 +1,51 @@
+<Project>
+
+  <!--
+    Central Package Management. All <PackageReference Include="..." /> entries
+    in project files must NOT specify Version; the version comes from the
+    matching <PackageVersion> below.
+    https://learn.microsoft.com/nuget/consume-packages/Central-Package-Management
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Label="Library runtime dependencies">
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.14" />
+    <PackageVersion Include="ClosedXML" Version="0.105.0" />
+    <PackageVersion Include="FastMember" Version="1.5.0" />
+    <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <PackageVersion Include="Microsoft.TypeScript.MSBuild" Version="5.9.2" />
+    <PackageVersion Include="PuppeteerSharp" Version="20.2.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="Serenity (multi-targeted: pinned per TFM)">
+    <PackageVersion Include="Serenity.Net.Services" Version="8.8.9" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageVersion Include="Serenity.Net.Services" Version="10.3.1" Condition="'$(TargetFramework)' == 'net10.0'" />
+  </ItemGroup>
+
+  <ItemGroup Label="net8.0-only transitive pin">
+    <PackageVersion Include="SixLabors.ImageSharp" Version="2.1.12" Condition="'$(TargetFramework)' == 'net8.0'" />
+  </ItemGroup>
+
+  <ItemGroup Label="Optional integration packages">
+    <PackageVersion Include="Autofac" Version="8.4.0" />
+    <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageVersion Include="Autofac.Extras.AttributeMetadata" Version="6.0.0" />
+    <PackageVersion Include="Serilog" Version="4.3.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.2" />
+  </ItemGroup>
+
+  <ItemGroup Label="Test dependencies">
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

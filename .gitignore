@@ -525,3 +525,9 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/vs,rider,visualstudiocode,macos,windows,dotnetcore
+
+# Local documentation (plans, specs, scratch notes)
+docs/superpowers/*
+
+# Claude Code session/workspace files
+.claude/

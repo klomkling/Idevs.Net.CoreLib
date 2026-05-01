@@ -1,0 +1,223 @@
+using System.Diagnostics;
+using System.Reflection;
+using Idevs.ComponentModel;
+using Idevs.ComponentModels;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Idevs.Extensions;
+
+/// <summary>
+/// Extension methods for configuring Idevs.Net.CoreLib services
+/// </summary>
+public static class ServiceExtensions
+{
+    /// <summary>
+    /// Adds Idevs CoreLib services to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The updated service collection</returns>
+    public static IServiceCollection AddIdevsCorelibServices(this IServiceCollection services)
+    {
+        // Register core services directly for standard DI scenarios
+        services.AddScoped<IViewPageRenderer, ViewPageRenderer>();
+        services.AddScoped<IIdevsExcelExporter, IdevsExcelExporter>();
+        services.AddSingleton<IIdevsPdfExporter>(_ => new IdevsPdfExporter());
+
+        // Register attribute-based services
+        RegisterAttributeBasedServices(services);
+        
+        return services;
+    }
+
+    /// <summary>
+    /// Registers services decorated with registration attributes.
+    /// This method is maintained for backward compatibility
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The updated service collection</returns>
+    [Obsolete("Use AddIdevsCorelibServices() instead, which includes attribute-based registration")]
+    public static IServiceCollection RegisterServices(this IServiceCollection services)
+    {
+        return AddIdevsCorelibServices(services);
+    }
+
+    /// <summary>
+    /// Registers services decorated with registration attributes using reflection.
+    /// Supports both legacy attributes and standard attributes
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    private static void RegisterAttributeBasedServices(IServiceCollection services)
+    {
+#pragma warning disable CS0618 // Keep legacy attribute discovery for backward compatibility.
+        // Legacy attribute types
+        var legacyScopedRegistration = typeof(ScopedRegistrationAttribute);
+        var legacySingletonRegistration = typeof(SingletonRegiatrationAttribute);
+        var legacyTransientRegistration = typeof(TransientRegistrationAttribute);
+#pragma warning restore CS0618
+
+        // Standard attribute types
+        var scopedAttribute = typeof(ScopedAttribute);
+        var singletonAttribute = typeof(SingletonAttribute);
+        var transientAttribute = typeof(TransientAttribute);
+
+        var types = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(assembly => !(assembly.FullName ?? string.Empty).StartsWith("System.Data.SqlClient"))
+            .Where(assembly => !(assembly.FullName ?? string.Empty).StartsWith("MySql.Data"))
+            .Where(assembly => !(assembly.FullName ?? string.Empty).StartsWith("Npgsql"))
+            .Where(assembly => !(assembly.FullName ?? string.Empty).StartsWith("System."))
+            .Where(assembly => !(assembly.FullName ?? string.Empty).StartsWith("Microsoft."))
+            .SelectMany(assembly =>
+            {
+                try
+                {
+                    return assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    Trace.TraceWarning(
+                        "Idevs.Net.CoreLib: Failed to fully load types from assembly '{0}'. {1} of {2} types could not be loaded; continuing with partial set. First loader exception: {3}",
+                        assembly.FullName,
+                        ex.LoaderExceptions?.Length ?? 0,
+                        ex.Types?.Length ?? 0,
+                        ex.LoaderExceptions?.FirstOrDefault()?.Message);
+                    return (ex.Types ?? Array.Empty<Type?>()).Where(t => t != null);
+                }
+            })
+            .Where(type => type is { IsInterface: false, IsAbstract: false })
+            .Where(type =>
+                // Legacy attributes
+                type != null && (
+                    type.IsDefined(legacyScopedRegistration, false) ||
+                    type.IsDefined(legacySingletonRegistration, false) ||
+                    type.IsDefined(legacyTransientRegistration, false) ||
+                    // Standard attributes
+                    type.IsDefined(scopedAttribute, false) ||
+                    type.IsDefined(singletonAttribute, false) ||
+                    type.IsDefined(transientAttribute, false)
+                    )
+                )
+            .ToList();
+
+        foreach (var implementationType in types.Where(implementationType =>
+                     !HandleLegacyAttributesForServiceCollection(services, implementationType, legacyScopedRegistration,
+                         legacySingletonRegistration, legacyTransientRegistration)))
+        {
+            // Handle standard attributes
+            HandleStandardAttributesForServiceCollection(services, implementationType);
+        }
+    }
+
+    /// <summary>
+    /// Handles legacy registration attributes for service collection
+    /// </summary>
+    private static bool HandleLegacyAttributesForServiceCollection(IServiceCollection services, Type? implementationType,
+        Type legacyScoped, Type legacySingleton, Type legacyTransient)
+    {
+        if (implementationType == null) return false;
+
+        var hasLegacyAttribute =
+            implementationType.IsDefined(legacyScoped, false) ||
+            implementationType.IsDefined(legacySingleton, false) ||
+            implementationType.IsDefined(legacyTransient, false);
+
+        if (!hasLegacyAttribute) return false;
+
+        var interfaceType = implementationType.GetInterface($"I{implementationType.Name}");
+        if (interfaceType == null)
+        {
+            Trace.TraceWarning(
+                "Idevs.Net.CoreLib: Type '{0}' is decorated with a legacy registration attribute but does not implement an interface named 'I{1}'. Skipping registration. Apply the standard ScopedAttribute/TransientAttribute/SingletonAttribute with an explicit ServiceType to register it.",
+                implementationType.FullName,
+                implementationType.Name);
+            return false;
+        }
+
+        if (implementationType.IsDefined(legacyScoped, false))
+        {
+            services.AddScoped(interfaceType, implementationType);
+            return true;
+        }
+
+        if (implementationType.IsDefined(legacyTransient, false))
+        {
+            services.AddTransient(interfaceType, implementationType);
+            return true;
+        }
+
+        services.AddSingleton(interfaceType, implementationType);
+        return true;
+    }
+
+    /// <summary>
+    /// Handles standard registration attributes for service collection
+    /// </summary>
+    private static void HandleStandardAttributesForServiceCollection(IServiceCollection services, Type? implementationType)
+    {
+        if (implementationType == null) return;
+
+        var attributes = implementationType
+            .GetCustomAttributes(inherit: false)
+            .OfType<IServiceRegistrationAttribute>()
+            .ToList();
+
+        if (attributes.Count == 0) return;
+
+        if (attributes.Count > 1)
+        {
+            Trace.TraceWarning(
+                "Idevs.Net.CoreLib: Type '{0}' has multiple service registration attributes ({1}). Only the first ({2}) will be applied.",
+                implementationType.FullName,
+                string.Join(", ", attributes.Select(a => a.GetType().Name)),
+                attributes[0].GetType().Name);
+        }
+
+        var attr = attributes[0];
+        RegisterWithStandardAttributeForServiceCollection(
+            services,
+            implementationType,
+            attr.ServiceType,
+            attr.ServiceKey,
+            attr.AllowSelfRegistration,
+            attr.Lifetime);
+    }
+
+    /// <summary>
+    /// Registers a service with standard attribute configuration for service collection
+    /// </summary>
+    private static void RegisterWithStandardAttributeForServiceCollection(IServiceCollection services, Type? implementationType,
+        Type? serviceType, string? serviceKey, bool allowSelfRegistration, ServiceLifetime lifetime)
+    {
+        // Determine the service type
+        var targetServiceType = serviceType ?? implementationType?.GetInterface($"I{implementationType.Name}");
+        
+        // If no interface found and self-registration is not allowed, try to find any interface
+        if (targetServiceType == null && !allowSelfRegistration)
+        {
+            var interfaces = implementationType?.GetInterfaces();
+            if (interfaces != null) targetServiceType = interfaces.FirstOrDefault();
+        }
+
+        // If still no service type and self-registration is allowed, use the implementation type
+        if (targetServiceType == null && allowSelfRegistration)
+        {
+            targetServiceType = implementationType;
+        }
+
+        // Skip registration if no valid service type found
+        if (targetServiceType == null) return;
+
+        // Register with appropriate lifetime (note: service keys are not supported in basic service collection)
+        switch (lifetime)
+        {
+            case ServiceLifetime.Scoped:
+                if (implementationType != null) services.AddScoped(targetServiceType, implementationType);
+                break;
+            case ServiceLifetime.Transient:
+                if (implementationType != null) services.AddTransient(targetServiceType, implementationType);
+                break;
+            case ServiceLifetime.Singleton:
+                if (implementationType != null) services.AddSingleton(targetServiceType, implementationType);
+                break;
+        }
+    }
+}
