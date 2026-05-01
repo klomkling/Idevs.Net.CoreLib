@@ -44,4 +44,22 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
             .Where(new Criteria(idField).In(idList.ToArray())),
             uow, ct);
     }
+
+    /// <summary>
+    /// Update <paramref name="row"/> by its Id field. Returns true when at least
+    /// one row was affected. The row's Id must be set before calling.
+    /// </summary>
+    public virtual Task<bool> UpdateAsync(
+        TRow row,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        if (row is null) throw new ArgumentNullException(nameof(row));
+
+        return ExecuteAsync((c, _) =>
+        {
+            var affected = c.UpdateById(row);
+            return Task.FromResult(affected > 0);
+        }, uow, ct);
+    }
 }

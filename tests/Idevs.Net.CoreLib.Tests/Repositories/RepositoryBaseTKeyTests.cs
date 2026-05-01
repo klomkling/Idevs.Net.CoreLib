@@ -82,4 +82,23 @@ public class RepositoryBaseTKeyTests
 
         Assert.Equal(1, repo.ExecuteAsyncCallCount);
     }
+
+    [Fact]
+    public async Task UpdateAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var row = new TestSampleRow { Id = 1, Code = "edit" };
+
+        await repo.UpdateAsync(row);
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NullRow_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.UpdateAsync(null!));
+    }
 }
