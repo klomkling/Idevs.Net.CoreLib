@@ -1,3 +1,4 @@
+using System.Data;
 using Idevs.Repositories;
 using NSubstitute;
 using Serenity.Data;
@@ -56,6 +57,48 @@ public class SqlServiceBaseTests
     {
         var subject = new OverrideSubject(Conns());
         Assert.Equal("Reports", InvokeProtectedConnectionKey(subject));
+    }
+
+    [Fact]
+    public void Dialect_IsCachedAfterFirstAccess_ConnectionsCreatedOnce()
+    {
+        var conns = new TestSqlConnections();
+        var subject = new ExposedSubject(conns);
+
+        var first = subject.PublicDialect;
+        var second = subject.PublicDialect;
+
+        Assert.NotNull(first);
+        Assert.Same(first, second);
+        Assert.Equal(1, conns.NewByKeyCallCount);
+    }
+
+    private sealed class ExposedSubject(ISqlConnections c) : SqlServiceBase(c)
+    {
+        public ISqlDialect PublicDialect => Dialect;
+    }
+
+    private sealed class TestSqlConnections : ISqlConnections
+    {
+        public int NewByKeyCallCount { get; private set; }
+
+        public IDbConnection NewByKey(string connectionKey)
+        {
+            NewByKeyCallCount++;
+            var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+            return new WrappedConnection(conn, SqliteDialect.Instance);
+        }
+
+        // ISqlConnections — minimal stubs sufficient for the test:
+        public IDbConnection New(string connectionString, string providerName, ISqlDialect dialect) =>
+            NewByKey("Default");
+        public IDbConnection NewFor<TRow>() where TRow : class, IRow => NewByKey("Default");
+        public string DefaultDialectKey { get; set; } = "sqlite";
+        public IConnectionString? TryGetConnectionString(string connectionKey) => null!;
+        public IConnectionString GetConnectionString(string connectionKey) => null!;
+        public IConnectionString GetConnectionStringFor<TRow>() where TRow : class, IRow => null!;
+        public IEnumerable<IConnectionString> ListConnectionStrings() => [];
+        public IConnectionStrings ConnectionStrings => null!;
     }
 
     private static string InvokeProtectedConnectionKey(SqlServiceBase subject)

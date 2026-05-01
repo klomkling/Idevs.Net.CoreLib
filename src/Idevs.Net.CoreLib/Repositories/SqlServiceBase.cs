@@ -25,6 +25,24 @@ public abstract class SqlServiceBase
     /// </summary>
     protected virtual string ConnectionKey => _connectionKeyFromAttribute;
 
+    private ISqlDialect? _dialect;
+
+    /// <summary>
+    /// Cached SQL dialect for this base's <see cref="ConnectionKey"/>. Resolved on
+    /// first access from the connection's metadata; cached for the lifetime of this
+    /// instance.
+    /// </summary>
+    protected ISqlDialect Dialect
+    {
+        get
+        {
+            if (_dialect != null) return _dialect;
+            using var connection = SqlConnections.NewByKey(ConnectionKey);
+            _dialect = connection.GetDialect();
+            return _dialect;
+        }
+    }
+
     protected SqlServiceBase(ISqlConnections sqlConnections)
     {
         SqlConnections = sqlConnections ?? throw new ArgumentNullException(nameof(sqlConnections));
