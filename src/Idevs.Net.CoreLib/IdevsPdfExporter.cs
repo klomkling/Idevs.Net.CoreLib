@@ -88,10 +88,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
 
     private void EnsureNotDisposed()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(IdevsPdfExporter));
-        }
+        if (!_disposed) return;
+        throw new ObjectDisposedException(nameof(IdevsPdfExporter));
     }
 
     /// <inheritdoc />

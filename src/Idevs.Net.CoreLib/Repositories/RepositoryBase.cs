@@ -8,11 +8,9 @@ namespace Idevs.Repositories;
 /// template inherited from <see cref="SqlServiceBase"/>.
 /// </summary>
 /// <typeparam name="TRow">A Serenity row type.</typeparam>
-public class RepositoryBase<TRow> : SqlServiceBase
+public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBase(sqlConnections)
     where TRow : class, IRow, new()
 {
-    public RepositoryBase(ISqlConnections sqlConnections) : base(sqlConnections) { }
-
     /// <summary>Return the first row that matches the configured query, or null.</summary>
     /// <remarks>
     /// The query is pre-bound to <see cref="SqlServiceBase.Dialect"/> before
@@ -24,7 +22,7 @@ public class RepositoryBase<TRow> : SqlServiceBase
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (configure is null) throw new ArgumentNullException(nameof(configure));
+        ArgumentNullException.ThrowIfNull(configure);
 
         return ExecuteAsync<TRow?>((c, _) =>
             Task.FromResult<TRow?>(c.TryFirst<TRow>(q =>
@@ -44,7 +42,7 @@ public class RepositoryBase<TRow> : SqlServiceBase
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (configure is null) throw new ArgumentNullException(nameof(configure));
+        ArgumentNullException.ThrowIfNull(configure);
 
         return ExecuteAsync((c, _) =>
             Task.FromResult(c.List<TRow>(q =>
@@ -67,7 +65,7 @@ public class RepositoryBase<TRow> : SqlServiceBase
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
+        ArgumentNullException.ThrowIfNull(row);
 
         return ExecuteAsync((c, _) =>
             Task.FromResult<long>(c.InsertAndGetID(row) ?? 0L),
@@ -94,7 +92,7 @@ public class RepositoryBase<TRow> : SqlServiceBase
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (keyField is null) throw new ArgumentNullException(nameof(keyField));
+        ArgumentNullException.ThrowIfNull(keyField);
 
         return FirstAsync(q => q
             .SelectTableFields()

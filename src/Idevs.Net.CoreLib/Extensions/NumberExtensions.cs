@@ -2,43 +2,46 @@ namespace Idevs.Extensions;
 
 public static class NumberExtensions
 {
-    public static decimal RoundNumber(this decimal source, short roundMethod = 0, int decimals = 2)
+    extension(decimal source)
     {
-        decimal result = 0;
-        if (roundMethod > 0)
+        public decimal RoundNumber(short roundMethod = 0, int decimals = 2)
         {
-            var r = Math.Round(source, 2);
-            result = roundMethod switch
+            decimal result = 0;
+            if (roundMethod > 0)
             {
-                1 => r - Math.Floor(r % 1 * 100) % 25 / 100, // Round down to quarter
-                2 => r - Math.Floor(r % 1 * 100) % 50 / 100, // Round down to half
-                3 => Math.Floor(r), // Round down to full
-                4 => Math.Floor(r) +
-                     (Math.Floor(r % 1 * 100) + (25 - Math.Floor(r % 1 * 100) % 25)) / 100, // Round up to quarter
-                5 => Math.Floor(r) +
-                     (Math.Floor(r % 1 * 100) + (50 - Math.Floor(r % 1 * 100) % 50)) / 100, // Round up to half
-                6 => Math.Ceiling(r), // Round up to full
-                7 => Math.Floor(r) + Math.Round(Math.Round(r % 1 * 100) / 25, 0) * 25 / 100, // Round to quarter
-                8 => Math.Floor(r) + Math.Round(Math.Round(r % 1 * 100) / 50, 0) * 50 / 100, // Round to half
-                9 => Math.Round(r, 0), // Round to full
-                _ => r // Not round
-            };
+                var r = Math.Round(source, 2);
+                result = roundMethod switch
+                {
+                    1 => r - Math.Floor(r % 1 * 100) % 25 / 100, // Round down to quarter
+                    2 => r - Math.Floor(r % 1 * 100) % 50 / 100, // Round down to half
+                    3 => Math.Floor(r), // Round down to full
+                    4 => Math.Floor(r) +
+                         (Math.Floor(r % 1 * 100) + (25 - Math.Floor(r % 1 * 100) % 25)) / 100, // Round up to quarter
+                    5 => Math.Floor(r) +
+                         (Math.Floor(r % 1 * 100) + (50 - Math.Floor(r % 1 * 100) % 50)) / 100, // Round up to half
+                    6 => Math.Ceiling(r), // Round up to full
+                    7 => Math.Floor(r) + Math.Round(Math.Round(r % 1 * 100) / 25, 0) * 25 / 100, // Round to quarter
+                    8 => Math.Floor(r) + Math.Round(Math.Round(r % 1 * 100) / 50, 0) * 50 / 100, // Round to half
+                    9 => Math.Round(r, 0), // Round to full
+                    _ => r // Not round
+                };
+            }
+            else
+            {
+                result = decimals > 2
+                    ? Math.Ceiling(source * (decimal)Math.Pow(10, decimals)) / (decimal)Math.Pow(10, decimals)
+                    : Math.Round(
+                        Math.Round(source * (decimal)Math.Pow(10, decimals + 1)) / (decimal)Math.Pow(10, decimals + 1),
+                        decimals);
+            }
+
+            return result;
         }
-        else
+
+        public decimal RoundVat(int decimals = 2)
         {
-            result = decimals > 2
-                ? Math.Ceiling(source * (decimal)Math.Pow(10, decimals)) / (decimal)Math.Pow(10, decimals)
-                : Math.Round(
-                    Math.Round(source * (decimal)Math.Pow(10, decimals + 1)) / (decimal)Math.Pow(10, decimals + 1),
-                    decimals);
+            return Math.Ceiling(source * (decimal)Math.Pow(10, decimals)) / (decimal)Math.Pow(10, decimals);
         }
-
-        return result;
-    }
-
-    public static decimal RoundVat(this decimal source, int decimals = 2)
-    {
-        return Math.Ceiling(source * (decimal)Math.Pow(10, decimals)) / (decimal)Math.Pow(10, decimals);
     }
 
     /***************************************************

@@ -1,6 +1,27 @@
 # Changelog
 
-## 0.6.0 (2026-05-01)
+## 0.6.1 (2026-05-01)
+
+### Changed (internal modernization, no public API change)
+
+- Adopt C# 12 primary constructors on `RepositoryBase<TRow>` and
+  `RepositoryBase<TRow, TKey>`.
+- Adopt collection expressions (`[]`) for empty/static lists and arrays
+  throughout `src/`.
+- Standardise on `ArgumentNullException.ThrowIfNull(x)` everywhere the
+  classic `if (x is null) throw …` pattern remained — completes the
+  Ardalis-removal sweep.
+- Use C# 14 `extension(T receiver) { … }` declarations to group related
+  extension methods in `NumberExtensions`, `TextLocalizerExtensions`,
+  `WebApplicationExtensions`, and (Autofac) `WebApplicationBuilderExtensions`.
+  Compiled IL is unchanged; existing call sites continue to work.
+- Rename internal `LogManager.loggerFactory` field to `_loggerFactory` to
+  match the underscore-prefix convention (private; no API impact).
+- Minor refactors in `IdevsPdfExporter`, `SmartPagination`, `CloudUploadStorage`,
+  `IdevsExcelExporter` for readability (early-return inversions, ternary
+  `throw` patterns).
+
+
 
 ### Breaking Changes
 

@@ -7,25 +7,28 @@ namespace Idevs.Extensions;
 /// </summary>
 public static class WebApplicationExtensions
 {
-    /// <summary>
-    /// Initializes the StaticServiceLocator with the application's service provider.
-    /// </summary>
-    public static WebApplication UseIdevsStaticServiceLocator(this WebApplication app)
+    extension(WebApplication app)
     {
-        ArgumentNullException.ThrowIfNull(app);
+        /// <summary>
+        /// Initializes the StaticServiceLocator with the application's service provider.
+        /// </summary>
+        public WebApplication UseIdevsStaticServiceLocator()
+        {
+            ArgumentNullException.ThrowIfNull(app);
 
-        StaticServiceLocator.Initialize(app.Services);
-        return app;
-    }
+            StaticServiceLocator.Initialize(app.Services);
+            return app;
+        }
 
-    /// <summary>
-    /// Initializes the StaticServiceLocator with a specific service provider.
-    /// </summary>
-    public static WebApplication UseIdevsStaticServiceLocator(this WebApplication app, IServiceProvider provider)
-    {
-        ArgumentNullException.ThrowIfNull(app);
+        /// <summary>
+        /// Initializes the StaticServiceLocator with a specific service provider.
+        /// </summary>
+        public WebApplication UseIdevsStaticServiceLocator(IServiceProvider provider)
+        {
+            ArgumentNullException.ThrowIfNull(app);
 
-        StaticServiceLocator.Initialize(provider);
-        return app;
+            StaticServiceLocator.Initialize(provider);
+            return app;
+        }
     }
 }

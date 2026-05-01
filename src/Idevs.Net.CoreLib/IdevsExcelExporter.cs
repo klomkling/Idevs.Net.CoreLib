@@ -157,16 +157,16 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         return Generate(data, columns, headers);
     }
 
-    private static readonly Type[] DateTimeTypes = new[]
-    {
+    private static readonly Type[] DateTimeTypes =
+    [
         typeof(DateTime),
         typeof(DateTime?),
         typeof(TimeSpan),
         typeof(TimeSpan?)
-    };
+    ];
 
-    private static readonly Type[] NumberTypes = new[]
-    {
+    private static readonly Type[] NumberTypes =
+    [
         typeof(short),
         typeof(short?),
         typeof(int),
@@ -177,7 +177,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         typeof(float?),
         typeof(decimal),
         typeof(decimal?)
-    };
+    ];
 
     private static string FixFormatSpecifier(string format, Type dataType)
     {
@@ -235,8 +235,9 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         
         using var workbook = CreateWorkbook(sheetName);
         var worksheet = workbook.Worksheets.First();
-        
-        var startRow = CalculateStartRow(reportHeaders);
+
+        var headers = reportHeaders?.ToArray() ?? [];
+        var startRow = CalculateStartRow(headers);
         CreateTableHeader(worksheet, columns, startRow);
         
         var dataList = ExtractDataFromRows(rows, columns);
@@ -249,7 +250,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         ApplyColumnFormatting(worksheet, columns);
         worksheet.Columns().AdjustToContents();
         
-        AddReportHeaders(worksheet, reportHeaders);
+        AddReportHeaders(worksheet, headers);
         
         return SaveWorkbookToByteArray(workbook);
     }

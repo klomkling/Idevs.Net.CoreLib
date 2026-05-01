@@ -8,11 +8,9 @@ namespace Idevs.Repositories;
 /// </summary>
 /// <typeparam name="TRow">A Serenity row that implements <see cref="IIdRow"/>.</typeparam>
 /// <typeparam name="TKey">The Id value type (typically <see cref="int"/> or <see cref="long"/>).</typeparam>
-public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
+public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : RepositoryBase<TRow>(sqlConnections)
     where TRow : class, IRow, IIdRow, new()
 {
-    public RepositoryBase(ISqlConnections sqlConnections) : base(sqlConnections) { }
-
     /// <summary>Fetch a single row by its Id, or null if not found.</summary>
     public virtual Task<TRow?> GetByIdAsync(
         TKey id,
@@ -35,7 +33,7 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        var idList = ids?.ToList() ?? new List<TKey>();
+        var idList = ids?.ToList() ?? [];
         if (idList.Count == 0) return Task.FromResult(new List<TRow>());
 
         var idField = ((IIdRow)new TRow()).IdField;
@@ -54,7 +52,7 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (row is null) throw new ArgumentNullException(nameof(row));
+        ArgumentNullException.ThrowIfNull(row);
 
         return ExecuteAsync((c, _) =>
         {

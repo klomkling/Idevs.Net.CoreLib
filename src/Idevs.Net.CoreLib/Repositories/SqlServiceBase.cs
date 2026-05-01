@@ -70,7 +70,7 @@ public abstract class SqlServiceBase
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
-        if (work is null) throw new ArgumentNullException(nameof(work));
+        ArgumentNullException.ThrowIfNull(work);
         ct.ThrowIfCancellationRequested();
 
         if (uow is not null)
