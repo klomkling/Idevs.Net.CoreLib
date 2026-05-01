@@ -119,4 +119,97 @@ public class SqlServiceBaseTests
         Assert.NotNull(value);
         return (string)value;
     }
+
+    [Fact]
+    public async Task ExecuteAsync_NoUow_OpensConnection_RunsWork_DisposesConnection()
+    {
+        var conns = Substitute.For<ISqlConnections>();
+        var connection = Substitute.For<IDbConnection>();
+        conns.NewByKey("Default").Returns(connection);
+
+        var subject = new ExecutorSubject(conns);
+
+        IDbConnection? capturedConn = null;
+        var result = await subject.RunAsync(async (c, _) =>
+        {
+            capturedConn = c;
+            return 42;
+        });
+
+        Assert.Equal(42, result);
+        Assert.Same(connection, capturedConn);
+        connection.Received(1).Dispose();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithUow_UsesUowConnection_DoesNotDispose()
+    {
+        var conns = Substitute.For<ISqlConnections>();
+        var ownedConnection = Substitute.For<IDbConnection>();
+        var uowConnection = Substitute.For<IDbConnection>();
+        conns.NewByKey("Default").Returns(ownedConnection);
+
+        var uow = new UnitOfWork(uowConnection);
+        var subject = new ExecutorSubject(conns);
+
+        IDbConnection? capturedConn = null;
+        await subject.RunAsync(async (c, _) =>
+        {
+            capturedConn = c;
+            return 0;
+        }, uow);
+
+        Assert.Same(uowConnection, capturedConn);
+        uowConnection.DidNotReceive().Dispose();
+        ownedConnection.DidNotReceive().Dispose();
+        conns.DidNotReceive().NewByKey(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CancelledToken_ThrowsBeforeOpeningConnection()
+    {
+        var conns = Substitute.For<ISqlConnections>();
+        var subject = new ExecutorSubject(conns);
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            subject.RunAsync(async (_, _) => 0, ct: cts.Token));
+
+        conns.DidNotReceive().NewByKey(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NullWork_Throws()
+    {
+        var subject = new ExecutorSubject(Substitute.For<ISqlConnections>());
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            subject.RunAsync<int>(work: null!));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WorkThrows_ConnectionStillDisposed_ExceptionPropagates()
+    {
+        var conns = Substitute.For<ISqlConnections>();
+        var connection = Substitute.For<IDbConnection>();
+        conns.NewByKey("Default").Returns(connection);
+
+        var subject = new ExecutorSubject(conns);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            subject.RunAsync<int>(async (_, _) => throw new InvalidOperationException("boom")));
+
+        connection.Received(1).Dispose();
+    }
+
+    private sealed class ExecutorSubject(ISqlConnections c) : SqlServiceBase(c)
+    {
+        public Task<T> RunAsync<T>(
+            Func<IDbConnection, CancellationToken, Task<T>> work,
+            UnitOfWork? uow = null,
+            CancellationToken ct = default)
+            => ExecuteAsync(work, uow, ct);
+    }
 }

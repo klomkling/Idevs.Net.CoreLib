@@ -1,3 +1,4 @@
+using System.Data;
 using System.Reflection;
 using Serenity.Data;
 
@@ -46,5 +47,36 @@ public abstract class SqlServiceBase
             using var connection = SqlConnections.NewByKey(ConnectionKey);
             return connection.GetDialect();
         });
+    }
+
+    /// <summary>
+    /// Run <paramref name="work"/> on a managed connection.
+    /// </summary>
+    /// <param name="work">Delegate that receives the open <see cref="IDbConnection"/>
+    /// and the cancellation token.</param>
+    /// <param name="uow">Optional UnitOfWork. When provided, <paramref name="work"/> runs
+    /// against <c>uow.Connection</c> and the connection is NOT disposed by this method —
+    /// the caller owns the lifetime. When null, a connection is opened from
+    /// <see cref="ConnectionKey"/> for the duration of the call and disposed on exit.</param>
+    /// <param name="ct">Cancellation token. Checked before opening a connection.</param>
+    /// <remarks>
+    /// Does not catch exceptions. If <paramref name="work"/> throws, the exception
+    /// propagates and the connection (if owned) is still disposed via <c>using</c>.
+    /// Override in derived classes to add retry, structured logging, or other
+    /// cross-cutting concerns.
+    /// </remarks>
+    protected virtual async Task<T> ExecuteAsync<T>(
+        Func<IDbConnection, CancellationToken, Task<T>> work,
+        UnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        if (work is null) throw new ArgumentNullException(nameof(work));
+        ct.ThrowIfCancellationRequested();
+
+        if (uow is not null)
+            return await work(uow.Connection, ct).ConfigureAwait(false);
+
+        using var connection = SqlConnections.NewByKey(ConnectionKey);
+        return await work(connection, ct).ConfigureAwait(false);
     }
 }
