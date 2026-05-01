@@ -86,6 +86,8 @@ public class RepositoryBase<TRow> : SqlServiceBase
     /// <typeparam name="TValue">The field's value type (e.g., <see cref="string"/> for a <see cref="StringField"/>).</typeparam>
     /// <param name="keyField">A Serenity field (e.g., <c>FooRow.Fields.Code</c>).</param>
     /// <param name="value">The value to match.</param>
+    /// <param name="uow">Optional unit of work; when supplied, the lookup runs against the caller's connection.</param>
+    /// <param name="ct">Cancellation token, propagated to the underlying connection scope.</param>
     public virtual Task<TRow?> GetByAsync<TValue>(
         Field keyField,
         TValue value,

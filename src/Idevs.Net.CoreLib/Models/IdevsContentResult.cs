@@ -13,10 +13,10 @@ public enum IdevsContentType
 public class IdevsContentResult
 {
     /// <summary>
-    /// Creates a FileContentResult containing passed data
+    /// Creates a FileContentResult containing passed data.
     /// </summary>
-    /// <param name="data">Data containing Pdf bytes</param>
-    /// <returns></returns>
+    /// <param name="data">Raw bytes to return as the file payload.</param>
+    /// <param name="contentType">Content type used to derive the MIME type and the default download extension.</param>
     public static FileContentResult Create(byte[] data, IdevsContentType contentType)
     {
         return Create(data, contentType, null);
