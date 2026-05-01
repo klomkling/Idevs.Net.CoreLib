@@ -208,7 +208,7 @@ public class SqlServiceBaseTests
     {
         public Task<T> RunAsync<T>(
             Func<IDbConnection, CancellationToken, Task<T>> work,
-            UnitOfWork? uow = null,
+            IUnitOfWork? uow = null,
             CancellationToken ct = default)
             => ExecuteAsync(work, uow, ct);
     }

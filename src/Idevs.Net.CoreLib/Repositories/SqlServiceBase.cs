@@ -67,7 +67,7 @@ public abstract class SqlServiceBase
     /// </remarks>
     protected virtual async Task<T> ExecuteAsync<T>(
         Func<IDbConnection, CancellationToken, Task<T>> work,
-        UnitOfWork? uow = null,
+        IUnitOfWork? uow = null,
         CancellationToken ct = default)
     {
         if (work is null) throw new ArgumentNullException(nameof(work));
