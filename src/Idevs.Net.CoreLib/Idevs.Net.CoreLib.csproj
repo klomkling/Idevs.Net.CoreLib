@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PackageId>Idevs.Net.CoreLib</PackageId>
+    <Version>0.5.0</Version>
+    <PackageTags>Idevs; CoreLib; Serenity; Extended</PackageTags>
+    <Description>A library to extend Serenity Framework.</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup Label="Packaging">
+    <Content Include="build\Idevs.Net.CoreLib.targets" PackagePath="build\Idevs.Net.CoreLib.targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ardalis.GuardClauses" />
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="FastMember" />
+    <PackageReference Include="Handlebars.Net" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="PuppeteerSharp" />
+    <PackageReference Include="Microsoft.TypeScript.MSBuild">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serenity.Net.Services" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+
+</Project>

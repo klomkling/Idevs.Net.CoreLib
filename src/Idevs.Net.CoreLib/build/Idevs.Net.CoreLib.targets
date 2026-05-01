@@ -1,0 +1,66 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--
+      Idevs.Net.CoreLib opt-in client assets installation.
+
+      Behavior
+      - On the first build that does not yet have @idevs/corelib in node_modules, this
+        target shells out to `npm install @idevs/corelib --no-save` so consumer projects
+        get the matching client-side assets.
+      - On every build, any CSS shipped under @idevs/corelib/css is copied into
+        wwwroot/lib/Idevs/Content for static serving.
+
+      Opting out
+      - Set <IdevsCoreLibInstallNpmPackage>false</IdevsCoreLibInstallNpmPackage> in the
+        consuming project's csproj or via `dotnet build /p:IdevsCoreLibInstallNpmPackage=false`.
+      - Useful for air-gapped CI or environments without npm.
+
+      Failure modes handled here
+      - Forward-slash paths so Exists() works on macOS/Linux as well as Windows.
+      - If npm is not on PATH, the install step is skipped with a warning instead of
+        producing an opaque exit-code build failure.
+    -->
+
+    <PropertyGroup>
+        <IdevsCoreLibInstallNpmPackage Condition="'$(IdevsCoreLibInstallNpmPackage)' == ''">true</IdevsCoreLibInstallNpmPackage>
+        <_IdevsCoreLibPackageMarker>$(ProjectDir)node_modules/@idevs/corelib/dist/index.d.ts</_IdevsCoreLibPackageMarker>
+    </PropertyGroup>
+
+    <Target Name="_IdevsCoreLibDetectNpm"
+            Condition="'$(IdevsCoreLibInstallNpmPackage)' == 'true' And !Exists('$(_IdevsCoreLibPackageMarker)')">
+        <Exec Command="npm --version"
+              IgnoreExitCode="true"
+              StandardOutputImportance="low"
+              StandardErrorImportance="low"
+              ConsoleToMSBuild="true">
+            <Output TaskParameter="ExitCode" PropertyName="_IdevsCoreLibNpmExitCode" />
+        </Exec>
+        <PropertyGroup>
+            <_IdevsCoreLibNpmAvailable Condition="'$(_IdevsCoreLibNpmExitCode)' == '0'">true</_IdevsCoreLibNpmAvailable>
+            <_IdevsCoreLibNpmAvailable Condition="'$(_IdevsCoreLibNpmExitCode)' != '0'">false</_IdevsCoreLibNpmAvailable>
+        </PropertyGroup>
+        <Warning Condition="'$(_IdevsCoreLibNpmAvailable)' != 'true'"
+                 Code="IDEVSCORELIB001"
+                 Text="Skipping @idevs/corelib npm install: npm was not found on PATH. Set IdevsCoreLibInstallNpmPackage=false to silence this warning, or install Node.js to fetch client assets." />
+    </Target>
+
+    <Target Name="NpmInstall"
+            BeforeTargets="BeforeBuild"
+            DependsOnTargets="_IdevsCoreLibDetectNpm"
+            Condition="'$(IdevsCoreLibInstallNpmPackage)' == 'true' And '$(_IdevsCoreLibNpmAvailable)' == 'true' And !Exists('$(_IdevsCoreLibPackageMarker)')">
+        <Message Text="Installing @idevs/corelib via npm (set IdevsCoreLibInstallNpmPackage=false to opt out)..." Importance="high" />
+        <Exec Command="npm install @idevs/corelib --no-save"
+              WorkingDirectory="$(ProjectDir)" />
+    </Target>
+
+    <Target Name="CopyContentToProject"
+            BeforeTargets="Build"
+            Condition="Exists('$(ProjectDir)node_modules/@idevs/corelib/css')">
+        <Message Text="Copying @idevs/corelib content to wwwroot" Importance="normal" />
+        <ItemGroup>
+            <ContentFiles Include="$(ProjectDir)node_modules/@idevs/corelib/css/*.css" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ContentFiles)"
+              DestinationFolder="$(ProjectDir)wwwroot/lib/Idevs/Content/" />
+    </Target>
+</Project>
