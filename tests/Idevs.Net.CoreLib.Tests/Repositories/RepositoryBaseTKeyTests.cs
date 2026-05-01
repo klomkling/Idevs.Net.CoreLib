@@ -48,4 +48,38 @@ public class RepositoryBaseTKeyTests
         Assert.Same(uow, repo.LastUow);
         Assert.Equal(cts.Token, repo.LastCt);
     }
+
+    [Fact]
+    public async Task GetByIdsAsync_EmptyInput_DoesNotCallExecuteAsync_ReturnsEmptyList()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        var result = await repo.GetByIdsAsync(Array.Empty<int>());
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+        Assert.Equal(0, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_NullInput_DoesNotCallExecuteAsync_ReturnsEmptyList()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        var result = await repo.GetByIdsAsync(null!);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+        Assert.Equal(0, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_NonEmpty_DispatchesViaListAsyncWhichDispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.GetByIdsAsync(new[] { 1, 2, 3 });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
 }

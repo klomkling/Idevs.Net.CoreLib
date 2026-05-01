@@ -23,4 +23,25 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
             Task.FromResult<TRow?>(c.TryById<TRow>(id!)),
             uow, ct);
     }
+
+    /// <summary>
+    /// Fetch all rows whose Id is contained in <paramref name="ids"/>. Returns an
+    /// empty list when <paramref name="ids"/> is null or empty without opening a
+    /// connection. Consumers are responsible for chunking large id lists to stay
+    /// within engine parameter limits (e.g., SQL Server 2100).
+    /// </summary>
+    public virtual Task<List<TRow>> GetByIdsAsync(
+        IEnumerable<TKey> ids,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        var idList = ids?.ToList() ?? new List<TKey>();
+        if (idList.Count == 0) return Task.FromResult(new List<TRow>());
+
+        var idField = ((IIdRow)new TRow()).IdField;
+        return ListAsync(q => q
+            .SelectTableFields()
+            .Where(new Criteria(idField).In(idList.ToArray())),
+            uow, ct);
+    }
 }
