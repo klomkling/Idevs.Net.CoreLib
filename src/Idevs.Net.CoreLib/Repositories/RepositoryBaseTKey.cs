@@ -82,4 +82,24 @@ public class RepositoryBase<TRow, TKey> : RepositoryBase<TRow>
             return Task.FromResult(affected > 0);
         }, uow, ct);
     }
+
+    private const string ObsoleteSyncMessage =
+        "Sync wrapper kept for migration. Prefer the *Async variant. " +
+        "Will be removed once underlying SQL APIs become real-async (~1.0).";
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual TRow? GetById(TKey id, IUnitOfWork? uow = null) =>
+        GetByIdAsync(id, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual List<TRow> GetByIds(IEnumerable<TKey> ids, IUnitOfWork? uow = null) =>
+        GetByIdsAsync(ids, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool Update(TRow row, IUnitOfWork? uow = null) =>
+        UpdateAsync(row, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool DeleteById(TKey id, IUnitOfWork? uow = null) =>
+        DeleteByIdAsync(id, uow).GetAwaiter().GetResult();
 }
