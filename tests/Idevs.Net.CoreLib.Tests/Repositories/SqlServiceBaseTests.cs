@@ -1,4 +1,3 @@
-using System.Data;
 using Idevs.Repositories;
 using NSubstitute;
 using Serenity.Data;
@@ -52,12 +51,22 @@ public class SqlServiceBaseTests
         Assert.Equal("Reports", InvokeProtectedConnectionKey(subject));
     }
 
+    [Fact]
+    public void ConnectionKey_VirtualOverride_WinsWithoutAttribute()
+    {
+        var subject = new OverrideSubject(Conns());
+        Assert.Equal("Reports", InvokeProtectedConnectionKey(subject));
+    }
+
     private static string InvokeProtectedConnectionKey(SqlServiceBase subject)
     {
         var prop = typeof(SqlServiceBase).GetProperty(
             "ConnectionKey",
             System.Reflection.BindingFlags.Instance |
             System.Reflection.BindingFlags.NonPublic);
-        return (string)prop!.GetValue(subject)!;
+        Assert.NotNull(prop);
+        var value = prop.GetValue(subject);
+        Assert.NotNull(value);
+        return (string)value;
     }
 }
