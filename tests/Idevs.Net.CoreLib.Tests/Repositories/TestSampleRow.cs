@@ -15,7 +15,10 @@ public sealed class TestSampleRow : Row<TestSampleRow.RowFields>, IIdRow, INameR
 
     public TestSampleRow() : base() { }
 
-    public new static readonly RowFields Fields = new();
+    // Use the shared RowFields instance from Row<TFields> so that Serenity's
+    // RowFieldsBase infrastructure populates the field members (Id, Code, etc.)
+    // before any test accesses them via the static Fields property.
+    public new static readonly RowFields Fields = (RowFields)new TestSampleRow().GetFields();
 
     public sealed class RowFields : RowFieldsBase
     {

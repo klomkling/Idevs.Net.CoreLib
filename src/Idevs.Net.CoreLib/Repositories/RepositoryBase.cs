@@ -53,4 +53,30 @@ public class RepositoryBase<TRow> : SqlServiceBase
                 configure(q);
             })), uow, ct);
     }
+
+    /// <summary>
+    /// Look up a single row by a Serenity field reference and value.
+    /// </summary>
+    /// <remarks>
+    /// Uses the non-generic <see cref="Field"/> base because concrete Serenity field types
+    /// (e.g., <see cref="StringField"/>, <see cref="Int32Field"/>) do not all share a common
+    /// generic ancestor. The <paramref name="value"/> parameter is typed to <typeparamref name="TValue"/>
+    /// to preserve call-site type safety.
+    /// </remarks>
+    /// <typeparam name="TValue">The field's value type (e.g., <see cref="string"/> for a <see cref="StringField"/>).</typeparam>
+    /// <param name="keyField">A Serenity field (e.g., <c>FooRow.Fields.Code</c>).</param>
+    /// <param name="value">The value to match.</param>
+    public virtual Task<TRow?> GetByAsync<TValue>(
+        Field keyField,
+        TValue value,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        if (keyField is null) throw new ArgumentNullException(nameof(keyField));
+
+        return FirstAsync(q => q
+            .SelectTableFields()
+            .WhereEqual(keyField, value),
+            uow, ct);
+    }
 }
