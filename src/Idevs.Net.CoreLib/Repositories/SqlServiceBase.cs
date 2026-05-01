@@ -25,23 +25,14 @@ public abstract class SqlServiceBase
     /// </summary>
     protected virtual string ConnectionKey => _connectionKeyFromAttribute;
 
-    private ISqlDialect? _dialect;
+    private readonly Lazy<ISqlDialect> _dialect;
 
     /// <summary>
     /// Cached SQL dialect for this base's <see cref="ConnectionKey"/>. Resolved on
     /// first access from the connection's metadata; cached for the lifetime of this
-    /// instance.
+    /// instance. Resolution is thread-safe (single execution, published once).
     /// </summary>
-    protected ISqlDialect Dialect
-    {
-        get
-        {
-            if (_dialect != null) return _dialect;
-            using var connection = SqlConnections.NewByKey(ConnectionKey);
-            _dialect = connection.GetDialect();
-            return _dialect;
-        }
-    }
+    protected ISqlDialect Dialect => _dialect.Value;
 
     protected SqlServiceBase(ISqlConnections sqlConnections)
     {
@@ -49,5 +40,11 @@ public abstract class SqlServiceBase
 
         var attr = GetType().GetCustomAttribute<ConnectionKeyAttribute>(inherit: true);
         _connectionKeyFromAttribute = attr?.Key ?? "Default";
+
+        _dialect = new Lazy<ISqlDialect>(() =>
+        {
+            using var connection = SqlConnections.NewByKey(ConnectionKey);
+            return connection.GetDialect();
+        });
     }
 }

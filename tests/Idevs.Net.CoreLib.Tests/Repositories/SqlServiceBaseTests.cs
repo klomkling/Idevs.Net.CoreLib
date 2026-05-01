@@ -86,6 +86,9 @@ public class SqlServiceBaseTests
         {
             NewByKeyCallCount++;
             var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+            // We don't Open() the connection — Serenity's WrappedConnection returns the
+            // pre-supplied SqliteDialect.Instance from GetDialect() without touching the
+            // underlying provider, so an unopened SqliteConnection is fine for this test.
             return new WrappedConnection(conn, SqliteDialect.Instance);
         }
 
@@ -94,11 +97,15 @@ public class SqlServiceBaseTests
             NewByKey("Default");
         public IDbConnection NewFor<TRow>() where TRow : class, IRow => NewByKey("Default");
         public string DefaultDialectKey { get; set; } = "sqlite";
-        public IConnectionString? TryGetConnectionString(string connectionKey) => null!;
-        public IConnectionString GetConnectionString(string connectionKey) => null!;
-        public IConnectionString GetConnectionStringFor<TRow>() where TRow : class, IRow => null!;
+        public IConnectionString? TryGetConnectionString(string connectionKey) =>
+            throw new NotImplementedException("Not used by current tests.");
+        public IConnectionString GetConnectionString(string connectionKey) =>
+            throw new NotImplementedException("Not used by current tests.");
+        public IConnectionString GetConnectionStringFor<TRow>() where TRow : class, IRow =>
+            throw new NotImplementedException("Not used by current tests.");
         public IEnumerable<IConnectionString> ListConnectionStrings() => [];
-        public IConnectionStrings ConnectionStrings => null!;
+        public IConnectionStrings ConnectionStrings =>
+            throw new NotImplementedException("Not used by current tests.");
     }
 
     private static string InvokeProtectedConnectionKey(SqlServiceBase subject)
