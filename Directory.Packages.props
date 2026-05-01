@@ -13,7 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup Label="Library runtime dependencies">
-    <PackageVersion Include="Ardalis.GuardClauses" Version="5.0.0" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.14" />
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
     <PackageVersion Include="FastMember" Version="1.5.0" />

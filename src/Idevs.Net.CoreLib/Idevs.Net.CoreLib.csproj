@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ardalis.GuardClauses" />
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="ClosedXML" />
     <PackageReference Include="FastMember" />
