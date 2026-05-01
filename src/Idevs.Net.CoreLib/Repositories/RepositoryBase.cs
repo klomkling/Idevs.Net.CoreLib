@@ -55,6 +55,26 @@ public class RepositoryBase<TRow> : SqlServiceBase
     }
 
     /// <summary>
+    /// Insert <paramref name="row"/> and return the new identity (or 0 if the row
+    /// type does not implement <see cref="IIdRow"/>).
+    /// </summary>
+    /// <remarks>
+    /// For updates, use <c>UpdateAsync</c>. The explicit Create/Update split mirrors
+    /// Serenity's endpoint convention.
+    /// </remarks>
+    public virtual Task<long> CreateAsync(
+        TRow row,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        if (row is null) throw new ArgumentNullException(nameof(row));
+
+        return ExecuteAsync((c, _) =>
+            Task.FromResult<long>(c.InsertAndGetID(row) ?? 0L),
+            uow, ct);
+    }
+
+    /// <summary>
     /// Look up a single row by a Serenity field reference and value.
     /// </summary>
     /// <remarks>

@@ -78,4 +78,23 @@ public class RepositoryBaseTests
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             repo.GetByAsync<string>(keyField: null!, value: "abc"));
     }
+
+    [Fact]
+    public async Task CreateAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var row = new TestSampleRow { Code = "new" };
+
+        await repo.CreateAsync(row);
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullRow_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.CreateAsync(null!));
+    }
 }
