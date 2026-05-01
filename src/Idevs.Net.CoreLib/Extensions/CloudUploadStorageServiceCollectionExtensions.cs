@@ -9,32 +9,35 @@ namespace Idevs.Extensions;
 
 public static class CloudUploadStorageServiceCollectionExtensions
 {
-    public static IServiceCollection AddCloudUploadStorage(this IServiceCollection services, IConfiguration configuration)
+    extension(IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configuration);
+        public IServiceCollection AddCloudUploadStorage(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(configuration);
 
-        var section = configuration.GetSection(CloudUploadStorageOptions.SectionName);
-        services.Configure<CloudUploadStorageOptions>(section);
+            var section = configuration.GetSection(CloudUploadStorageOptions.SectionName);
+            services.Configure<CloudUploadStorageOptions>(section);
 
-        var provider = section.GetValue<string>(nameof(CloudUploadStorageOptions.Provider), CloudUploadStorageOptions.DefaultProvider);
-        RegisterCloudStorageWhenNeeded(services, provider);
+            var provider = section.GetValue<string>(nameof(CloudUploadStorageOptions.Provider), CloudUploadStorageOptions.DefaultProvider);
+            RegisterCloudStorageWhenNeeded(services, provider);
 
-        return services;
-    }
+            return services;
+        }
 
-    public static IServiceCollection AddCloudUploadStorage(this IServiceCollection services, Action<CloudUploadStorageOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
+        public IServiceCollection AddCloudUploadStorage(Action<CloudUploadStorageOptions> configure)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(configure);
 
-        var options = new CloudUploadStorageOptions();
-        configure(options);
+            var options = new CloudUploadStorageOptions();
+            configure(options);
 
-        services.Configure(configure);
-        RegisterCloudStorageWhenNeeded(services, options.Provider);
+            services.Configure(configure);
+            RegisterCloudStorageWhenNeeded(services, options.Provider);
 
-        return services;
+            return services;
+        }
     }
 
     private static void RegisterCloudStorageWhenNeeded(IServiceCollection services, string? provider)

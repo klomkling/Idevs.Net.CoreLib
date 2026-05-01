@@ -13,22 +13,12 @@ public enum IdevsContentType
 public class IdevsContentResult
 {
     /// <summary>
-    /// Creates a FileContentResult containing passed data
-    /// </summary>
-    /// <param name="data">Data containing Pdf bytes</param>
-    /// <returns></returns>
-    public static FileContentResult Create(byte[] data, IdevsContentType contentType)
-    {
-        return Create(data, contentType, null);
-    }
-
-    /// <summary>
     /// Creates a FileContentResult containing passed data and a download name
     /// </summary>
     /// <param name="data">Data containing Pdf file bytes</param>
     /// <param name="contentType">Content type</param>
     /// <param name="downloadName">Optional download name</param>
-    public static FileContentResult Create(byte[] data, IdevsContentType contentType, string? downloadName)
+    public static FileContentResult Create(byte[] data, IdevsContentType contentType, string? downloadName = null)
     {
         var dataType = GetContentType(contentType);
         var result = new FileContentResult(data, dataType)

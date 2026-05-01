@@ -10,9 +10,12 @@ public static class TextLocalizerExtension
         return localizer.TryGet(name) ?? key;
     }
 
-    public static string TranslateText(this string key, string moduleName, ITextLocalizer? localizer) =>
-        localizer?.TryGet($"{moduleName}.{key}") ?? key;
+    extension(string key)
+    {
+        public string TranslateText(string moduleName, ITextLocalizer? localizer) =>
+            localizer?.TryGet($"{moduleName}.{key}") ?? key;
 
-    public static string TranslateData(this string key, string moduleName, ITextLocalizer localizer) =>
-        localizer.Translate(moduleName, key);
+        public string TranslateData(string moduleName, ITextLocalizer localizer) =>
+            localizer.Translate(moduleName, key);
+    }
 }

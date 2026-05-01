@@ -407,88 +407,38 @@ for (int i = 0; i < totalRecords; i += batchSize)
 
 ## Migration Guide
 
-### From v0.3.x to v0.5.0
+Upgrade notes for every version live in [MIGRATION.md](MIGRATION.md). Direct
+links for the most-recent transitions:
 
-#### Package Layout and DI Changes
+- [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
+- [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
+- [v0.1.x → v0.2.0 — Autofac Integration](MIGRATION.md#v01x--v020--autofac-integration)
+- [v0.0.x → v0.1.x — Service Registration & Chrome Setup](MIGRATION.md#v00x--v01x--service-registration--chrome-setup)
 
-1. **Standard DI is now the default**:
+## Repositories
 
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddIdevsCorelibServices();
-```
+`Idevs.Net.CoreLib` ships a focused class hierarchy for data access:
 
-2. **Autofac moved to `Idevs.Net.CoreLib.Autofac`**:
+- **`SqlServiceBase`** — base for services that need raw SQL access without
+  being a typed-row repository. Provides `ISqlConnections`, lazy `Dialect`,
+  `SqlQuery()`/`SqlInsert(t)`/`SqlUpdate(t)`/`SqlDelete(t)` factories, and a
+  uniform `ExecuteAsync<T>` template that manages connection lifetime and
+  composes with an optional `UnitOfWork`.
 
-```bash
-dotnet add package Idevs.Net.CoreLib.Autofac
-```
+- **`RepositoryBase<TRow>`** — typed read/list/getby/create on a Serenity
+  `IRow`. Methods: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
+  `CreateAsync`. `[Obsolete]` sync wrappers for migration.
 
-```csharp
-builder.UseIdevsAutofac();
-```
+- **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`:
+  `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
 
-3. **Serilog support is optional via `Idevs.Net.CoreLib.Serilog`**:
+Connection key is configurable via the virtual `ConnectionKey` property or
+the `[ConnectionKey("Warehouse")]` attribute.
 
-```bash
-dotnet add package Idevs.Net.CoreLib.Serilog
-```
+For caching, see `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers
+around Serenity `ITwoLevelCache`.
 
-```csharp
-app.UseIdevsSerilogLogManager();
-```
-
-4. **StaticServiceProvider removed**:
-
-`StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points, use `StaticServiceLocator`.
-
-### From v0.1.x to v0.2.0
-
-#### Autofac Integration
-
-- **Better Performance**: Autofac provides superior dependency resolution performance
-- **Advanced Features**: Support for decorators, interceptors, and advanced lifetime scopes
-- **Module System**: Organized service registration through modules
-- **Attribute-Based Registration**: Automatic service discovery and registration
-
-### From v0.0.x to v0.1.x
-
-1. **Service Registration**: Replace manual service registration with `AddIdevsCorelibServices()`:
-
-```csharp
-// Old way
-services.AddScoped<IViewPageRenderer, ViewPageRenderer>();
-services.AddScoped<IIdevsPdfExporter, IdevsPdfExporter>();
-services.AddScoped<IIdevsExcelExporter, IdevsExcelExporter>();
-
-// New way
-services.AddIdevsCorelibServices();
-```
-
-2. **Chrome Setup**: Add Chrome download to startup:
-
-```csharp
-// Add this to Program.cs
-ChromeHelper.DownloadChrome();
-```
-
-3. **Static Service Provider**: `StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points that cannot receive dependencies through DI, use `StaticServiceLocator`.
-
-```csharp
-var app = builder.Build();
-app.UseIdevsStaticServiceLocator();
-var service = StaticServiceLocator.Resolve<IMyService>();
-
-// Or manual initialization
-// StaticServiceLocator.Initialize(app.Services);
-```
-
-#### StaticServiceLocator Benefits
-
-- **Legacy Bridge**: Supports static or legacy code while you migrate toward constructor DI
-- **Better Error Handling**: More descriptive error messages
-- **Scoped Resolution**: Support for creating service scopes
-- **Singleton Cache**: Optional caching for services known to be registered as singletons
+**Migrating from 0.5.0:** see [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
 
 ## Cloud Upload Storage
 

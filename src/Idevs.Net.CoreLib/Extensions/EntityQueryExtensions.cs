@@ -1,4 +1,3 @@
-using Ardalis.GuardClauses;
 using Serenity.Data;
 
 namespace Idevs.Extensions;
@@ -16,7 +15,7 @@ public static class EntityQueryExtensions
     ///   Object itself.</returns>
     public static T Set<T>(this T self, IRow row, params Field[] exclude) where T : ISetFieldByStatement
     {
-        Guard.Against.Null(row, nameof(row));
+        ArgumentNullException.ThrowIfNull(row);
 
         if (!row.TrackAssignments)
             throw new ArgumentException("row must be in TrackAssignments mode to determine modified fields.");

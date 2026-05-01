@@ -14,15 +14,8 @@ public static class AutofacWebApplicationExtensions
         return app;
     }
 
-    private sealed class AutofacServiceProvider : IServiceProvider
+    private sealed class AutofacServiceProvider(ILifetimeScope scope) : IServiceProvider
     {
-        private readonly ILifetimeScope scope;
-
-        public AutofacServiceProvider(ILifetimeScope scope)
-        {
-            this.scope = scope;
-        }
-
         public object? GetService(Type serviceType)
         {
             return scope.ResolveOptional(serviceType);

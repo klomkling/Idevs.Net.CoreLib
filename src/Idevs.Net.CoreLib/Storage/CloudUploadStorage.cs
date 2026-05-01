@@ -143,10 +143,9 @@ public sealed class CloudUploadStorage : IUploadStorage, IDisposable
     public long GetFileSize(string path)
     {
         var metadata = TryGetObjectMetadata(ToStorageKey(path));
-        if (metadata is null)
-            throw new FileNotFoundException("File not found", NormalizePath(path).TrimStart('/'));
-
-        return metadata.Headers.ContentLength;
+        return metadata is null
+            ? throw new FileNotFoundException("File not found", NormalizePath(path).TrimStart('/'))
+            : metadata.Headers.ContentLength;
     }
 
     public string[] GetFiles(string path, string searchPattern)
@@ -166,12 +165,12 @@ public sealed class CloudUploadStorage : IUploadStorage, IDisposable
                 ContinuationToken = continuationToken
             }, CancellationToken.None));
 
-            foreach (var objectItem in response.S3Objects)
-            {
-                if (objectItem.Key.EndsWith('/'))
-                    continue;
+            var relativePaths = from objectItem in response.S3Objects
+                where !objectItem.Key.EndsWith('/')
+                select ToRelativePath(objectItem.Key);
 
-                var relativePath = ToRelativePath(objectItem.Key);
+            foreach (var relativePath in relativePaths)
+            {
                 if (!IsImmediateChild(directory, relativePath, out var fileName))
                     continue;
 
@@ -189,10 +188,9 @@ public sealed class CloudUploadStorage : IUploadStorage, IDisposable
     public IDictionary<string, string> GetFileMetadata(string path)
     {
         var metadata = TryGetObjectMetadata(ToStorageKey(path));
-        if (metadata is null)
-            throw new FileNotFoundException("File not found", NormalizePath(path).TrimStart('/'));
-
-        return metadata.Metadata.Keys.ToDictionary(key => key, key => metadata.Metadata[key], StringComparer.OrdinalIgnoreCase);
+        return metadata is null
+            ? throw new FileNotFoundException("File not found", NormalizePath(path).TrimStart('/'))
+            : metadata.Metadata.Keys.ToDictionary(key => key, key => metadata.Metadata[key], StringComparer.OrdinalIgnoreCase);
     }
 
     public void SetFileMetadata(string path, IDictionary<string, string> metadata, bool overwriteAll)
@@ -202,38 +200,42 @@ public sealed class CloudUploadStorage : IUploadStorage, IDisposable
         var normalizedPath = NormalizePath(path).TrimStart('/');
         var objectKey = ToStorageKey(normalizedPath);
         var current = TryGetObjectMetadata(objectKey);
-        if (current is null)
+        if (current is not null)
+        {
+            var mergedMetadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (!overwriteAll)
+            {
+                foreach (var key in current.Metadata.Keys)
+                    mergedMetadata[key] = current.Metadata[key];
+            }
+
+            foreach (var item in metadata)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Key))
+                    mergedMetadata[item.Key] = item.Value ?? string.Empty;
+            }
+
+            var request = new CopyObjectRequest
+            {
+                SourceBucket = bucketName,
+                SourceKey = objectKey,
+                DestinationBucket = bucketName,
+                DestinationKey = objectKey,
+                MetadataDirective = S3MetadataDirective.REPLACE,
+                ContentType = string.IsNullOrWhiteSpace(current.Headers.ContentType)
+                    ? GetContentType(normalizedPath)
+                    : current.Headers.ContentType
+            };
+
+            foreach (var item in mergedMetadata)
+                request.Metadata[item.Key] = item.Value ?? string.Empty;
+
+            Execute(() => s3Client.CopyObjectAsync(request, CancellationToken.None));
+        }
+        else
+        {
             throw new FileNotFoundException("File not found", normalizedPath);
-
-        var mergedMetadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (!overwriteAll)
-        {
-            foreach (var key in current.Metadata.Keys)
-                mergedMetadata[key] = current.Metadata[key];
         }
-
-        foreach (var item in metadata)
-        {
-            if (!string.IsNullOrWhiteSpace(item.Key))
-                mergedMetadata[item.Key] = item.Value ?? string.Empty;
-        }
-
-        var request = new CopyObjectRequest
-        {
-            SourceBucket = bucketName,
-            SourceKey = objectKey,
-            DestinationBucket = bucketName,
-            DestinationKey = objectKey,
-            MetadataDirective = S3MetadataDirective.REPLACE,
-            ContentType = string.IsNullOrWhiteSpace(current.Headers.ContentType)
-                ? GetContentType(normalizedPath)
-                : current.Headers.ContentType
-        };
-
-        foreach (var item in mergedMetadata)
-            request.Metadata[item.Key] = item.Value ?? string.Empty;
-
-        Execute(() => s3Client.CopyObjectAsync(request, CancellationToken.None));
     }
 
     public Stream OpenFile(string path)
@@ -383,22 +385,20 @@ public sealed class CloudUploadStorage : IUploadStorage, IDisposable
         {
             var profileName = options.AwsProfileName.Trim();
             var profileChain = new CredentialProfileStoreChain();
-            if (!profileChain.TryGetAWSCredentials(profileName, out var profileCredentials))
-                throw new InvalidOperationException($"AWS profile '{profileName}' was not found.");
-
-            return new AmazonS3Client(profileCredentials, config);
+            return !profileChain.TryGetAWSCredentials(profileName, out var profileCredentials)
+                ? throw new InvalidOperationException($"AWS profile '{profileName}' was not found.")
+                : new AmazonS3Client(profileCredentials, config);
         }
 
-        if (!string.IsNullOrWhiteSpace(options.AccessKey) && !string.IsNullOrWhiteSpace(options.SecretKey))
-        {
-            AWSCredentials credentials = string.IsNullOrWhiteSpace(options.SessionToken)
-                ? new BasicAWSCredentials(options.AccessKey.Trim(), options.SecretKey.Trim())
-                : new SessionAWSCredentials(options.AccessKey.Trim(), options.SecretKey.Trim(), options.SessionToken.Trim());
+        if (string.IsNullOrWhiteSpace(options.AccessKey) || string.IsNullOrWhiteSpace(options.SecretKey))
+            return new AmazonS3Client(config);
 
-            return new AmazonS3Client(credentials, config);
-        }
+        AWSCredentials credentials = string.IsNullOrWhiteSpace(options.SessionToken)
+            ? new BasicAWSCredentials(options.AccessKey.Trim(), options.SecretKey.Trim())
+            : new SessionAWSCredentials(options.AccessKey.Trim(), options.SecretKey.Trim(), options.SessionToken.Trim());
 
-        return new AmazonS3Client(config);
+        return new AmazonS3Client(credentials, config);
+
     }
 
     private static (string BucketName, string KeyPrefix) ParseBucketName(string? bucketName)

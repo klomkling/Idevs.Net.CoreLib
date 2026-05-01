@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.6.1 (2026-05-01)
+
+### Changed (internal modernization, no public API change)
+
+- Adopt C# 12 primary constructors on `RepositoryBase<TRow>` and
+  `RepositoryBase<TRow, TKey>`.
+- Adopt collection expressions (`[]`) for empty/static lists and arrays
+  throughout `src/`.
+- Standardise on `ArgumentNullException.ThrowIfNull(x)` everywhere the
+  classic `if (x is null) throw …` pattern remained — completes the
+  Ardalis-removal sweep.
+- Use C# 14 `extension(T receiver) { … }` declarations to group related
+  extension methods in `NumberExtensions`, `TextLocalizerExtensions`,
+  `WebApplicationExtensions`, and (Autofac) `WebApplicationBuilderExtensions`.
+  Compiled IL is unchanged; existing call sites continue to work.
+- Rename internal `LogManager.loggerFactory` field to `_loggerFactory` to
+  match the underscore-prefix convention (private; no API impact).
+- Minor refactors in `IdevsPdfExporter`, `SmartPagination`, `CloudUploadStorage`,
+  `IdevsExcelExporter` for readability (early-return inversions, ternary
+  `throw` patterns).
+
+
+
+### Breaking Changes
+
+- **Removed `Idevs.RepositoryBase<T>`.** Replaced by three new classes under
+  `Idevs.Repositories`: `SqlServiceBase` (DB plumbing only), `RepositoryBase<TRow>`
+  (typed Serenity row CRUD), `RepositoryBase<TRow, TKey>` (Id-keyed CRUD on `IIdRow`).
+- **Constructor signature changed.** Old: `(IServiceProvider, ILogger<T>)`.
+  New: `(ISqlConnections)`. Consumers inject `ILogger<T>`, `ITextLocalizer`, etc.
+  themselves.
+- **`ExceptionLog`, `Localizer`, `ServiceProvider`, `Connection` properties removed.**
+- **Auto-detect `Save` removed.** Use `CreateAsync` (insert) and `UpdateAsync`
+  (update by Id) explicitly — mirrors Serenity's endpoint convention.
+- **`SqlQuery` is now a method**, not a property.
+- The `uow` parameter on every method is `IUnitOfWork?` (interface) so derived
+  consumers can pass any unit-of-work implementation; Serenity's concrete
+  `UnitOfWork` class implements `IUnitOfWork`.
+
+### Added
+
+- Async-first typed CRUD: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
+  `CreateAsync`, `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
+- `[Obsolete]` sync wrappers for each, transitional until ~1.0.
+- Optional `IUnitOfWork? uow = null` parameter on every CRUD method for
+  transaction composition.
+- `[ConnectionKey("...")]` attribute and virtual `ConnectionKey` property on
+  `SqlServiceBase`.
+- Lazy thread-safe `Dialect` cache via `Lazy<ISqlDialect>`.
+- `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers around Serenity
+  `ITwoLevelCache` (read-through `GetLocalCachedAsync` and `GetGloballyCachedAsync`
+  for reference types).
+
+### Migration
+
+See [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
+
 ## 0.5.0 (2026-05-01)
 
 ### Breaking Changes

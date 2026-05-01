@@ -1,5 +1,4 @@
 using System.Collections;
-using Ardalis.GuardClauses;
 using ClosedXML.Excel;
 using FastMember;
 using Idevs.Models;
@@ -85,8 +84,8 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
     /// <inheritdoc />
     public byte[] Export(IEnumerable data, IEnumerable<ReportColumn> columns)
     {
-        Guard.Against.Null(data, nameof(data));
-        Guard.Against.Null(columns, nameof(columns));
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(columns);
         
         var report = new TabularDataReport(data, columns);
         return Render(report, null);
@@ -95,8 +94,8 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
     /// <inheritdoc />
     public byte[] Export(IEnumerable data, Type columnsType)
     {
-        Guard.Against.Null(data, nameof(data));
-        Guard.Against.Null(columnsType, nameof(columnsType));
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(columnsType);
         
         var report = new TabularDataReport(data, columnsType, _serviceProvider);
         return Render(report, null);
@@ -105,9 +104,9 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
     /// <inheritdoc />
     public byte[] Export(IEnumerable data, Type columnsType, IEnumerable<string> exportColumns)
     {
-        Guard.Against.Null(data, nameof(data));
-        Guard.Against.Null(columnsType, nameof(columnsType));
-        Guard.Against.Null(exportColumns, nameof(exportColumns));
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(columnsType);
+        ArgumentNullException.ThrowIfNull(exportColumns);
         
         var report = new TabularDataReport(data, columnsType, exportColumns, _serviceProvider);
         return Render(report, null);
@@ -120,9 +119,9 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         IEnumerable<ReportHeader> reportHeaders
     )
     {
-        Guard.Against.Null(data, nameof(data));
-        Guard.Against.Null(columnsType, nameof(columnsType));
-        Guard.Against.Null(reportHeaders, nameof(reportHeaders));
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(columnsType);
+        ArgumentNullException.ThrowIfNull(reportHeaders);
         
         var report = new TabularDataReport(data, columnsType, _serviceProvider);
         return Render(report, reportHeaders);
@@ -136,9 +135,9 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         IEnumerable<ReportHeader>? reportHeaders
     )
     {
-        Guard.Against.Null(data, nameof(data));
-        Guard.Against.Null(columnsType, nameof(columnsType));
-        Guard.Against.Null(exportColumns, nameof(exportColumns));
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(columnsType);
+        ArgumentNullException.ThrowIfNull(exportColumns);
         
         var report = new TabularDataReport(data, columnsType, exportColumns, _serviceProvider);
         return Render(report, reportHeaders);
@@ -158,16 +157,16 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         return Generate(data, columns, headers);
     }
 
-    private static readonly Type[] DateTimeTypes = new[]
-    {
+    private static readonly Type[] DateTimeTypes =
+    [
         typeof(DateTime),
         typeof(DateTime?),
         typeof(TimeSpan),
         typeof(TimeSpan?)
-    };
+    ];
 
-    private static readonly Type[] NumberTypes = new[]
-    {
+    private static readonly Type[] NumberTypes =
+    [
         typeof(short),
         typeof(short?),
         typeof(int),
@@ -178,7 +177,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         typeof(float?),
         typeof(decimal),
         typeof(decimal?)
-    };
+    ];
 
     private static string FixFormatSpecifier(string format, Type dataType)
     {
@@ -227,17 +226,18 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         string sheetName = "Sheet1"
     )
     {
-        Guard.Against.Null(rows, nameof(rows));
-        Guard.Against.Null(columns, nameof(columns));
-        Guard.Against.NullOrWhiteSpace(sheetName, nameof(sheetName));
+        ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(columns);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sheetName);
         
         if (columns.Count == 0)
             throw new ArgumentException("At least one column must be provided.", nameof(columns));
         
         using var workbook = CreateWorkbook(sheetName);
         var worksheet = workbook.Worksheets.First();
-        
-        var startRow = CalculateStartRow(reportHeaders);
+
+        var headers = reportHeaders?.ToArray() ?? [];
+        var startRow = CalculateStartRow(headers);
         CreateTableHeader(worksheet, columns, startRow);
         
         var dataList = ExtractDataFromRows(rows, columns);
@@ -250,7 +250,7 @@ public class IdevsExcelExporter(IServiceProvider serviceProvider) : IIdevsExcelE
         ApplyColumnFormatting(worksheet, columns);
         worksheet.Columns().AdjustToContents();
         
-        AddReportHeaders(worksheet, reportHeaders);
+        AddReportHeaders(worksheet, headers);
         
         return SaveWorkbookToByteArray(workbook);
     }

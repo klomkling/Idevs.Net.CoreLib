@@ -17,8 +17,8 @@ public static class SmartPagination
     /// <returns>Pagination result with page data and metadata</returns>
     public static PaginationResult<T> CreatePages<T>(List<T> items, PaginationConfig config)
     {
-        if (items == null) throw new ArgumentNullException(nameof(items));
-        if (config == null) throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(config);
 
         var result = new PaginationResult<T> { TotalItems = items.Count };
         var lastPageCapacity = config.RegularPageSize - config.LastPageReserveRows;
@@ -40,12 +40,11 @@ public static class SmartPagination
             CreateMultiplePages(result, items, config, lastPageCapacity);
         }
 
-        if (config.EnableLogging)
-        {
-            Console.WriteLine($"================================================");
-            Console.WriteLine($"✓ PAGINATION COMPLETE: {result.TotalPages} page(s) generated");
-            Console.WriteLine($"================================================");
-        }
+        if (!config.EnableLogging) return result;
+
+        Console.WriteLine($"================================================");
+        Console.WriteLine($"✓ PAGINATION COMPLETE: {result.TotalPages} page(s) generated");
+        Console.WriteLine($"================================================");
 
         return result;
     }

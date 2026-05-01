@@ -60,12 +60,12 @@ public class PageData<T>
     /// <summary>
     /// Actual items on this page
     /// </summary>
-    public List<ItemWithLineNumber<T>> Items { get; set; } = new();
+    public List<ItemWithLineNumber<T>> Items { get; set; } = [];
 
     /// <summary>
     /// Filler rows to maintain consistent page height
     /// </summary>
-    public List<FillerRow> FillerRows { get; set; } = new();
+    public List<FillerRow> FillerRows { get; set; } = [];
 
     /// <summary>
     /// True if this is the first page (contains special header content)

@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Reflection;
-using Ardalis.GuardClauses;
 using Idevs.Models;
 using PuppeteerSharp;
 using PuppeteerSharp.Media;
@@ -89,10 +88,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
 
     private void EnsureNotDisposed()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(IdevsPdfExporter));
-        }
+        if (!_disposed) return;
+        throw new ObjectDisposedException(nameof(IdevsPdfExporter));
     }
 
     /// <inheritdoc />
@@ -105,7 +102,7 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
     )
     {
         EnsureNotDisposed();
-        Guard.Against.NullOrEmpty(html, nameof(html));
+        ArgumentException.ThrowIfNullOrEmpty(html);
         var pdfOptions = BuildPdfOptions(header, footer, options);
         return await GeneratePdfAsync(html, pdfOptions, cancellationToken);
     }
@@ -124,8 +121,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
     )
     {
         EnsureNotDisposed();
-        Guard.Against.NullOrEmpty(html, nameof(html));
-        Guard.Against.Null(pdfOptions, nameof(pdfOptions));
+        ArgumentException.ThrowIfNullOrEmpty(html);
+        ArgumentNullException.ThrowIfNull(pdfOptions);
         var safeOptions = ClonePdfOptions(pdfOptions);
         return await GeneratePdfAsync(html, safeOptions, cancellationToken);
     }
@@ -156,8 +153,8 @@ public class IdevsPdfExporter : IIdevsPdfExporter, IAsyncDisposable
         CancellationToken cancellationToken = default
     )
     {
-        Guard.Against.NullOrEmpty(html, nameof(html));
-        Guard.Against.Null(pdfOptions, nameof(pdfOptions));
+        ArgumentException.ThrowIfNullOrEmpty(html);
+        ArgumentNullException.ThrowIfNull(pdfOptions);
 
         cancellationToken.ThrowIfCancellationRequested();
 
