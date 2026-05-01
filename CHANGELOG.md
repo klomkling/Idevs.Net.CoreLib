@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.5.0 (2026-05-01)
+
+### Breaking Changes
+
+- Restructured repository projects under `src/` and `tests/`.
+- Removed `StaticServiceProvider`; use constructor DI or `StaticServiceLocator`.
+- Moved Autofac integration to `Idevs.Net.CoreLib.Autofac`.
+- Removed Autofac dependencies from `Idevs.Net.CoreLib`.
+
+### Added
+
+- Added optional `Idevs.Net.CoreLib.Autofac` package.
+- Added optional `Idevs.Net.CoreLib.Serilog` package.
+- Added CloudUploadStorage support for AWS S3 and Cloudflare R2.
+- Added provider-neutral `LogManager` based on `Microsoft.Extensions.Logging`.
+- Consolidated registration attributes into `ComponentModels/ServiceRegistrationAttributes.cs`
+  with a new `IServiceRegistrationAttribute` interface implemented by
+  `ScopedAttribute`, `SingletonAttribute`, and `TransientAttribute`. Legacy
+  `ScopedRegistrationAttribute`, `SingletonRegiatrationAttribute`, and
+  `TransientRegistrationAttribute` types remain available under
+  `ComponentModels/Obsolete/` and are still recognised by the DI scanner.
+- Initial test scaffolding under `tests/Idevs.Net.CoreLib.Tests/` covering
+  `ChromeHelper`, `IdevsContentResult`, `ServiceExtensions`, and the
+  attribute-namespace contract.
+
+### Build & Tooling
+
+- Adopted Central Package Management via `Directory.Packages.props` and shared
+  build defaults via `Directory.Build.props`.
+- Added a repo-local `nuget.config` with explicit `nuget.org` source mapping;
+  removed the intermittently-unavailable `serenity.is` private feed
+  (Serenity packages also publish to nuget.org).
+- Hardened the `build/Idevs.Net.CoreLib.targets` `NpmInstall` step:
+  cross-platform paths, npm presence detection, opt-out documentation,
+  explicit `WorkingDirectory`.
+- Bumped `Serenity.Net.Services` to `8.8.9` (net8.0) and `10.3.1` (net10.0).
+
+### Fixed
+
+- `ChromeHelper.DownloadChrome` no longer wraps the async fetch in a redundant
+  `Task.Run(...).GetAwaiter().GetResult()`. Added a true async overload
+  `DownloadChromeAsync(CancellationToken)`.
+- `RepositoryBase<T>.Dialect` is now lazy-cached; it no longer opens and
+  disposes a connection on every access.
+- `ServiceExtensions.AddIdevsCorelibServices` now logs a `Trace` warning when
+  an assembly type-load fails (instead of silently dropping types) and warns
+  when a legacy-attributed type is skipped because it lacks the conventional
+  `I{ClassName}` interface.
+- `IdevsContentResult.CreatePdfViewResult` accepts `string? downloadName = null`
+  with a guard against empty/whitespace input; eliminates a dead null-check on
+  the previously non-nullable parameter.
+
+### Migration
+
+- Replace direct `StaticServiceProvider` usage with constructor DI or `StaticServiceLocator`.
+- Add `Idevs.Net.CoreLib.Autofac` if the app uses `UseIdevsAutofac`, `IdevsModule`, or keyed service registration.
+- Add `Idevs.Net.CoreLib.Serilog` if the app wants Serilog-specific CoreLib logging setup.
+- Replace `[ScopedRegistration]` / `[SingletonRegiatration]` / `[TransientRegistration]`
+  with the new `[Scoped]` / `[Singleton]` / `[Transient]` attributes from
+  `Idevs.ComponentModels`. The legacy attributes still work but are marked obsolete.
+
 ## 0.3.3 (2025-10-02)
 
 ### Rollback to PuppeteerSharp Only

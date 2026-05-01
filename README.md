@@ -32,17 +32,16 @@ Install-Package Idevs.Net.CoreLib
 
 ## Quick Start
 
-### 1. Service Registration with Autofac (Recommended)
+### 1. Service Registration
 
-Idevs.Net.CoreLib now uses Autofac as the preferred dependency injection container. Add the following to your `Program.cs`:
+Idevs.Net.CoreLib uses standard `Microsoft.Extensions.DependencyInjection` by default. Add the following to your `Program.cs`:
 
 ```csharp
 using Idevs.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Autofac as the service provider and register Idevs services
-builder.UseIdevsAutofac();
+builder.Services.AddIdevsCorelibServices();
 
 // Your other service registrations
 builder.Services.AddControllersWithViews();
@@ -56,20 +55,23 @@ app.MapControllers();
 app.Run();
 ```
 
-### 1.1. Alternative Service Registration (Legacy)
+### 1.1. Autofac Integration
 
-For projects that cannot use Autofac, you can still use the traditional service collection approach:
+Autofac support is available from the optional `Idevs.Net.CoreLib.Autofac` package:
+
+```bash
+dotnet add package Idevs.Net.CoreLib.Autofac
+```
 
 ```csharp
-// In ConfigureServices method or Program.cs
-builder.Services.AddIdevsCorelibServices();
+using Idevs.Extensions;
 
-// Note: RegisterServices() is now obsolete and included in AddIdevsCorelibServices()
+builder.UseIdevsAutofac();
 ```
 
 ### 1.2. Advanced Autofac Configuration
 
-For more advanced scenarios, you can customize the Autofac container:
+After installing `Idevs.Net.CoreLib.Autofac`, you can customize the Autofac container:
 
 ```csharp
 // With custom container configuration
@@ -208,31 +210,9 @@ public class OrderColumns
 
 ### Service Registration with Attributes
 
-Idevs.Net.CoreLib supports both legacy attributes and enhanced standard attributes for service registration:
+Idevs.Net.CoreLib supports standard attributes for service registration:
 
-#### Legacy Attributes (Backward Compatibility)
-
-```csharp
-[ScopedRegistration]
-public class OrderService : IOrderService
-{
-    // Your service implementation
-}
-
-[SingletonRegiatration]
-public class CacheService : ICacheService
-{
-    // Singleton service
-}
-
-[TransientRegistration]
-public class EmailService : IEmailService
-{
-    // Transient service
-}
-```
-
-#### Standard Attributes (Enhanced Features)
+#### Standard Attributes
 
 ```csharp
 // Basic usage - auto-discovers I{ClassName} interface
@@ -249,6 +229,23 @@ public class CacheService : ICacheService, IDisposable
     // Singleton service with explicit interface
 }
 
+// Named registrations (Autofac only)
+[Transient(ServiceKey = "smtp")]
+public class EmailService : IEmailService
+{
+    // SMTP email implementation
+}
+```
+
+#### Legacy Attributes (Backward Compatibility)
+
+The legacy `[ScopedRegistration]`, `[SingletonRegiatration]`, and `[TransientRegistration]`
+attributes are still supported but obsolete. Prefer `[Scoped]`, `[Singleton]`, and `[Transient]`
+for new code.
+
+#### Advanced Features
+
+```csharp
 // Named registrations (Autofac only)
 [Transient(ServiceKey = "smtp")]
 public class SmtpEmailService : IEmailService
@@ -278,16 +275,16 @@ public class UtilityService
 | Service Keys | Not supported | Supported (Autofac only) |
 | Explicit Service Type | Not supported | Supported |
 | Self-registration | Not supported | Supported |
-| Backward Compatibility | ✅ | ✅ (both work together) |
+| Status | Obsolete | Recommended |
 
 ### Static Service Resolution
 
-For scenarios where dependency injection is not feasible (e.g., static methods, legacy code integration), you can use the StaticServiceLocator:
+Prefer constructor dependency injection for new code. `StaticServiceLocator` is still supported, but it should be treated as a last-resort compatibility bridge for static methods or legacy code paths that cannot receive dependencies through DI.
 
 ```csharp
-// Initialize in your Program.cs (automatic with Autofac)
+// Initialize in your Program.cs only if static or legacy code needs it
 var app = builder.Build();
-app.UseIdevsStaticServiceLocator(); // Automatically detects Autofac or traditional DI
+app.UseIdevsStaticServiceLocator();
 
 // Use in static methods or legacy code
 public static class LegacyHelper
@@ -312,13 +309,13 @@ public static class LegacyHelper
     
     public static void ProcessDataWithCaching()
     {
-        // Cache singleton services for better performance
+        // Cache only services that are registered as singletons
         var cachedService = StaticServiceLocator.ResolveSingleton<IMySingletonService>();
     }
 }
 ```
 
-**Important**: Use StaticServiceLocator sparingly and prefer proper dependency injection whenever possible.
+**Important**: Do not use `StaticServiceLocator` from normal application services. Static resolution hides dependencies and can make service lifetime problems harder to diagnose.
 
 ## Configuration Options
 
@@ -410,33 +407,44 @@ for (int i = 0; i < totalRecords; i += batchSize)
 
 ## Migration Guide
 
-### From v0.1.x to v0.2.0 (Current)
+### From v0.3.x to v0.5.0
 
-#### Autofac Integration (Recommended)
+#### Package Layout and DI Changes
 
-1. **Update to Autofac**: Replace service collection registration with Autofac:
+1. **Standard DI is now the default**:
 
 ```csharp
-// Old way (v0.1.x)
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddIdevsCorelibServices();
+```
 
-// New way (v0.2.0) - Recommended
-var builder = WebApplication.CreateBuilder(args);
+2. **Autofac moved to `Idevs.Net.CoreLib.Autofac`**:
+
+```bash
+dotnet add package Idevs.Net.CoreLib.Autofac
+```
+
+```csharp
 builder.UseIdevsAutofac();
 ```
 
-2. **Legacy Support**: If you cannot use Autofac, the old way still works:
+3. **Serilog support is optional via `Idevs.Net.CoreLib.Serilog`**:
 
-```csharp
-// Still supported for backward compatibility
-builder.Services.AddIdevsCorelibServices();
-
-// Note: RegisterServices() is now obsolete
-// builder.Services.RegisterServices(); // Remove this line
+```bash
+dotnet add package Idevs.Net.CoreLib.Serilog
 ```
 
-#### Benefits of Autofac Integration
+```csharp
+app.UseIdevsSerilogLogManager();
+```
+
+4. **StaticServiceProvider removed**:
+
+`StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points, use `StaticServiceLocator`.
+
+### From v0.1.x to v0.2.0
+
+#### Autofac Integration
 
 - **Better Performance**: Autofac provides superior dependency resolution performance
 - **Advanced Features**: Support for decorators, interceptors, and advanced lifetime scopes
@@ -464,16 +472,11 @@ services.AddIdevsCorelibServices();
 ChromeHelper.DownloadChrome();
 ```
 
-3. **Static Service Provider**: Migrate to StaticServiceLocator (recommended):
+3. **Static Service Provider**: `StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points that cannot receive dependencies through DI, use `StaticServiceLocator`.
 
 ```csharp
-// Old way (still works but obsolete)
-StaticServiceProvider.Provider = app.ApplicationServices;
-var service = StaticServiceProvider.GetService<IMyService>();
-
-// New way (recommended)
 var app = builder.Build();
-app.UseIdevsStaticServiceLocator(); // Automatic initialization
+app.UseIdevsStaticServiceLocator();
 var service = StaticServiceLocator.Resolve<IMyService>();
 
 // Or manual initialization
@@ -482,12 +485,78 @@ var service = StaticServiceLocator.Resolve<IMyService>();
 
 #### StaticServiceLocator Benefits
 
-- **Autofac Support**: Works seamlessly with both Autofac and traditional DI
-- **Thread Safety**: Improved thread-safe operations
+- **Legacy Bridge**: Supports static or legacy code while you migrate toward constructor DI
 - **Better Error Handling**: More descriptive error messages
 - **Scoped Resolution**: Support for creating service scopes
-- **Performance**: Caching options for singleton services
-- **Backward Compatibility**: Automatic fallback when using StaticServiceProvider
+- **Singleton Cache**: Optional caching for services known to be registered as singletons
+
+## Cloud Upload Storage
+
+`Idevs.Net.CoreLib` can replace Serenity upload storage with S3-compatible object storage.
+
+```csharp
+using Idevs.Extensions;
+
+builder.Services.AddCloudUploadStorage(builder.Configuration);
+builder.Services.AddUploadStorage();
+```
+
+AWS S3 configuration:
+
+```json
+{
+  "CloudUploadStorage": {
+    "Provider": "AWS",
+    "BucketName": "my-bucket/uploads",
+    "Region": "ap-southeast-1",
+    "KeyPrefix": "tenant-a"
+  }
+}
+```
+
+Cloudflare R2 configuration:
+
+```json
+{
+  "CloudUploadStorage": {
+    "Provider": "CloudflareR2",
+    "BucketName": "my-bucket",
+    "CloudflareAccountId": "account-id",
+    "AccessKey": "access-key",
+    "SecretKey": "secret-key"
+  }
+}
+```
+
+Set `"Provider": "Local"` to keep Serenity's default local upload storage.
+
+## Log Manager
+
+`LogManager` provides a provider-neutral bridge for code paths that cannot receive `ILogger<T>` through dependency injection.
+
+```csharp
+using Idevs.Logging;
+using Microsoft.Extensions.Logging;
+
+LogManager.SetLoggerFactory(app.Services.GetRequiredService<ILoggerFactory>());
+var logger = LogManager.GetLogger<Program>();
+```
+
+### Serilog Integration
+
+Serilog support is available from the optional `Idevs.Net.CoreLib.Serilog` package.
+
+```bash
+dotnet add package Idevs.Net.CoreLib.Serilog
+```
+
+```csharp
+using Idevs.Extensions;
+
+app.UseIdevsSerilogLogManager();
+```
+
+The core package continues to use `Microsoft.Extensions.Logging` abstractions.
 
 ## Contributing
 
