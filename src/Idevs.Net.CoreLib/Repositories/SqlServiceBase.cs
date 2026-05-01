@@ -79,4 +79,16 @@ public abstract class SqlServiceBase
         using var connection = SqlConnections.NewByKey(ConnectionKey);
         return await work(connection, ct).ConfigureAwait(false);
     }
+
+    /// <summary>Creates a new <see cref="SqlQuery"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
+    protected SqlQuery SqlQuery() => new SqlQuery().Dialect(Dialect);
+
+    /// <summary>Creates a new <see cref="SqlInsert"/> for the given table.</summary>
+    protected SqlInsert SqlInsert(string tableName) => new(tableName);
+
+    /// <summary>Creates a new <see cref="SqlUpdate"/> for the given table.</summary>
+    protected SqlUpdate SqlUpdate(string tableName) => new(tableName);
+
+    /// <summary>Creates a new <see cref="SqlDelete"/> for the given table.</summary>
+    protected SqlDelete SqlDelete(string tableName) => new(tableName);
 }
