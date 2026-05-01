@@ -1,8 +1,21 @@
-# Migrating to Idevs.Net.CoreLib 0.6.0 — RepositoryBase Redesign
+# Migration Guide
 
-Version 0.6.0 introduces a breaking redesign of `RepositoryBase`. This guide walks through the changes and shows before/after for the three common method shapes.
+Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
-## Summary
+## Contents
+
+- [v0.5.0 → v0.6.0 — RepositoryBase Redesign](#v050--v060--repositorybase-redesign)
+- [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
+- [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
+- [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.5.0 → v0.6.0 — RepositoryBase Redesign
+
+Version 0.6.0 introduces a breaking redesign of `RepositoryBase`. This section walks through the changes and shows before/after for the common method shapes.
+
+### Summary
 
 | Old (≤ 0.5.0) | New (0.6.0) |
 |---|---|
@@ -13,9 +26,9 @@ Version 0.6.0 introduces a breaking redesign of `RepositoryBase`. This guide wal
 | Hardcoded `"Default"` connection key | Virtual `ConnectionKey` property + `[ConnectionKey("...")]` attribute |
 | No typed CRUD | `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`, `CreateAsync` (any IRow); `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync` (IIdRow) |
 
-## Migration steps
+### Migration steps
 
-### 1. Update the constructor
+#### 1. Update the constructor
 
 **Before:**
 ```csharp
@@ -40,7 +53,7 @@ public class CustomerRepository(ISqlConnections sqlConnections, ILogger<Customer
 
 Add the `using Idevs.Repositories;` directive.
 
-### 2. Replace `GetById(int)` → inherited `GetByIdAsync(int)`
+#### 2. Replace `GetById(int)` → inherited `GetByIdAsync(int)`
 
 **Before:**
 ```csharp
@@ -70,7 +83,7 @@ public CustomerRow GetById(int id)
 
 If you need a sync API for now, the base also provides an `[Obsolete]` `GetById(id)` sync wrapper that delegates to the async path.
 
-### 3. `GetByCode(string code)` → one-liner using `GetByAsync`
+#### 3. `GetByCode(string code)` → one-liner using `GetByAsync`
 
 **Before:** ~12 lines of `using var uow = ... try { ... } catch { ... } finally { ... }`.
 
@@ -80,7 +93,7 @@ public Task<CustomerRow?> GetByCodeAsync(string code, CancellationToken ct = def
     GetByAsync(CustomerRow.Fields.CustomerCode, code, ct: ct);
 ```
 
-### 4. Custom queries → `ExecuteAsync` template
+#### 4. Custom queries → `ExecuteAsync` template
 
 **Before:**
 ```csharp
@@ -111,7 +124,7 @@ public List<CustomerRow> GetCustomers(string? containsText, string[]? department
 public Task<List<CustomerRow>> GetCustomersAsync(
     string? containsText,
     string[]? departmentCodes,
-    UnitOfWork? uow = null,
+    IUnitOfWork? uow = null,
     CancellationToken ct = default) =>
     ListAsync(q => q
         .SelectTableFields()
@@ -119,7 +132,7 @@ public Task<List<CustomerRow>> GetCustomersAsync(
         uow, ct);
 ```
 
-### 5. Multi-step transactional methods → pass `UnitOfWork`
+#### 5. Multi-step transactional methods → pass `UnitOfWork`
 
 **Before:**
 ```csharp
@@ -131,7 +144,7 @@ public bool UpdateFinanceStatus(UnitOfWork uow, string customerCode, string stat
 **After:**
 ```csharp
 public Task<bool> UpdateFinanceStatusAsync(
-    UnitOfWork uow,
+    IUnitOfWork uow,
     string customerCode,
     string status,
     CancellationToken ct = default) =>
@@ -145,7 +158,9 @@ public Task<bool> UpdateFinanceStatusAsync(
     }, uow, ct);
 ```
 
-### 6. Services that inherited `RepositoryBase<T>` only for plumbing
+The CRUD signatures accept `IUnitOfWork?` (interface) so any unit-of-work implementation composes; Serenity's concrete `UnitOfWork` class implements `IUnitOfWork`.
+
+#### 6. Services that inherited `RepositoryBase<T>` only for plumbing
 
 If your service was inheriting `RepositoryBase<T>` not because it manages a typed row but because it needed `Connection` / `SqlInsert` / etc. (e.g., a `Setting` service that touches multiple rows), inherit `SqlServiceBase` instead:
 
@@ -161,11 +176,11 @@ public class Setting(ISqlConnections sqlConnections) : SqlServiceBase(sqlConnect
 }
 ```
 
-### 7. Strip `try/catch/LogCritical/throw` pairs
+#### 7. Strip `try/catch/LogCritical/throw` pairs
 
 The new base does not log exceptions inside `ExecuteAsync`. ASP.NET Core middleware (or your background-job runner) is the right layer to log with full request context. If you specifically need per-repo structured logging, override `ExecuteAsync` in your derived class.
 
-### 8. Drop hand-rolled async-via-default-interface wrappers
+#### 8. Drop hand-rolled async-via-default-interface wrappers
 
 If you wrote interfaces like:
 ```csharp
@@ -178,7 +193,7 @@ public interface ICsParaRepository {
 
 Drop the sync method and let the implementation be the natural `Task<T> ...Async`.
 
-## Caching
+### Caching
 
 Caching is no longer a base-class concern. Use the new `Idevs.Caching.TwoLevelCacheExtensions`:
 
@@ -193,11 +208,11 @@ public Task<CustomerRow?> GetByIdCachedAsync(int id, CancellationToken ct = defa
 
 The cache wrap and the repo method compose explicitly. Invalidation stays in your hands (e.g., on `Save`/`Delete` you call `cache.RemoveGroup(...)` as before).
 
-## On the `[Obsolete]` sync wrappers
+### On the `[Obsolete]` sync wrappers
 
 Each new async method has a sync wrapper marked `[Obsolete]` to ease migration. They are safe today (the underlying SQL calls are sync, so the wrappers are sync-over-fake-async — no deadlock risk). They will be **removed in 1.0** when Serenity ships real-async fluent SQL — at which point sync-over-real-async would become deadlock-prone. Treat the `[Obsolete]` warnings as a migration prompt, not a permanent state.
 
-## Connection-key configuration
+### Connection-key configuration
 
 For multi-DB consumers, override the connection key per repo:
 
@@ -218,3 +233,94 @@ public class StockRepository : RepositoryBase<StockRow, int>
 ```
 
 The override wins over the attribute.
+
+---
+
+## v0.3.x → v0.5.0 — Package Layout & DI Changes
+
+#### 1. Standard DI is now the default
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddIdevsCorelibServices();
+```
+
+#### 2. Autofac moved to `Idevs.Net.CoreLib.Autofac`
+
+```bash
+dotnet add package Idevs.Net.CoreLib.Autofac
+```
+
+```csharp
+builder.UseIdevsAutofac();
+```
+
+#### 3. Serilog support is optional via `Idevs.Net.CoreLib.Serilog`
+
+```bash
+dotnet add package Idevs.Net.CoreLib.Serilog
+```
+
+```csharp
+app.UseIdevsSerilogLogManager();
+```
+
+#### 4. `StaticServiceProvider` removed
+
+`StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points, use `StaticServiceLocator`.
+
+---
+
+## v0.1.x → v0.2.0 — Autofac Integration
+
+- **Better Performance**: Autofac provides superior dependency resolution performance.
+- **Advanced Features**: Support for decorators, interceptors, and advanced lifetime scopes.
+- **Module System**: Organized service registration through modules.
+- **Attribute-Based Registration**: Automatic service discovery and registration.
+
+---
+
+## v0.0.x → v0.1.x — Service Registration & Chrome Setup
+
+#### 1. Service Registration
+
+Replace manual service registration with `AddIdevsCorelibServices()`:
+
+```csharp
+// Old way
+services.AddScoped<IViewPageRenderer, ViewPageRenderer>();
+services.AddScoped<IIdevsPdfExporter, IdevsPdfExporter>();
+services.AddScoped<IIdevsExcelExporter, IdevsExcelExporter>();
+
+// New way
+services.AddIdevsCorelibServices();
+```
+
+#### 2. Chrome Setup
+
+Add Chrome download to startup:
+
+```csharp
+// Add this to Program.cs
+ChromeHelper.DownloadChrome();
+```
+
+#### 3. Static Service Provider
+
+`StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points that cannot receive dependencies through DI, use `StaticServiceLocator`.
+
+```csharp
+var app = builder.Build();
+app.UseIdevsStaticServiceLocator();
+var service = StaticServiceLocator.Resolve<IMyService>();
+
+// Or manual initialization
+// StaticServiceLocator.Initialize(app.Services);
+```
+
+##### `StaticServiceLocator` benefits
+
+- **Legacy bridge**: supports static or legacy code while you migrate toward constructor DI.
+- **Better error handling**: more descriptive error messages.
+- **Scoped resolution**: support for creating service scopes.
+- **Singleton cache**: optional caching for services known to be registered as singletons.

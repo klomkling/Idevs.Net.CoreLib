@@ -407,88 +407,13 @@ for (int i = 0; i < totalRecords; i += batchSize)
 
 ## Migration Guide
 
-### From v0.3.x to v0.5.0
+Upgrade notes for every version live in [MIGRATION.md](MIGRATION.md). Direct
+links for the most-recent transitions:
 
-#### Package Layout and DI Changes
-
-1. **Standard DI is now the default**:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddIdevsCorelibServices();
-```
-
-2. **Autofac moved to `Idevs.Net.CoreLib.Autofac`**:
-
-```bash
-dotnet add package Idevs.Net.CoreLib.Autofac
-```
-
-```csharp
-builder.UseIdevsAutofac();
-```
-
-3. **Serilog support is optional via `Idevs.Net.CoreLib.Serilog`**:
-
-```bash
-dotnet add package Idevs.Net.CoreLib.Serilog
-```
-
-```csharp
-app.UseIdevsSerilogLogManager();
-```
-
-4. **StaticServiceProvider removed**:
-
-`StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points, use `StaticServiceLocator`.
-
-### From v0.1.x to v0.2.0
-
-#### Autofac Integration
-
-- **Better Performance**: Autofac provides superior dependency resolution performance
-- **Advanced Features**: Support for decorators, interceptors, and advanced lifetime scopes
-- **Module System**: Organized service registration through modules
-- **Attribute-Based Registration**: Automatic service discovery and registration
-
-### From v0.0.x to v0.1.x
-
-1. **Service Registration**: Replace manual service registration with `AddIdevsCorelibServices()`:
-
-```csharp
-// Old way
-services.AddScoped<IViewPageRenderer, ViewPageRenderer>();
-services.AddScoped<IIdevsPdfExporter, IdevsPdfExporter>();
-services.AddScoped<IIdevsExcelExporter, IdevsExcelExporter>();
-
-// New way
-services.AddIdevsCorelibServices();
-```
-
-2. **Chrome Setup**: Add Chrome download to startup:
-
-```csharp
-// Add this to Program.cs
-ChromeHelper.DownloadChrome();
-```
-
-3. **Static Service Provider**: `StaticServiceProvider` was removed in `0.5.0`. Use constructor dependency injection first. For legacy static integration points that cannot receive dependencies through DI, use `StaticServiceLocator`.
-
-```csharp
-var app = builder.Build();
-app.UseIdevsStaticServiceLocator();
-var service = StaticServiceLocator.Resolve<IMyService>();
-
-// Or manual initialization
-// StaticServiceLocator.Initialize(app.Services);
-```
-
-#### StaticServiceLocator Benefits
-
-- **Legacy Bridge**: Supports static or legacy code while you migrate toward constructor DI
-- **Better Error Handling**: More descriptive error messages
-- **Scoped Resolution**: Support for creating service scopes
-- **Singleton Cache**: Optional caching for services known to be registered as singletons
+- [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
+- [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
+- [v0.1.x → v0.2.0 — Autofac Integration](MIGRATION.md#v01x--v020--autofac-integration)
+- [v0.0.x → v0.1.x — Service Registration & Chrome Setup](MIGRATION.md#v00x--v01x--service-registration--chrome-setup)
 
 ## Repositories
 
@@ -513,7 +438,7 @@ the `[ConnectionKey("Warehouse")]` attribute.
 For caching, see `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers
 around Serenity `ITwoLevelCache`.
 
-**Migrating from 0.5.0:** see [docs/migrations/0.6.0-repositorybase.md](docs/migrations/0.6.0-repositorybase.md).
+**Migrating from 0.5.0:** see [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
 
 ## Cloud Upload Storage
 

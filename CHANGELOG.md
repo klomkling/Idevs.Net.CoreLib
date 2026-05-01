@@ -34,7 +34,7 @@
 
 ### Migration
 
-See [docs/migrations/0.6.0-repositorybase.md](docs/migrations/0.6.0-repositorybase.md).
+See [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
 
 ## 0.5.0 (2026-05-01)
 
