@@ -6,7 +6,13 @@ namespace Idevs.Repositories;
 /// property override on a derived class wins over this attribute.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
-public sealed class ConnectionKeyAttribute(string key) : Attribute
+public sealed class ConnectionKeyAttribute : Attribute
 {
-    public string Key { get; } = key ?? throw new ArgumentNullException(nameof(key));
+    public ConnectionKeyAttribute(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        Key = key;
+    }
+
+    public string Key { get; }
 }
