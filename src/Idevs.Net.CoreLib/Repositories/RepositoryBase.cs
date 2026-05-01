@@ -1,4 +1,3 @@
-using System.Data;
 using Serenity.Data;
 
 namespace Idevs.Repositories;
@@ -15,6 +14,11 @@ public class RepositoryBase<TRow> : SqlServiceBase
     public RepositoryBase(ISqlConnections sqlConnections) : base(sqlConnections) { }
 
     /// <summary>Return the first row that matches the configured query, or null.</summary>
+    /// <remarks>
+    /// The query is pre-bound to <see cref="SqlServiceBase.Dialect"/> before
+    /// <paramref name="configure"/> is invoked, so consumers don't need to call
+    /// <c>q.Dialect(...)</c> themselves.
+    /// </remarks>
     public virtual Task<TRow?> FirstAsync(
         Action<SqlQuery> configure,
         IUnitOfWork? uow = null,
@@ -22,13 +26,19 @@ public class RepositoryBase<TRow> : SqlServiceBase
     {
         if (configure is null) throw new ArgumentNullException(nameof(configure));
 
-        return ExecuteAsync((c, _) =>
-        {
-            return Task.FromResult(c.TryFirst<TRow>(configure));
-        }, uow, ct);
+        return ExecuteAsync<TRow?>((c, _) =>
+            Task.FromResult<TRow?>(c.TryFirst<TRow>(q =>
+            {
+                q.Dialect(Dialect);
+                configure(q);
+            })), uow, ct);
     }
 
     /// <summary>Return all rows that match the configured query.</summary>
+    /// <remarks>
+    /// The query is pre-bound to <see cref="SqlServiceBase.Dialect"/> before
+    /// <paramref name="configure"/> is invoked.
+    /// </remarks>
     public virtual Task<List<TRow>> ListAsync(
         Action<SqlQuery> configure,
         IUnitOfWork? uow = null,
@@ -37,8 +47,10 @@ public class RepositoryBase<TRow> : SqlServiceBase
         if (configure is null) throw new ArgumentNullException(nameof(configure));
 
         return ExecuteAsync((c, _) =>
-        {
-            return Task.FromResult(c.List<TRow>(configure));
-        }, uow, ct);
+            Task.FromResult(c.List<TRow>(q =>
+            {
+                q.Dialect(Dialect);
+                configure(q);
+            })), uow, ct);
     }
 }
