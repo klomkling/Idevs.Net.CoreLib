@@ -1,0 +1,30 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - duplicate
+      - invalid
+    authors:
+      - dependabot
+      - dependabot[bot]
+  categories:
+    - title: 🚀 Features
+      labels:
+        - enhancement
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+    - title: 📚 Documentation
+      labels:
+        - documentation
+    - title: ♻️ Refactor
+      labels:
+        - refactor
+    - title: 🛠️ CI / Tooling
+      labels:
+        - ci
+        - chore
+        - build
+    - title: 🔧 Other Changes
+      labels:
+        - "*"
