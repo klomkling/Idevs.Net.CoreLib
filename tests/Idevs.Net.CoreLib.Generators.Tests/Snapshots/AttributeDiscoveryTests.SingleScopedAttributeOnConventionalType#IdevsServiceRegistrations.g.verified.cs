@@ -13,6 +13,8 @@ public static class IdevsServiceRegistrations
     {
         services.AddIdevsCorelibCore();
 
+        services.AddScoped<global::Demo.ICustomerRepository, global::Demo.CustomerRepository>();
+
         return services;
     }
 }

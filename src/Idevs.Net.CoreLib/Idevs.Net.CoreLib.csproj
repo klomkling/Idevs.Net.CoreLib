@@ -56,6 +56,10 @@
   </ItemGroup>
 
   <ItemGroup Label="Source generator bundling">
+    <ProjectReference Include="..\Idevs.Net.CoreLib.Generators.Abstractions\Idevs.Net.CoreLib.Generators.Abstractions.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+
     <ProjectReference Include="..\Idevs.Net.CoreLib.Generators\Idevs.Net.CoreLib.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
