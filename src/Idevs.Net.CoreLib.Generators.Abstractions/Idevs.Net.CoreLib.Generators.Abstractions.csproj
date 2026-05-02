@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <PackageId>Idevs.Net.CoreLib.Serilog</PackageId>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Idevs.Net.CoreLib.Generators.Abstractions</PackageId>
     <Version>0.7.0</Version>
-    <Description>Optional Serilog integration for Idevs.Net.CoreLib.</Description>
+    <PackageTags>Idevs; CoreLib; Roslyn; SourceGenerator; Helpers</PackageTags>
+    <Description>Reusable Roslyn helpers for source generators that integrate with Idevs.Net.CoreLib's DI conventions.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <DevelopmentDependency>true</DevelopmentDependency>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,9 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj" />
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

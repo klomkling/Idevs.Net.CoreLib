@@ -1,3 +1,7 @@
+// These tests intentionally exercise the obsolete AddIdevsCorelibServices()
+// + the legacy [ScopedRegistration] attribute paths to prove they still work
+// through 0.7.x. CS0618 (obsolete) and IDEVSGEN010 (legacy attribute) are
+// expected and suppressed in the test csproj's <NoWarn>.
 using Idevs.ComponentModel;
 using Idevs.ComponentModels;
 using Idevs.Extensions;
@@ -119,5 +123,23 @@ public class ServiceExtensionsTests
         Assert.Equal(ServiceLifetime.Scoped, ((IServiceRegistrationAttribute)new ScopedAttribute()).Lifetime);
         Assert.Equal(ServiceLifetime.Singleton, ((IServiceRegistrationAttribute)new SingletonAttribute()).Lifetime);
         Assert.Equal(ServiceLifetime.Transient, ((IServiceRegistrationAttribute)new TransientAttribute()).Lifetime);
+    }
+
+    [Fact]
+    public void AddIdevsCorelibCore_RegistersHandCodedServices()
+    {
+        var services = new ServiceCollection().AddIdevsCorelibCore();
+
+        Assert.Contains(services, d => d.ServiceType == typeof(IViewPageRenderer));
+        Assert.Contains(services, d => d.ServiceType == typeof(IIdevsExcelExporter));
+        Assert.Contains(services, d => d.ServiceType == typeof(IIdevsPdfExporter));
+    }
+
+    [Fact]
+    public void AddIdevsCorelibLegacyScan_RegistersAttributedServices()
+    {
+        var services = new ServiceCollection().AddIdevsCorelibLegacyScan();
+
+        Assert.Contains(services, d => d.ServiceType == typeof(IStandardScopedSample));
     }
 }

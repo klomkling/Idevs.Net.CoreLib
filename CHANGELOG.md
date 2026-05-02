@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.7.0 (2026-05-02)
+
+### Breaking Changes
+
+- **`AddIdevsCorelibServices()` is `[Obsolete]`** — use the source-generator-emitted
+  `services.AddIdevsServices()` instead. The old method now delegates to
+  `AddIdevsCorelibCore()` + `AddIdevsCorelibLegacyScan()`. Removed in 0.8.0.
+
+### Added
+
+- New source generator `Idevs.Net.CoreLib.Generators` (bundled into the main nupkg
+  under `analyzers/dotnet/cs/`). Emits compile-time DI registrations from
+  attribute, marker-interface, and `IIdevsServiceRegistrar` discovery paths.
+- New package `Idevs.Net.CoreLib.Generators.Abstractions` — Roslyn helpers
+  (scanning, validation, emission, diagnostics) for any consumer-authored
+  source generator.
+- New marker interfaces in `Idevs.Repositories`: `IScopedService`,
+  `ISingletonService`, `ITransientService`, plus generic variants with `<TService>`.
+- New runtime hook `IIdevsServiceRegistrar` for arbitrary imperative DI registration.
+- New extension class `Idevs.Extensions.CoreLibBootstrapper` exposing
+  `AddIdevsCorelibCore` (hand-coded services only) and
+  `AddIdevsCorelibLegacyScan` (transitional reflection-based scan).
+- 10 Roslyn diagnostics `IDEVSGEN001`–`IDEVSGEN010` covering attribute/marker
+  conflicts, ambiguous service types, registrar validation, and legacy
+  attribute usage.
+- `<IdevsCoreLibUseSourceGenerator>` MSBuild flag (default `true`); set to `false`
+  to fall back to the legacy scan during transition.
+- `Microsoft.CodeAnalysis.PublicApiAnalyzers` enabled on the four public packages.
+  `PublicAPI.Shipped.txt` baselined at 0.6.1.
+
+### Migration
+
+See [MIGRATION.md](MIGRATION.md#v06x--v070--source-generator-di-registration).
+
 ## 0.6.1 (2026-05-01)
 
 ### Changed (internal modernization, no public API change)

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Idevs.Net.CoreLib</PackageId>
-    <Version>0.6.1</Version>
+    <Version>0.7.0</Version>
     <PackageTags>Idevs; CoreLib; Serenity; Extended</PackageTags>
     <Description>A library to extend Serenity Framework.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -41,6 +41,46 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup Label="Source generator bundling">
+    <!--
+      Build-order dependency only: the generator projects must build before this
+      project packs (so their DLLs exist for the <None Pack="true"> entries below).
+      We do NOT register them as Analyzer here, because that would make the
+      generator run on this project's own compilation and emit a conflicting
+      Idevs.Generated.IdevsServiceRegistrations into Idevs.Net.CoreLib.dll
+      (CS0436 type conflict in consumer projects).
+    -->
+    <ProjectReference Include="..\Idevs.Net.CoreLib.Generators.Abstractions\Idevs.Net.CoreLib.Generators.Abstractions.csproj"
+                      PrivateAssets="all"
+                      ReferenceOutputAssembly="false" />
+
+    <ProjectReference Include="..\Idevs.Net.CoreLib.Generators\Idevs.Net.CoreLib.Generators.csproj"
+                      PrivateAssets="all"
+                      ReferenceOutputAssembly="false" />
+
+    <None Include="..\Idevs.Net.CoreLib.Generators\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.Generators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+
+    <None Include="..\Idevs.Net.CoreLib.Generators.Abstractions\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.Generators.Abstractions.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
   </ItemGroup>
 
 </Project>

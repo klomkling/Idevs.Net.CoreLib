@@ -4,6 +4,15 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      ServiceExtensionsTests intentionally exercises:
+      - The obsolete AddIdevsCorelibServices() (CS0618) — proves it still
+        delegates correctly through 0.7.x.
+      - Legacy [ScopedRegistration]-attributed test fixtures (IDEVSGEN010) —
+        proves the legacy scanner path still resolves them.
+      Both will be removed in 0.8.0; suppressed here until then.
+    -->
+    <NoWarn>$(NoWarn);CS0618;IDEVSGEN010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +32,15 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Idevs.Net.CoreLib.Generators/Idevs.Net.CoreLib.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/Idevs.Net.CoreLib.Generators.Abstractions/Idevs.Net.CoreLib.Generators.Abstractions.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

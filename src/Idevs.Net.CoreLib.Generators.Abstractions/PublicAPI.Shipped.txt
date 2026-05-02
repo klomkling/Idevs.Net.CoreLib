@@ -1,0 +1,47 @@
+#nullable enable
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.ConsumerRange = "IDEVSGEN200+" -> string!
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibAnalyzersRange = "IDEVSGEN100-IDEVSGEN199" -> string!
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibDIRange = "IDEVSGEN001-IDEVSGEN099" -> string!
+Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange
+Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.AppendLine(string! line = "") -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.AppendRaw(string! raw) -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.CloseClass() -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.CloseMethod() -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.IdevsSourceWriter() -> void
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.OpenClass(string! name, bool isStatic = false, bool isPartial = false) -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.OpenMethod(string! signature) -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.ToSourceText() -> Microsoft.CodeAnalysis.Text.SourceText!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.WithFileHeader() -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.WithNamespace(string! ns) -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Emission.IdevsSourceWriter.WithUsings(params string![]! namespaces) -> Idevs.Generators.Abstractions.Emission.IdevsSourceWriter!
+Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner
+Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions
+Idevs.Generators.Abstractions.Scanning.ResolvedServiceType
+Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ImplementationType.get -> string!
+Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.Lifetime.get -> Idevs.Generators.Abstractions.Validation.Lifetime
+Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ResolvedServiceType(string! implementationType, string! serviceType, Idevs.Generators.Abstractions.Validation.Lifetime lifetime) -> void
+Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ServiceType.get -> string!
+Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver
+Idevs.Generators.Abstractions.Validation.Lifetime
+Idevs.Generators.Abstractions.Validation.Lifetime.Scoped = 0 -> Idevs.Generators.Abstractions.Validation.Lifetime
+Idevs.Generators.Abstractions.Validation.Lifetime.Singleton = 1 -> Idevs.Generators.Abstractions.Validation.Lifetime
+Idevs.Generators.Abstractions.Validation.Lifetime.Transient = 2 -> Idevs.Generators.Abstractions.Validation.Lifetime
+Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.Disagreement = 2 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.None = 0 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.NoneSpecified = 3 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.Redundant = 1 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeResolver
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateError(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateInfo(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateWarning(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByAttribute(Microsoft.CodeAnalysis.Compilation! compilation, string! fullAttributeName) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByAttributeImplementingInterface(Microsoft.CodeAnalysis.Compilation! compilation, string! fullInterfaceName) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByInterface(Microsoft.CodeAnalysis.Compilation! compilation, params string![]! fullInterfaceNames) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
+static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.HasAttributeWithFullName(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
+static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.ImplementsInterface(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
+static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveByConvention(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
+static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveWithSelfRegistration(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, bool allowSelfRegistration, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
+static Idevs.Generators.Abstractions.Validation.LifetimeResolver.Resolve(Idevs.Generators.Abstractions.Validation.Lifetime? attributeLifetime, Idevs.Generators.Abstractions.Validation.Lifetime? markerLifetime) -> (Idevs.Generators.Abstractions.Validation.Lifetime? Lifetime, Idevs.Generators.Abstractions.Validation.LifetimeConflict? Conflict)
