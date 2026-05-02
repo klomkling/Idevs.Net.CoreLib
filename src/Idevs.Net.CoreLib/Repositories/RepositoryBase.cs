@@ -76,8 +76,9 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// Run a partial UPDATE with criteria. Returns rows affected.
     /// </summary>
     /// <remarks>
-    /// Table name is pre-resolved from <typeparamref name="TRow"/>; the caller only
-    /// supplies <c>Set(...)</c> and <c>Where(...)</c> on the provided
+    /// Table name and <see cref="SqlServiceBase.Dialect"/> are pre-bound (via the
+    /// <see cref="SqlServiceBase.SqlUpdate"/> factory); the caller only supplies
+    /// <c>Set(...)</c> and <c>Where(...)</c> on the provided
     /// <see cref="SqlUpdate"/>. Defaults to <see cref="ExpectedRows.One"/> — fails
     /// loudly when the WHERE clause matches zero or more than one row. For batch
     /// updates pass <see cref="ExpectedRows.Ignore"/> or call
@@ -110,8 +111,12 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// Run a DELETE with criteria. Returns rows affected.
     /// </summary>
     /// <remarks>
-    /// Table name is pre-resolved from <typeparamref name="TRow"/>; the caller only
-    /// supplies <c>Where(...)</c> on the provided <see cref="SqlDelete"/>.
+    /// Table name is pre-resolved from <typeparamref name="TRow"/>; the caller
+    /// only supplies <c>Where(...)</c> on the provided <see cref="SqlDelete"/>.
+    /// Dialect is resolved from the connection at <c>Execute</c> time —
+    /// Serenity's <see cref="SqlDelete"/> does not expose a chainable
+    /// <c>Dialect()</c> setter, but the connection is the authoritative source
+    /// for the active dialect, so emitted SQL is correct.
     /// Defaults to <see cref="ExpectedRows.One"/>. For batch deletes pass
     /// <see cref="ExpectedRows.Ignore"/> or call <see cref="DeleteManyAsync"/>.
     /// </remarks>
