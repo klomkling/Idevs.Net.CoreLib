@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Idevs.Net.CoreLib.Generators;
 
+
 /// <summary>
 /// Idevs DI source generator. Emits one file:
 /// <c>Idevs.Generated.IdevsServiceRegistrations.AddIdevsServices(IServiceCollection)</c>
@@ -20,7 +21,7 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Pipeline: discover registrations (attributes + marker interfaces), then emit one file.
+        // Pipeline 1: discover registrations (attributes + marker interfaces).
         var attributedTypes = context.SyntaxProvider
             .CreateSyntaxProvider(
                 predicate: (node, _) => node is ClassDeclarationSyntax,
@@ -28,10 +29,23 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
             .Combine(context.CompilationProvider)
             .SelectMany((pair, _) => DiscoverRegistrations(pair.Right, pair.Left));
 
-        var collected = attributedTypes.Collect();
+        var collectedRegs = attributedTypes.Collect();
 
-        context.RegisterSourceOutput(collected, (ctx, registrations) =>
+        // Pipeline 2: discover IIdevsServiceRegistrar implementations.
+        var registrarSyntax = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: (node, _) => node is ClassDeclarationSyntax,
+                transform: (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
+            .Combine(context.CompilationProvider)
+            .SelectMany((pair, _) => DiscoverRegistrars(pair.Right, pair.Left));
+
+        var collectedRegistrars = registrarSyntax.Collect();
+
+        var combined = collectedRegs.Combine(collectedRegistrars);
+        context.RegisterSourceOutput(combined, (ctx, both) =>
         {
+            var (registrations, registrars) = both;
+
             var writer = new IdevsSourceWriter()
                 .WithFileHeader()
                 .WithUsings("Idevs.Extensions", "Microsoft.Extensions.DependencyInjection")
@@ -55,6 +69,19 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
                 foreach (var reg in sorted)
                 {
                     writer.AppendLine($"services.Add{reg.Lifetime}<{reg.ServiceFullName}, {reg.ImplementationFullName}>();");
+                }
+            }
+
+            var sortedRegistrars = registrars
+                .OrderBy(r => r, System.StringComparer.Ordinal)
+                .ToImmutableArray();
+
+            if (sortedRegistrars.Length > 0)
+            {
+                writer.AppendLine();
+                foreach (var registrar in sortedRegistrars)
+                {
+                    writer.AppendLine($"new {registrar}().Register(services);");
                 }
             }
 
@@ -122,6 +149,26 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
 
             yield return new RegistrationRecord(ToGlobalQualified(type), ToGlobalQualified(serviceTypeFromMarker!), markerLifetime);
         }
+    }
+
+    private static IEnumerable<string> DiscoverRegistrars(
+        Compilation compilation,
+        ClassDeclarationSyntax classDecl)
+    {
+        var model = compilation.GetSemanticModel(classDecl.SyntaxTree);
+        if (model.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol type) yield break;
+        if (type.IsAbstract || type.TypeKind != TypeKind.Class) yield break;
+
+        if (!type.AllInterfaces.Any(i =>
+                i.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                    == "global::Idevs.Repositories.IIdevsServiceRegistrar"))
+            yield break;
+
+        var hasParameterlessCtor = type.Constructors.Any(c =>
+            c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public);
+        if (!hasParameterlessCtor) yield break;
+
+        yield return ToGlobalQualified(type);
     }
 
     private static string? ResolveAttributeLifetime(INamedTypeSymbol attrClass)
