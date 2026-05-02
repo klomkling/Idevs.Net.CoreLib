@@ -1,3 +1,4 @@
+#nullable enable
 Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange
 const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibAnalyzersRange = "IDEVSGEN100-IDEVSGEN199" -> string!
 const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibDIRange = "IDEVSGEN001-IDEVSGEN099" -> string!
@@ -9,3 +10,7 @@ static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateWarning(
 Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions
 static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.HasAttributeWithFullName(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
 static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.ImplementsInterface(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
+Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByAttribute(Microsoft.CodeAnalysis.Compilation! compilation, string! fullAttributeName) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByAttributeImplementingInterface(Microsoft.CodeAnalysis.Compilation! compilation, string! fullInterfaceName) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
+static Idevs.Generators.Abstractions.Scanning.IdevsRoslynScanner.FindByInterface(Microsoft.CodeAnalysis.Compilation! compilation, params string![]! fullInterfaceNames) -> System.Collections.Generic.IEnumerable<Microsoft.CodeAnalysis.INamedTypeSymbol!>!
