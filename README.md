@@ -109,6 +109,7 @@ public class SmtpEmailService : IEmailService { }
 
 ```csharp
 using Idevs.Repositories;
+using Serenity.Data; // ISqlConnections, IRow, IIdRow
 
 public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
     : RepositoryBase<TRow, TKey>(c), IScopedService
@@ -181,7 +182,7 @@ Three layered base classes for data access:
   | **Writes** | `CreateAsync(TRow)`, `UpdateAsync(Action<SqlUpdate>, ExpectedRows)`, `UpdateManyAsync(Action<SqlUpdate>)`, `DeleteAsync(Action<SqlDelete>, ExpectedRows)`, `DeleteManyAsync(Action<SqlDelete>)` |
   | **Deprecated** | `FirstAsync` (use `TryFirstAsync`); all sync wrappers (`*` without `Async`) |
 
-  `UpdateAsync` and `DeleteAsync` default to `ExpectedRows.One` so a wrong WHERE clause fails loudly — use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations. `CreateAsync` is an insert and has no row-count assertion (it returns the new identity).
+  `UpdateAsync` and `DeleteAsync` default to `ExpectedRows.One` so a wrong WHERE clause fails loudly — use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations. `CreateAsync` is an insert and has no row-count assertion: it returns the new identity for rows that implement `IIdRow`, or `0` otherwise.
 
 - **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`: `GetByIdAsync(TKey)`, `GetByIdsAsync(IEnumerable<TKey>)`, `UpdateAsync(TRow row)` (entity-by-id), `DeleteByIdAsync(TKey)`. Inherits all criteria-based methods from `RepositoryBase<TRow>`. The `UpdateAsync(TRow)` and `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
 
@@ -192,6 +193,7 @@ Connection key is configurable via the virtual `ConnectionKey` property or the `
 ```csharp
 using Idevs.ComponentModels;
 using Idevs.Repositories;
+using Serenity.Data; // ISqlConnections, IUnitOfWork
 
 public interface IMappingLotRepository
 {
@@ -234,6 +236,8 @@ public class MappingLotRepository(ISqlConnections c)
 | `GetLocalCachedAsync<T>` | `GetLocalStoreOnly<T>` | Per-process memory cache; never hits the remote (distributed) layer. |
 | `GetGloballyCachedAsync<T>` | `Get<T>` (full two-level path) | Memory + remote; survives across processes/instances. |
 
+Both helpers take a `Func<CancellationToken, Task<T>>` factory, so the cancellation token is forwarded into the underlying load:
+
 ```csharp
 using Idevs.Net.CoreLib.Caching;
 
@@ -242,7 +246,7 @@ var amphurs = await cache.GetLocalCachedAsync(
     CacheKey.Base.Amphur,
     CacheKey.Base.DefaultCacheDuration,
     CacheKey.Base.GroupKey,
-    () => repo.ListAsync(q => q.SelectTableFields(), ct: ct),
+    token => repo.ListAsync(q => q.SelectTableFields(), ct: token),
     ct);
 
 // Two-level cache (memory + remote/distributed).
@@ -250,7 +254,7 @@ var lookups = await cache.GetGloballyCachedAsync(
     CacheKey.Base.Lookups,
     CacheKey.Base.DefaultCacheDuration,
     CacheKey.Base.GroupKey,
-    () => repo.ListAsync(q => q.SelectTableFields(), ct: ct),
+    token => repo.ListAsync(q => q.SelectTableFields(), ct: token),
     ct);
 ```
 
@@ -490,8 +494,10 @@ public class OrderColumns
 
 Two entry points:
 
-- `CreatePages<T>(List<T> items, PaginationConfig config)` — full control via `PaginationConfig` (first-page size, regular page size, last-page reserved rows, filler-row behavior).
+- `CreatePages<T>(List<T> items, PaginationConfig config)` — full control. `PaginationConfig` exposes `FirstPageSize`, `RegularPageSize`, `LastPageReserveRows`, and `EnableLogging`.
 - `CreatePaginatedData<T>(List<T> items, int firstPageSize, int regularPageSize, int lastPageReserveRows, bool enableLogging = true)` — convenience overload that builds the config inline.
+
+Filler rows are added automatically by `SmartPagination` to keep page heights consistent (no opt-in flag required).
 
 ```csharp
 using Idevs;
@@ -503,7 +509,8 @@ var result = SmartPagination.CreatePaginatedData(orders,
 
 // result.Pages       — List<PageData<T>>
 // result.TotalPages  — int
-// each PageData<T> exposes Items, PageNumber, IsLastPage, etc.
+// each PageData<T> exposes: Index (page number), Items, FillerRows,
+//   IsFirst, IsLast, PageOffset, Capacity.
 ```
 
 ### Static service locator
@@ -574,8 +581,8 @@ Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member
 | `IDEVSGEN002` | Error | Multiple lifetime marker interfaces with distinct lifetimes |
 | `IDEVSGEN003` | Error | Attribute and marker interface specify different lifetimes |
 | `IDEVSGEN004` | Warning | Redundant — attribute and marker specify the same lifetime |
-| `IDEVSGEN005` | Error | Ambiguous service type — multiple candidate interfaces, none picked |
-| `IDEVSGEN006` | Error | Cannot register — no service interface and `AllowSelfRegistration` is false |
+| `IDEVSGEN005` | Warning | Ambiguous service type — multiple candidate interfaces, none picked |
+| `IDEVSGEN006` | Warning | Cannot register — no service interface and `AllowSelfRegistration` is false |
 | `IDEVSGEN007` | Error | Attribute `ServiceType` conflicts with the generic marker's service type |
 | `IDEVSGEN008` | Error | `IIdevsServiceRegistrar` type has no accessible public constructor |
 | `IDEVSGEN009` | Warning | `IIdevsServiceRegistrar` is internal — consider making it public |
