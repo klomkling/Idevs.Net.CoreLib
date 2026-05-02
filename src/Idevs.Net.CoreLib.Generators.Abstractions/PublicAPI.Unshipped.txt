@@ -6,3 +6,6 @@ Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics
 static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateError(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
 static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateInfo(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
 static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateWarning(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions
+static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.HasAttributeWithFullName(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
+static Idevs.Generators.Abstractions.Scanning.INamedTypeSymbolExtensions.ImplementsInterface(this Microsoft.CodeAnalysis.INamedTypeSymbol! symbol, string! fullName) -> bool
