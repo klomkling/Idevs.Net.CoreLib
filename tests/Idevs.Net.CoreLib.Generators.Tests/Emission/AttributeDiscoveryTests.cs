@@ -6,7 +6,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class AttributeDiscoveryTests
 {
-    static AttributeDiscoveryTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task SingleScopedAttributeOnConventionalType()

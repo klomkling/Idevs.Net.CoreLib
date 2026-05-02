@@ -7,7 +7,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class MsbuildFlagOffTests
 {
-    static MsbuildFlagOffTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task FlagOff_EmitsLegacyScanFallback()

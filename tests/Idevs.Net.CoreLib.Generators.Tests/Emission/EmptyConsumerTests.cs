@@ -10,7 +10,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class EmptyConsumerTests
 {
-    static EmptyConsumerTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task EmptyConsumer_EmitsWrapperCallingCoreOnly()

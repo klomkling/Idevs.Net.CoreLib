@@ -6,7 +6,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class RegistrarDiscoveryTests
 {
-    static RegistrarDiscoveryTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task SingleRegistrar_EmitsConstructAndRegisterCall()

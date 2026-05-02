@@ -6,7 +6,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class MarkerDiscoveryTests
 {
-    static MarkerDiscoveryTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task NonGenericScopedMarker()

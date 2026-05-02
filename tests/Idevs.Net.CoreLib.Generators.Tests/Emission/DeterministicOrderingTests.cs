@@ -6,7 +6,6 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Emission;
 
 public class DeterministicOrderingTests
 {
-    static DeterministicOrderingTests() => VerifySourceGenerators.Initialize();
 
     [Fact]
     public Task RegistrationsAreSortedAlphabetically()
