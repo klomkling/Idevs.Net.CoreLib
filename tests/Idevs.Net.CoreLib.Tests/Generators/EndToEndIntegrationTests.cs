@@ -7,20 +7,20 @@ namespace Idevs.Net.CoreLib.Tests.Generators;
 public class EndToEndIntegrationTests
 {
     // Path 1: attribute-based discovery
-    public interface IExampleViaAttribute { }
+    public interface IExampleViaAttribute;
 
     [Scoped]
-    public class ExampleViaAttribute : IExampleViaAttribute { }
+    public class ExampleViaAttribute : IExampleViaAttribute;
 
     // Path 2: marker interface discovery
-    public interface IExampleViaMarker { }
+    public interface IExampleViaMarker;
 
-    public class ExampleViaMarker : IExampleViaMarker, IScopedService { }
+    public class ExampleViaMarker : IExampleViaMarker, IScopedService;
 
     // Path 3: registrar discovery
-    public interface IExtraRegistrarService { }
+    public interface IExtraRegistrarService;
 
-    public class ExtraRegistrarServiceImpl : IExtraRegistrarService { }
+    public class ExtraRegistrarServiceImpl : IExtraRegistrarService;
 
     public class ExampleRegistrar : IIdevsServiceRegistrar
     {
@@ -35,7 +35,7 @@ public class EndToEndIntegrationTests
     {
         var services = new ServiceCollection();
 
-        Idevs.Generated.IdevsServiceRegistrations.AddIdevsServices(services);
+        Generated.IdevsServiceRegistrations.AddIdevsServices(services);
 
         Assert.Contains(services, d => d.ServiceType == typeof(IExampleViaAttribute));
         Assert.Contains(services, d => d.ServiceType == typeof(IExampleViaMarker));

@@ -5,14 +5,14 @@
 
       Behavior
       - On the first build that does not yet have @idevs/corelib in node_modules, this
-        target shells out to `npm install @idevs/corelib --no-save` so consumer projects
+        target shells out to npm install @idevs/corelib with the no-save option so consumer projects
         get the matching client-side assets.
       - On every build, any CSS shipped under @idevs/corelib/css is copied into
         wwwroot/lib/Idevs/Content for static serving.
 
       Opting out
       - Set <IdevsCoreLibInstallNpmPackage>false</IdevsCoreLibInstallNpmPackage> in the
-        consuming project's csproj or via `dotnet build /p:IdevsCoreLibInstallNpmPackage=false`.
+        consuming project's csproj or via dotnet build /p:IdevsCoreLibInstallNpmPackage=false.
       - Useful for air-gapped CI or environments without npm.
 
       Failure modes handled here
