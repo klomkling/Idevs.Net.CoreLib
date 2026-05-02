@@ -20,14 +20,13 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Pipeline: discover registrations, then emit one file.
+        // Pipeline: discover registrations (attributes + marker interfaces), then emit one file.
         var attributedTypes = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: (node, _) => node is ClassDeclarationSyntax c
-                                        && c.AttributeLists.Count > 0,
+                predicate: (node, _) => node is ClassDeclarationSyntax,
                 transform: (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
             .Combine(context.CompilationProvider)
-            .SelectMany((pair, _) => DiscoverFromAttributes(pair.Right, pair.Left));
+            .SelectMany((pair, _) => DiscoverRegistrations(pair.Right, pair.Left));
 
         var collected = attributedTypes.Collect();
 
@@ -41,7 +40,12 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
                 .OpenMethod("public static IServiceCollection AddIdevsServices(this IServiceCollection services)")
                 .AppendLine("services.AddIdevsCorelibCore();");
 
+            // De-dup by (impl, service) pair — prevents double registration when a class
+            // uses both an attribute and a marker interface. Task 18 will emit IDEVSGEN004
+            // for that case; for now we simply take first.
             var sorted = registrations
+                .GroupBy(r => (r.ImplementationFullName, r.ServiceFullName))
+                .Select(g => g.First())
                 .OrderBy(r => r.ImplementationFullName, System.StringComparer.Ordinal)
                 .ToImmutableArray();
 
@@ -64,7 +68,7 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
         });
     }
 
-    private static IEnumerable<RegistrationRecord> DiscoverFromAttributes(
+    private static IEnumerable<RegistrationRecord> DiscoverRegistrations(
         Compilation compilation,
         ClassDeclarationSyntax classDecl)
     {
@@ -72,6 +76,7 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
         if (model.GetDeclaredSymbol(classDecl) is not INamedTypeSymbol type) yield break;
         if (type.IsAbstract || type.TypeKind != TypeKind.Class) yield break;
 
+        // ----- Path 1: attribute-based discovery -----
         foreach (var attr in type.GetAttributes())
         {
             var attrClass = attr.AttributeClass;
@@ -82,10 +87,40 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
 
             if (!ServiceTypeResolver.TryResolveByConvention(type, out var serviceType)) continue;
 
-            var implFullName = "global::" + type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
-            var serviceFullName = "global::" + serviceType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+            yield return new RegistrationRecord(ToGlobalQualified(type), ToGlobalQualified(serviceType!), lifetime);
+        }
 
-            yield return new RegistrationRecord(implFullName, serviceFullName, lifetime);
+        // ----- Path 2: marker-interface discovery -----
+        var markerLifetime = ResolveMarkerLifetime(type);
+        if (markerLifetime is not null)
+        {
+            // Check for generic marker first (pins ServiceType explicitly).
+            INamedTypeSymbol? serviceTypeFromMarker = null;
+            foreach (var iface in type.AllInterfaces)
+            {
+                if (iface.IsGenericType && iface.TypeArguments.Length == 1)
+                {
+                    var origDef = iface.OriginalDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                    if (origDef == "global::Idevs.Repositories.IScopedService<TService>"
+                        || origDef == "global::Idevs.Repositories.ISingletonService<TService>"
+                        || origDef == "global::Idevs.Repositories.ITransientService<TService>")
+                    {
+                        if (iface.TypeArguments[0] is INamedTypeSymbol named)
+                        {
+                            serviceTypeFromMarker = named;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (serviceTypeFromMarker is null)
+            {
+                // No generic marker — fall back to I{ClassName} convention.
+                if (!ServiceTypeResolver.TryResolveByConvention(type, out serviceTypeFromMarker)) yield break;
+            }
+
+            yield return new RegistrationRecord(ToGlobalQualified(type), ToGlobalQualified(serviceTypeFromMarker!), markerLifetime);
         }
     }
 
@@ -104,6 +139,30 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
             _ => null
         };
     }
+
+    private static string? ResolveMarkerLifetime(INamedTypeSymbol type)
+    {
+        foreach (var iface in type.AllInterfaces)
+        {
+            var fullName = iface.OriginalDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            switch (fullName)
+            {
+                case "global::Idevs.Repositories.IScopedService":
+                case "global::Idevs.Repositories.IScopedService<TService>":
+                    return "Scoped";
+                case "global::Idevs.Repositories.ISingletonService":
+                case "global::Idevs.Repositories.ISingletonService<TService>":
+                    return "Singleton";
+                case "global::Idevs.Repositories.ITransientService":
+                case "global::Idevs.Repositories.ITransientService<TService>":
+                    return "Transient";
+            }
+        }
+        return null;
+    }
+
+    private static string ToGlobalQualified(INamedTypeSymbol s) =>
+        "global::" + s.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
 
     private sealed class RegistrationRecord
     {
