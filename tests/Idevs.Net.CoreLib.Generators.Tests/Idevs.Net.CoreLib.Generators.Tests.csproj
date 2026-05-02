@@ -4,6 +4,14 @@
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit 1.1.2 declares
+      pinned dependencies on the 3.8.0 line of Microsoft.CodeAnalysis.* packages,
+      but our generator targets 4.7.0. The 4.7.0 line is a strict superset; the
+      runtime resolution is correct, but NU1608 fires per package. Out of our
+      control until the testing-xunit package is updated upstream.
+    -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

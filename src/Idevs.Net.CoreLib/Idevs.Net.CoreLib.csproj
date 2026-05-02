@@ -56,12 +56,20 @@
   </ItemGroup>
 
   <ItemGroup Label="Source generator bundling">
+    <!--
+      Build-order dependency only: the generator projects must build before this
+      project packs (so their DLLs exist for the <None Pack="true"> entries below).
+      We do NOT register them as Analyzer here, because that would make the
+      generator run on this project's own compilation and emit a conflicting
+      Idevs.Generated.IdevsServiceRegistrations into Idevs.Net.CoreLib.dll
+      (CS0436 type conflict in consumer projects).
+    -->
     <ProjectReference Include="..\Idevs.Net.CoreLib.Generators.Abstractions\Idevs.Net.CoreLib.Generators.Abstractions.csproj"
-                      OutputItemType="Analyzer"
+                      PrivateAssets="all"
                       ReferenceOutputAssembly="false" />
 
     <ProjectReference Include="..\Idevs.Net.CoreLib.Generators\Idevs.Net.CoreLib.Generators.csproj"
-                      OutputItemType="Analyzer"
+                      PrivateAssets="all"
                       ReferenceOutputAssembly="false" />
 
     <None Include="..\Idevs.Net.CoreLib.Generators\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.Generators.dll"

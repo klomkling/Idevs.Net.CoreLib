@@ -143,7 +143,6 @@ Idevs.Extensions.WebApplicationExtensions
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication)
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator() -> Microsoft.AspNetCore.Builder.WebApplication
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator(System.IServiceProvider provider) -> Microsoft.AspNetCore.Builder.WebApplication
-Idevs.Generated.IdevsServiceRegistrations
 Idevs.Helpers.PdfOptionsBuilder
 Idevs.IdevsExcelExporter
 Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Collections.Generic.IEnumerable<Serenity.Reporting.ReportColumn> columns) -> byte[]
@@ -482,7 +481,6 @@ static Idevs.Extensions.NumberExtensions.ToThaiBahtText(this string strNumber, b
 static Idevs.Extensions.ServiceExtensions.AddIdevsCorelibServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Extensions.ServiceExtensions.RegisterServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Extensions.TextLocalizerExtension.Translate(this Serenity.ITextLocalizer localizer, string moduleName, string key) -> string
-static Idevs.Generated.IdevsServiceRegistrations.AddIdevsServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Helpers.PdfOptionsBuilder.CreateBusiness(PuppeteerSharp.Media.PaperFormat format = null) -> PuppeteerSharp.PdfOptions
 static Idevs.Helpers.PdfOptionsBuilder.CreateClean(PuppeteerSharp.Media.PaperFormat format = null, (string top, string bottom, string left, string right)? margins = null) -> PuppeteerSharp.PdfOptions
 static Idevs.Helpers.PdfOptionsBuilder.CreateWithTemplates(string headerTemplate = null, string footerTemplate = null, PuppeteerSharp.Media.PaperFormat format = null, string headerHeight = "20mm", string footerHeight = "20mm") -> PuppeteerSharp.PdfOptions

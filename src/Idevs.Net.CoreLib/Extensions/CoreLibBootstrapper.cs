@@ -24,7 +24,7 @@ public static class CoreLibBootstrapper
 
     /// <summary>
     /// Scans loaded assemblies for types decorated with service registration attributes
-    /// (e.g. <see cref="Idevs.ComponentModel.ScopedAttribute"/>) and registers them.
+    /// (e.g. <see cref="Idevs.ComponentModels.ScopedAttribute"/>) and registers them.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The updated service collection.</returns>

@@ -6,6 +6,14 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IsPackable>false</IsPackable>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <!--
+      RS1032: Diagnostic messages should be single-sentence-without-period or
+              multi-sentence-with-period. Our IDEVSGEN messages are descriptive
+              single sentences with trailing periods — stylistic, not a defect.
+      RS2008: Recommends an AnalyzerReleases.Shipped.md tracking file. Out of
+              scope for an internal analyzer bundled into the main library nupkg.
+    -->
+    <NoWarn>$(NoWarn);RS1032;RS2008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

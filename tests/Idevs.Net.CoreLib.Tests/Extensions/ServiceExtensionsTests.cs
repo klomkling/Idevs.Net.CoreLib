@@ -1,3 +1,7 @@
+// These tests intentionally exercise the obsolete AddIdevsCorelibServices()
+// + the legacy [ScopedRegistration] attribute paths to prove they still work
+// through 0.7.x. CS0618 (obsolete) and IDEVSGEN010 (legacy attribute) are
+// expected and suppressed in the test csproj's <NoWarn>.
 using Idevs.ComponentModel;
 using Idevs.ComponentModels;
 using Idevs.Extensions;
