@@ -83,12 +83,19 @@ public abstract class SqlServiceBase
     /// <summary>Creates a new <see cref="SqlQuery"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
     protected SqlQuery SqlQuery() => new SqlQuery().Dialect(Dialect);
 
-    /// <summary>Creates a new <see cref="SqlInsert"/> for the given table.</summary>
-    protected SqlInsert SqlInsert(string tableName) => new(tableName);
+    /// <summary>Creates a new <see cref="SqlInsert"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
+    protected SqlInsert SqlInsert(string tableName) => new SqlInsert(tableName).Dialect(Dialect);
 
-    /// <summary>Creates a new <see cref="SqlUpdate"/> for the given table.</summary>
-    protected SqlUpdate SqlUpdate(string tableName) => new(tableName);
+    /// <summary>Creates a new <see cref="SqlUpdate"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
+    protected SqlUpdate SqlUpdate(string tableName) => new SqlUpdate(tableName).Dialect(Dialect);
 
     /// <summary>Creates a new <see cref="SqlDelete"/> for the given table.</summary>
+    /// <remarks>
+    /// Unlike <see cref="SqlQuery"/>/<see cref="SqlInsert"/>/<see cref="SqlUpdate"/>,
+    /// Serenity's <see cref="SqlDelete"/> does not expose a chainable
+    /// <c>Dialect()</c> setter. The dialect is resolved from the connection
+    /// at <c>Execute</c> time, which is correct for any DELETE statement
+    /// produced through this factory.
+    /// </remarks>
     protected SqlDelete SqlDelete(string tableName) => new(tableName);
 }

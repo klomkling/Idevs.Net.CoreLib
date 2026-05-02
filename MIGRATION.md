@@ -4,11 +4,109 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
 - [v0.6.x → v0.7.0 — Source-Generator DI Registration](#v06x--v070--source-generator-di-registration)
 - [v0.5.0 → v0.6.0 — RepositoryBase Redesign](#v050--v060--repositorybase-redesign)
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias
+
+### What changed
+
+- New async helpers on `RepositoryBase<TRow>`:
+  - `TryFirstAsync(Action<SqlQuery>, ...)` — semantic alias for the existing
+    `FirstAsync` (which returns `Task<TRow?>`). Name matches Serenity's
+    `Connection.TryFirst` convention.
+  - `UpdateAsync(Action<SqlUpdate>, ExpectedRows, ...)` — criteria-based partial
+    UPDATE. Table name is auto-resolved from `TRow`. Defaults to
+    `ExpectedRows.One` so a wrong WHERE clause fails loudly.
+  - `UpdateManyAsync(Action<SqlUpdate>, ...)` — alias for
+    `UpdateAsync(..., ExpectedRows.Ignore, ...)`.
+  - `DeleteAsync(Action<SqlDelete>, ExpectedRows, ...)` — symmetric to
+    `UpdateAsync`.
+  - `DeleteManyAsync(Action<SqlDelete>, ...)` — alias for batch deletes.
+- Sync `[Obsolete]` wrappers (`TryFirst`, `Update`, `UpdateMany`, `Delete`,
+  `DeleteMany`) follow the existing migration pattern and will be removed
+  alongside the other sync wrappers in 1.0.
+- `FirstAsync(Action<SqlQuery>, ...)` and its sync sibling `First(...)` are
+  marked `[Obsolete]`. Same behavior; they now delegate to `TryFirstAsync`.
+  Will be removed in 1.0.
+
+### Why `ExpectedRows.One` is the default
+
+Most domain operations target exactly one row (update a specific document,
+delete a specific record). Default-to-`One` makes incorrect WHERE clauses fail
+loudly at runtime instead of silently corrupting data (the 0-rows case) or
+wreaking havoc (the N-rows case). This matches Serenity's own `Execute(connection)`
+overload default. Callers wanting batch behavior must opt in explicitly via
+`*ManyAsync` or `ExpectedRows.Ignore`.
+
+### Migration steps
+
+1. Bump to 0.7.2 in your consumer project:
+   ```xml
+   <PackageReference Include="Idevs.Net.CoreLib" Version="0.7.2" />
+   ```
+
+2. **(Optional) Rename existing `FirstAsync`/`First` calls to `TryFirstAsync`/`TryFirst`.**
+   Behavior is identical; only the name changes. The deprecation is non-breaking
+   for 0.7.x and removal is planned for 1.0:
+   ```csharp
+   - var row = await repo.FirstAsync(q => q.SelectTableFields().Where(...), uow, ct);
+   + var row = await repo.TryFirstAsync(q => q.SelectTableFields().Where(...), uow, ct);
+   ```
+
+3. **Replace inline `new SqlUpdate(...).Execute(...)` patterns with `UpdateAsync`.**
+   The repository version pre-resolves the table name and defaults to
+   `ExpectedRows.One`:
+   ```csharp
+   - new SqlUpdate(MappingLotSelectionRow.Fields.TableName)
+   -     .Dialect(dialect)
+   -     .Set(cFld.McApproveQty, qty)
+   -     .Where(cFld.DocNo == docno && cFld.ProductId == productId)
+   -     .Execute(uow.Connection);
+   + await mappingLotRepo.UpdateAsync(u => u
+   +     .Set(cFld.McApproveQty, qty)
+   +     .Where(cFld.DocNo == docno && cFld.ProductId == productId),
+   +     uow: uow, ct: ct);
+   ```
+   If your previous code was effectively unchecked (no row-count assertion
+   around the `Execute` call) and the WHERE clause may match many rows,
+   call `UpdateManyAsync` instead — or pass `ExpectedRows.Ignore` explicitly.
+
+4. **Same pattern for `SqlDelete` → `DeleteAsync` / `DeleteManyAsync`.**
+   ```csharp
+   - new SqlDelete(MappingLotSelectionRow.Fields.TableName)
+   -     .Where(cFld.DocNo == docno)
+   -     .Execute(uow.Connection);
+   + await mappingLotRepo.DeleteManyAsync(d => d
+   +     .Where(cFld.DocNo == docno),
+   +     uow: uow, ct: ct);
+   ```
+   `DeleteManyAsync` is the right choice here because a `DocNo`-only filter
+   typically removes multiple rows. Use plain `DeleteAsync` only when you
+   *expect* exactly one row to be removed.
+
+5. **Audit existing single-row updates for hidden bugs.**
+   After switching to `UpdateAsync`, the `ExpectedRows.One` default may surface
+   pre-existing issues — for example, a `Where` clause that matches zero rows
+   because the row was already updated, or matches multiple rows because the
+   filter is too loose. These now throw at runtime instead of silently
+   succeeding. That is the intended behavior; treat each throw as a real bug.
+
+### Notes
+
+- `CountAsync` and `ExistsAsync` were considered for 0.7.2 but deferred until
+  the right Serenity idiom is identified. Track the follow-up in the next
+  patch.
+- The keyed variant `RepositoryBase<TRow, TKey>` already exposes
+  `UpdateAsync(TRow row, ...)` (by-Id, full-row update). The new
+  `UpdateAsync(Action<SqlUpdate>, ...)` overload coexists by signature; both
+  work side-by-side without ambiguity.
 
 ---
 

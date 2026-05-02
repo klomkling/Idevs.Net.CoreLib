@@ -4,7 +4,7 @@ namespace Idevs.Repositories;
 
 /// <summary>
 /// Typed repository base for a single Serenity <see cref="IRow"/>. Provides
-/// async-first read/list helpers and an <see cref="SqlServiceBase.ExecuteAsync{T}"/>
+/// async-first read/list/write helpers and an <see cref="SqlServiceBase.ExecuteAsync{T}"/>
 /// template inherited from <see cref="SqlServiceBase"/>.
 /// </summary>
 /// <typeparam name="TRow">A Serenity row type.</typeparam>
@@ -15,9 +15,9 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// <remarks>
     /// The query is pre-bound to <see cref="SqlServiceBase.Dialect"/> before
     /// <paramref name="configure"/> is invoked, so consumers don't need to call
-    /// <c>q.Dialect(...)</c> themselves.
+    /// <c>q.Dialect(...)</c> themselves. Wraps Serenity's <c>Connection.TryFirst</c>.
     /// </remarks>
-    public virtual Task<TRow?> FirstAsync(
+    public virtual Task<TRow?> TryFirstAsync(
         Action<SqlQuery> configure,
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
@@ -73,6 +73,77 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     }
 
     /// <summary>
+    /// Run a partial UPDATE with criteria. Returns rows affected.
+    /// </summary>
+    /// <remarks>
+    /// Table name and <see cref="SqlServiceBase.Dialect"/> are pre-bound (via the
+    /// <see cref="SqlServiceBase.SqlUpdate"/> factory); the caller only supplies
+    /// <c>Set(...)</c> and <c>Where(...)</c> on the provided
+    /// <see cref="SqlUpdate"/>. Defaults to <see cref="ExpectedRows.One"/> — fails
+    /// loudly when the WHERE clause matches zero or more than one row. For batch
+    /// updates pass <see cref="ExpectedRows.Ignore"/> or call
+    /// <see cref="UpdateManyAsync"/>.
+    /// </remarks>
+    public virtual Task<int> UpdateAsync(
+        Action<SqlUpdate> configure,
+        ExpectedRows expectedRows = ExpectedRows.One,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var update = SqlUpdate(new TRow().Table);
+            configure(update);
+            return Task.FromResult(update.Execute(c, expectedRows));
+        }, uow, ct);
+    }
+
+    /// <summary>Run an UPDATE with no row-count assertion (any number of rows accepted).</summary>
+    public virtual Task<int> UpdateManyAsync(
+        Action<SqlUpdate> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+        => UpdateAsync(configure, ExpectedRows.Ignore, uow, ct);
+
+    /// <summary>
+    /// Run a DELETE with criteria. Returns rows affected.
+    /// </summary>
+    /// <remarks>
+    /// Table name is pre-resolved from <typeparamref name="TRow"/>; the caller
+    /// only supplies <c>Where(...)</c> on the provided <see cref="SqlDelete"/>.
+    /// Dialect is resolved from the connection at <c>Execute</c> time —
+    /// Serenity's <see cref="SqlDelete"/> does not expose a chainable
+    /// <c>Dialect()</c> setter, but the connection is the authoritative source
+    /// for the active dialect, so emitted SQL is correct.
+    /// Defaults to <see cref="ExpectedRows.One"/>. For batch deletes pass
+    /// <see cref="ExpectedRows.Ignore"/> or call <see cref="DeleteManyAsync"/>.
+    /// </remarks>
+    public virtual Task<int> DeleteAsync(
+        Action<SqlDelete> configure,
+        ExpectedRows expectedRows = ExpectedRows.One,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var delete = SqlDelete(new TRow().Table);
+            configure(delete);
+            return Task.FromResult(delete.Execute(c, expectedRows));
+        }, uow, ct);
+    }
+
+    /// <summary>Run a DELETE with no row-count assertion (any number of rows accepted).</summary>
+    public virtual Task<int> DeleteManyAsync(
+        Action<SqlDelete> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+        => DeleteAsync(configure, ExpectedRows.Ignore, uow, ct);
+
+    /// <summary>
     /// Look up a single row by a Serenity field reference and value.
     /// </summary>
     /// <remarks>
@@ -94,19 +165,35 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     {
         ArgumentNullException.ThrowIfNull(keyField);
 
-        return FirstAsync(q => q
+        return TryFirstAsync(q => q
             .SelectTableFields()
             .WhereEqual(keyField, value),
             uow, ct);
     }
+
+    private const string ObsoleteFirstAsyncMessage =
+        "Use TryFirstAsync. Same behavior; the new name matches Serenity's TryFirst convention. " +
+        "Will be removed in 1.0.";
+
+    /// <summary>Deprecated alias for <see cref="TryFirstAsync"/>.</summary>
+    [Obsolete(ObsoleteFirstAsyncMessage)]
+    public virtual Task<TRow?> FirstAsync(
+        Action<SqlQuery> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+        => TryFirstAsync(configure, uow, ct);
 
     private const string ObsoleteSyncMessage =
         "Sync wrapper kept for migration. Prefer the *Async variant. " +
         "Will be removed once underlying SQL APIs become real-async (~1.0).";
 
     [Obsolete(ObsoleteSyncMessage)]
+    public virtual TRow? TryFirst(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        TryFirstAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteFirstAsyncMessage)]
     public virtual TRow? First(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
-        FirstAsync(configure, uow).GetAwaiter().GetResult();
+        TryFirstAsync(configure, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
     public virtual List<TRow> List(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
@@ -119,4 +206,26 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     [Obsolete(ObsoleteSyncMessage)]
     public virtual long Create(TRow row, IUnitOfWork? uow = null) =>
         CreateAsync(row, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual int Update(
+        Action<SqlUpdate> configure,
+        ExpectedRows expectedRows = ExpectedRows.One,
+        IUnitOfWork? uow = null) =>
+        UpdateAsync(configure, expectedRows, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual int UpdateMany(Action<SqlUpdate> configure, IUnitOfWork? uow = null) =>
+        UpdateManyAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual int Delete(
+        Action<SqlDelete> configure,
+        ExpectedRows expectedRows = ExpectedRows.One,
+        IUnitOfWork? uow = null) =>
+        DeleteAsync(configure, expectedRows, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual int DeleteMany(Action<SqlDelete> configure, IUnitOfWork? uow = null) =>
+        DeleteManyAsync(configure, uow).GetAwaiter().GetResult();
 }

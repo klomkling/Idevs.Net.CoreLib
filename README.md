@@ -439,6 +439,7 @@ for (int i = 0; i < totalRecords; i += batchSize)
 Upgrade notes for every version live in [MIGRATION.md](MIGRATION.md). Direct
 links for the most-recent transitions:
 
+- [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
 - [v0.6.x → v0.7.0 — Source-Generator DI Registration](MIGRATION.md#v06x--v070--source-generator-di-registration)
 - [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
@@ -456,18 +457,45 @@ links for the most-recent transitions:
   composes with an optional `UnitOfWork`.
 
 - **`RepositoryBase<TRow>`** — typed read/list/getby/create on a Serenity
-  `IRow`. Methods: `FirstAsync`, `ListAsync`, `GetByAsync<TValue>`,
-  `CreateAsync`. `[Obsolete]` sync wrappers for migration.
+  `IRow`. Methods:
+  - **Reads:** `TryFirstAsync` (returns `TRow?`), `ListAsync`,
+    `GetByAsync<TValue>`.
+  - **Writes:** `CreateAsync`, `UpdateAsync(Action<SqlUpdate>, ExpectedRows)`
+    (criteria-based partial update; defaults to `ExpectedRows.One`),
+    `UpdateManyAsync` (batch alias), `DeleteAsync(Action<SqlDelete>, ExpectedRows)`,
+    `DeleteManyAsync`.
+  - `[Obsolete]` sync wrappers for migration.
+  - `FirstAsync` is `[Obsolete]` since 0.7.2 — use `TryFirstAsync` instead
+    (same behavior, name matches Serenity's `Connection.TryFirst`).
 
 - **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`:
-  `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync`, `DeleteByIdAsync`.
+  `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync(TRow row)`, `DeleteByIdAsync`.
+  Inherits all the criteria-based methods above; the `UpdateAsync(TRow)` and
+  `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
 
 Connection key is configurable via the virtual `ConnectionKey` property or
 the `[ConnectionKey("Warehouse")]` attribute.
 
+### Criteria-based update example
+
+```csharp
+// Throws if zero or more than one row matches (default ExpectedRows.One).
+await mappingLotRepo.UpdateAsync(u => u
+    .Set(cFld.McApproveQty, qty)
+    .Where(cFld.DocNo == docno && cFld.ProductId == productId),
+    uow: uow, ct: ct);
+
+// Batch update (any number of rows accepted).
+await mappingLotRepo.UpdateManyAsync(u => u
+    .Set(cFld.Status, "Cancelled")
+    .Where(cFld.DocNo == docno),
+    uow, ct);
+```
+
 For caching, see `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers
 around Serenity `ITwoLevelCache`.
 
+**Migrating to 0.7.2:** see [MIGRATION.md](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias).
 **Migrating from 0.5.0:** see [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
 
 ## Cloud Upload Storage

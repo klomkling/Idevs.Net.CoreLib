@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.7.2 (2026-05-02)
+
+### Added
+
+- `RepositoryBase<TRow>.TryFirstAsync(Action<SqlQuery>, ...)` — semantic alias
+  for the existing `FirstAsync` (which returns `Task<TRow?>`). Matches Serenity's
+  `Connection.TryFirst` naming convention.
+- `RepositoryBase<TRow>.UpdateAsync(Action<SqlUpdate>, ExpectedRows, ...)` —
+  criteria-based partial UPDATE. Table name is pre-resolved from the row type;
+  caller only supplies `Set(...)` and `Where(...)`. Defaults to
+  `ExpectedRows.One` for safe single-row semantics.
+- `RepositoryBase<TRow>.UpdateManyAsync(Action<SqlUpdate>, ...)` — convenience
+  alias for `UpdateAsync(..., ExpectedRows.Ignore, ...)` (any number of rows).
+- `RepositoryBase<TRow>.DeleteAsync(Action<SqlDelete>, ExpectedRows, ...)` —
+  criteria-based DELETE with the same `ExpectedRows.One` default as
+  `UpdateAsync`.
+- `RepositoryBase<TRow>.DeleteManyAsync(Action<SqlDelete>, ...)` — convenience
+  alias for batch deletes.
+- Sync `[Obsolete]` wrappers for each new async method (`TryFirst`, `Update`,
+  `UpdateMany`, `Delete`, `DeleteMany`) following the existing migration
+  pattern.
+
+### Deprecated
+
+- `RepositoryBase<TRow>.FirstAsync(Action<SqlQuery>, ...)` — marked
+  `[Obsolete]` redirecting to `TryFirstAsync`. Same behavior; will be removed
+  in 1.0.
+- `RepositoryBase<TRow>.First(Action<SqlQuery>, ...)` — sync wrapper, also
+  redirected to `TryFirstAsync`.
+
 ## 0.7.1 (2026-05-02)
 
 ### Added
