@@ -1,7 +1,7 @@
 using Serenity;
 using Serenity.Abstractions;
 
-namespace Idevs.Caching;
+namespace Idevs.Net.CoreLib.Caching;
 
 /// <summary>
 /// Async wrappers over Serenity's <see cref="ITwoLevelCache"/>. The underlying
@@ -12,48 +12,47 @@ namespace Idevs.Caching;
 /// </summary>
 public static class TwoLevelCacheExtensions
 {
-    extension(ITwoLevelCache cache)
+    /// <summary>
+    /// Async wrapper around <see cref="Serenity.TwoLevelCacheExtensions.GetLocalStoreOnly{T}"/>.
+    /// On cache hit returns the cached value without invoking <paramref name="factory"/>.
+    /// On miss runs the factory, populates the local memory cache, and returns the fresh value.
+    /// </summary>
+    public static Task<T> GetLocalCachedAsync<T>(this ITwoLevelCache cache,
+        string key,
+        TimeSpan duration,
+        string groupKey,
+        Func<CancellationToken, Task<T>> factory,
+        CancellationToken ct = default)
+        where T : class
     {
-        /// <summary>
-        /// Async wrapper around <see cref="Serenity.TwoLevelCacheExtensions.GetLocalStoreOnly{T}"/>.
-        /// On cache hit returns the cached value without invoking <paramref name="factory"/>.
-        /// On miss runs the factory, populates the local memory cache, and returns the fresh value.
-        /// </summary>
-        public Task<T> GetLocalCachedAsync<T>(string key,
-            TimeSpan duration,
-            string groupKey,
-            Func<CancellationToken, Task<T>> factory,
-            CancellationToken ct = default)
-            where T : class
-        {
-            ArgumentNullException.ThrowIfNull(cache);
-            ArgumentNullException.ThrowIfNull(factory);
-            ct.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(factory);
+        ct.ThrowIfCancellationRequested();
 
-            return Task.FromResult(cache.GetLocalStoreOnly(key, duration, groupKey, SyncFactory)!);
+        return Task.FromResult(cache.GetLocalStoreOnly(key, duration, groupKey, SyncFactory)!);
 
-            T SyncFactory() => factory(ct).GetAwaiter().GetResult();
-        }
+        T SyncFactory() => factory(ct).GetAwaiter().GetResult();
+    }
 
-        /// <summary>
-        /// Async wrapper around Serenity's two-tier <c>ITwoLevelCache.Get</c> path.
-        /// Same semantics as <see cref="GetLocalCachedAsync{T}"/> but also consults the
-        /// distributed cache layer before invoking the factory.
-        /// </summary>
-        public Task<T> GetGloballyCachedAsync<T>(string key,
-            TimeSpan duration,
-            string groupKey,
-            Func<CancellationToken, Task<T>> factory,
-            CancellationToken ct = default)
-            where T : class
-        {
-            ArgumentNullException.ThrowIfNull(cache);
-            ArgumentNullException.ThrowIfNull(factory);
-            ct.ThrowIfCancellationRequested();
+    /// <summary>
+    /// Async wrapper around Serenity's two-tier <c>ITwoLevelCache.Get</c> path.
+    /// Same semantics as <see cref="GetLocalCachedAsync{T}"/> but also consults the
+    /// distributed cache layer before invoking the factory.
+    /// </summary>
+    public static Task<T> GetGloballyCachedAsync<T>(this ITwoLevelCache cache,
+        string key,
+        TimeSpan duration,
+        string groupKey,
+        Func<CancellationToken, Task<T>> factory,
+        CancellationToken ct = default)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(factory);
+        ct.ThrowIfCancellationRequested();
 
-            return Task.FromResult(cache.Get(key, duration, groupKey, SyncFactory)!);
+        return Task.FromResult(cache.Get(key, duration, groupKey, SyncFactory)!);
 
-            T SyncFactory() => factory(ct).GetAwaiter().GetResult();
-        }
+        T SyncFactory() => factory(ct).GetAwaiter().GetResult();
     }
 }
