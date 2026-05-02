@@ -120,4 +120,22 @@ public class ServiceExtensionsTests
         Assert.Equal(ServiceLifetime.Singleton, ((IServiceRegistrationAttribute)new SingletonAttribute()).Lifetime);
         Assert.Equal(ServiceLifetime.Transient, ((IServiceRegistrationAttribute)new TransientAttribute()).Lifetime);
     }
+
+    [Fact]
+    public void AddIdevsCorelibCore_RegistersHandCodedServices()
+    {
+        var services = new ServiceCollection().AddIdevsCorelibCore();
+
+        Assert.Contains(services, d => d.ServiceType == typeof(IViewPageRenderer));
+        Assert.Contains(services, d => d.ServiceType == typeof(IIdevsExcelExporter));
+        Assert.Contains(services, d => d.ServiceType == typeof(IIdevsPdfExporter));
+    }
+
+    [Fact]
+    public void AddIdevsCorelibLegacyScan_RegistersAttributedServices()
+    {
+        var services = new ServiceCollection().AddIdevsCorelibLegacyScan();
+
+        Assert.Contains(services, d => d.ServiceType == typeof(IStandardScopedSample));
+    }
 }

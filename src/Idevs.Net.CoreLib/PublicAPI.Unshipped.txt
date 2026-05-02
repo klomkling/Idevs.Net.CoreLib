@@ -7,3 +7,6 @@ Idevs.Repositories.ISingletonService
 Idevs.Repositories.ISingletonService<TService>
 Idevs.Repositories.ITransientService
 Idevs.Repositories.ITransientService<TService>
+Idevs.Extensions.CoreLibBootstrapper
+static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibLegacyScan(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
