@@ -30,28 +30,47 @@ public class RepositoryBaseTests
     }
 
     [Fact]
-    public async Task FirstAsync_DispatchesViaExecuteAsync()
+    public async Task TryFirstAsync_DispatchesViaExecuteAsync()
     {
         var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
 
-        await repo.FirstAsync(_ => { });
+        await repo.TryFirstAsync(_ => { });
 
         Assert.Equal(1, repo.ExecuteAsyncCallCount);
         Assert.Null(repo.LastUow);
     }
 
     [Fact]
-    public async Task FirstAsync_PassesUowAndCancellationToken()
+    public async Task TryFirstAsync_PassesUowAndCancellationToken()
     {
         var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
         var uow = new UnitOfWork(Substitute.For<IDbConnection>());
         using var cts = new CancellationTokenSource();
 
-        await repo.FirstAsync(_ => { }, uow, cts.Token);
+        await repo.TryFirstAsync(_ => { }, uow, cts.Token);
 
         Assert.Same(uow, repo.LastUow);
         Assert.Equal(cts.Token, repo.LastCt);
     }
+
+    [Fact]
+    public async Task TryFirstAsync_NullConfigure_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.TryFirstAsync(null!));
+    }
+
+    [Fact]
+#pragma warning disable CS0618 // intentional: verify deprecated FirstAsync still dispatches via TryFirstAsync
+    public async Task FirstAsync_Obsolete_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.FirstAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+#pragma warning restore CS0618
 
     [Fact]
     public async Task ListAsync_DispatchesViaExecuteAsync()
@@ -64,7 +83,87 @@ public class RepositoryBaseTests
     }
 
     [Fact]
-    public async Task GetByAsync_DispatchesViaFirstAsync()
+    public async Task UpdateAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.UpdateAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PassesUowAndCancellationToken()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var uow = new UnitOfWork(Substitute.For<IDbConnection>());
+        using var cts = new CancellationTokenSource();
+
+        await repo.UpdateAsync(_ => { }, ExpectedRows.Ignore, uow, cts.Token);
+
+        Assert.Same(uow, repo.LastUow);
+        Assert.Equal(cts.Token, repo.LastCt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NullConfigure_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.UpdateAsync(null!));
+    }
+
+    [Fact]
+    public async Task UpdateManyAsync_DispatchesViaUpdateAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.UpdateManyAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.DeleteAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_PassesUowAndCancellationToken()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var uow = new UnitOfWork(Substitute.For<IDbConnection>());
+        using var cts = new CancellationTokenSource();
+
+        await repo.DeleteAsync(_ => { }, ExpectedRows.Ignore, uow, cts.Token);
+
+        Assert.Same(uow, repo.LastUow);
+        Assert.Equal(cts.Token, repo.LastCt);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_NullConfigure_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.DeleteAsync(null!));
+    }
+
+    [Fact]
+    public async Task DeleteManyAsync_DispatchesViaDeleteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.DeleteManyAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task GetByAsync_DispatchesViaTryFirstAsync()
     {
         var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
         await repo.GetByAsync(TestSampleRow.Fields.Code, "abc");
