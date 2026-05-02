@@ -23,3 +23,6 @@ Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ImplementationType.ge
 Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ServiceType.get -> string!
 Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.Lifetime.get -> Idevs.Generators.Abstractions.Validation.Lifetime
 Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ResolvedServiceType(string! implementationType, string! serviceType, Idevs.Generators.Abstractions.Validation.Lifetime lifetime) -> void
+Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver
+static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveByConvention(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
+static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveWithSelfRegistration(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, bool allowSelfRegistration, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
