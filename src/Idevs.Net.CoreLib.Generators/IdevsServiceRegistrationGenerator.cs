@@ -38,9 +38,10 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
                 predicate: (node, _) => node is ClassDeclarationSyntax,
                 transform: (ctx, _) => (ClassDeclarationSyntax)ctx.Node)
             .Combine(context.CompilationProvider)
-            .SelectMany((pair, _) => DiscoverRegistrars(pair.Right, pair.Left));
+            .SelectMany((pair, _) => DiscoverRegistrarCandidates(pair.Right, pair.Left));
 
         var collectedRegistrars = registrarSyntax.Collect();
+
 
         var combined = collectedTypes.Combine(collectedRegistrars);
         context.RegisterSourceOutput(combined, (ctx, both) =>
@@ -78,7 +79,32 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
                 }
             }
 
-            var sortedRegistrars = registrars
+            // Process registrar candidates: emit diagnostics, collect valid ones.
+            var validRegistrars = new List<string>();
+            foreach (var candidate in registrars)
+            {
+                if (!candidate.HasPublicParameterlessCtor)
+                {
+                    ctx.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.RegistrarMissingPublicCtor,
+                        candidate.Location,
+                        candidate.Name));
+                    continue;
+                }
+
+                if (candidate.IsInternal)
+                {
+                    ctx.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.RegistrarIsInternal,
+                        candidate.Location,
+                        candidate.Name));
+                    // Still emit the registration even though it's internal.
+                }
+
+                validRegistrars.Add(candidate.GlobalQualifiedName);
+            }
+
+            var sortedRegistrars = validRegistrars
                 .OrderBy(r => r, System.StringComparer.Ordinal)
                 .ToImmutableArray();
 
@@ -382,7 +408,7 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
         _ => null
     };
 
-    private static IEnumerable<string> DiscoverRegistrars(
+    private static IEnumerable<RegistrarCandidate> DiscoverRegistrarCandidates(
         Compilation compilation,
         ClassDeclarationSyntax classDecl)
     {
@@ -397,9 +423,15 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
 
         var hasParameterlessCtor = type.Constructors.Any(c =>
             c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public);
-        if (!hasParameterlessCtor) yield break;
+        var isInternal = type.DeclaredAccessibility == Accessibility.Internal;
+        var location = type.Locations.FirstOrDefault() ?? Location.None;
 
-        yield return ToGlobalQualified(type);
+        yield return new RegistrarCandidate(
+            name: type.Name,
+            globalQualifiedName: ToGlobalQualified(type),
+            hasPublicParameterlessCtor: hasParameterlessCtor,
+            isInternal: isInternal,
+            location: location);
     }
 
     private static (string? Lifetime, bool IsLegacy) ResolveAttributeLifetimeWithLegacyFlag(INamedTypeSymbol attrClass)
@@ -448,6 +480,29 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
             MarkerLifetimes = markerLifetimes;
             GenericMarkerServiceType = genericMarkerServiceType;
             AttributeServiceType = attributeServiceType;
+        }
+    }
+
+    private sealed class RegistrarCandidate
+    {
+        public string Name { get; }
+        public string GlobalQualifiedName { get; }
+        public bool HasPublicParameterlessCtor { get; }
+        public bool IsInternal { get; }
+        public Location Location { get; }
+
+        public RegistrarCandidate(
+            string name,
+            string globalQualifiedName,
+            bool hasPublicParameterlessCtor,
+            bool isInternal,
+            Location location)
+        {
+            Name = name;
+            GlobalQualifiedName = globalQualifiedName;
+            HasPublicParameterlessCtor = hasPublicParameterlessCtor;
+            IsInternal = isInternal;
+            Location = location;
         }
     }
 
