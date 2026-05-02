@@ -1,0 +1,9 @@
+#nullable enable
+Idevs.Repositories.IIdevsServiceRegistrar
+Idevs.Repositories.IIdevsServiceRegistrar.Register(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+Idevs.Repositories.IScopedService
+Idevs.Repositories.IScopedService<TService>
+Idevs.Repositories.ISingletonService
+Idevs.Repositories.ISingletonService<TService>
+Idevs.Repositories.ITransientService
+Idevs.Repositories.ITransientService<TService>
