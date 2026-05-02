@@ -1,3 +1,4 @@
+#nullable enable
 const Idevs.Storage.CloudUploadStorageOptions.DefaultProvider = "Local" -> string
 const Idevs.Storage.CloudUploadStorageOptions.ProviderAws = "AWS" -> string
 const Idevs.Storage.CloudUploadStorageOptions.ProviderCloudflareR2 = "CloudflareR2" -> string
@@ -129,6 +130,7 @@ Idevs.Extensions.ControllerExtensions
 Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller)
 Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller).RenderView<T>(string path, string viewName, T model, bool partial = false) -> string
 Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller).RenderViewAsync<T>(string path, string viewName, T model, bool partial = false) -> System.Threading.Tasks.Task<string>
+Idevs.Extensions.CoreLibBootstrapper
 Idevs.Extensions.EntityQueryExtensions
 Idevs.Extensions.EnumExtensions
 Idevs.Extensions.ModelExtensions
@@ -145,6 +147,7 @@ Idevs.Extensions.WebApplicationExtensions
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication)
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator() -> Microsoft.AspNetCore.Builder.WebApplication
 Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator(System.IServiceProvider provider) -> Microsoft.AspNetCore.Builder.WebApplication
+Idevs.Generated.IdevsServiceRegistrations
 Idevs.Helpers.PdfOptionsBuilder
 Idevs.IdevsExcelExporter
 Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Collections.Generic.IEnumerable<Serenity.Reporting.ReportColumn> columns) -> byte[]
@@ -400,6 +403,14 @@ Idevs.Models.TableTheme.TableStyleMedium9 = 109 -> Idevs.Models.TableTheme
 Idevs.Repositories.ConnectionKeyAttribute
 Idevs.Repositories.ConnectionKeyAttribute.ConnectionKeyAttribute(string key) -> void
 Idevs.Repositories.ConnectionKeyAttribute.Key.get -> string
+Idevs.Repositories.IIdevsServiceRegistrar
+Idevs.Repositories.IIdevsServiceRegistrar.Register(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+Idevs.Repositories.IScopedService
+Idevs.Repositories.IScopedService<TService>
+Idevs.Repositories.ISingletonService
+Idevs.Repositories.ISingletonService<TService>
+Idevs.Repositories.ITransientService
+Idevs.Repositories.ITransientService<TService>
 Idevs.Repositories.RepositoryBase<TRow, TKey>
 Idevs.Repositories.RepositoryBase<TRow, TKey>.RepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
 Idevs.Repositories.RepositoryBase<TRow>
@@ -464,6 +475,8 @@ static Idevs.ChromeHelper.DownloadChrome() -> void
 static Idevs.ChromeHelper.DownloadChromeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task
 static Idevs.ChromeHelper.GetChromePath() -> string
 static Idevs.ChromeHelper.IsChromeDownloaded() -> bool
+static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibLegacyScan(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Idevs.Extensions.EntityQueryExtensions.Set<T>(this T self, Serenity.Data.IRow row, params Serenity.Data.Field[] exclude) -> T
 static Idevs.Extensions.EnumExtensions.GetDescription<T>(this T enumValue) -> string
 static Idevs.Extensions.ModelExtensions.TrimModel<T>(System.Collections.Generic.IEnumerable<T> collection, bool emptyStringToNull = false) -> System.Collections.Generic.IEnumerable<T>
@@ -472,6 +485,7 @@ static Idevs.Extensions.NumberExtensions.ToThaiBahtText(this string strNumber, b
 static Idevs.Extensions.ServiceExtensions.AddIdevsCorelibServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Extensions.ServiceExtensions.RegisterServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Extensions.TextLocalizerExtension.Translate(this Serenity.ITextLocalizer localizer, string moduleName, string key) -> string
+static Idevs.Generated.IdevsServiceRegistrations.AddIdevsServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Helpers.PdfOptionsBuilder.CreateBusiness(PuppeteerSharp.Media.PaperFormat format = null) -> PuppeteerSharp.PdfOptions
 static Idevs.Helpers.PdfOptionsBuilder.CreateClean(PuppeteerSharp.Media.PaperFormat format = null, (string top, string bottom, string left, string right)? margins = null) -> PuppeteerSharp.PdfOptions
 static Idevs.Helpers.PdfOptionsBuilder.CreateWithTemplates(string headerTemplate = null, string footerTemplate = null, PuppeteerSharp.Media.PaperFormat format = null, string headerHeight = "20mm", string footerHeight = "20mm") -> PuppeteerSharp.PdfOptions
