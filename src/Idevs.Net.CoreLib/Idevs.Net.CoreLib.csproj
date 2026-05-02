@@ -55,4 +55,20 @@
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
   </ItemGroup>
 
+  <ItemGroup Label="Source generator bundling">
+    <ProjectReference Include="..\Idevs.Net.CoreLib.Generators\Idevs.Net.CoreLib.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+
+    <None Include="..\Idevs.Net.CoreLib.Generators\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.Generators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+
+    <None Include="..\Idevs.Net.CoreLib.Generators.Abstractions\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.Generators.Abstractions.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
 </Project>
