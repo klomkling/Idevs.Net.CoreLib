@@ -1,0 +1,67 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Pack & Publish
+    runs-on: ubuntu-latest
+    environment: nuget
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Pack
+        run: |
+          mkdir -p ./artifacts
+          dotnet pack src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj \
+            --configuration Release --no-build --output ./artifacts
+          dotnet pack src/Idevs.Net.CoreLib.Autofac/Idevs.Net.CoreLib.Autofac.csproj \
+            --configuration Release --no-build --output ./artifacts
+          dotnet pack src/Idevs.Net.CoreLib.Serilog/Idevs.Net.CoreLib.Serilog.csproj \
+            --configuration Release --no-build --output ./artifacts
+          dotnet pack src/Idevs.Net.CoreLib.Generators.Abstractions/Idevs.Net.CoreLib.Generators.Abstractions.csproj \
+            --configuration Release --no-build --output ./artifacts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: ./artifacts/*.nupkg
+
+      - name: Publish to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "${NUGET_API_KEY}" ]; then
+            echo "::error::NUGET_API_KEY secret is not set."
+            exit 1
+          fi
+          dotnet nuget push "./artifacts/*.nupkg" \
+            --api-key "${NUGET_API_KEY}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

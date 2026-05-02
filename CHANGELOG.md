@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.1 (2026-05-02)
+
+### Added
+
+- GitHub Actions CI/CD workflows under `.github/workflows/`:
+  - `ci.yml` — build & test on .NET 8 and .NET 10 for every PR; requests
+    GitHub Copilot as a reviewer on PR open/reopen/ready_for_review.
+  - `tag-on-merge.yml` — on merge to `main`, reads `<Version>` from
+    `Idevs.Net.CoreLib.csproj` and creates an annotated `v{version}` tag
+    (idempotent; skips if the tag already exists).
+  - `publish-nuget.yml` — on `v*` tag push, packs all four public projects
+    and publishes them to nuget.org via the `nuget` deployment environment
+    (`--skip-duplicate`). Uploads `.nupkg` artifacts for traceability.
+
 ## 0.7.0 (2026-05-02)
 
 ### Breaking Changes
