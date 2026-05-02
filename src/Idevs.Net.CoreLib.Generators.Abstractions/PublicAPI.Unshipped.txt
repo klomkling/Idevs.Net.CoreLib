@@ -26,3 +26,10 @@ Idevs.Generators.Abstractions.Scanning.ResolvedServiceType.ResolvedServiceType(s
 Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver
 static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveByConvention(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
 static Idevs.Generators.Abstractions.Scanning.ServiceTypeResolver.TryResolveWithSelfRegistration(Microsoft.CodeAnalysis.INamedTypeSymbol! implementationType, bool allowSelfRegistration, out Microsoft.CodeAnalysis.INamedTypeSymbol? serviceType) -> bool
+Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.Disagreement = 2 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.None = 0 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.NoneSpecified = 3 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeConflict.Redundant = 1 -> Idevs.Generators.Abstractions.Validation.LifetimeConflict
+Idevs.Generators.Abstractions.Validation.LifetimeResolver
+static Idevs.Generators.Abstractions.Validation.LifetimeResolver.Resolve(Idevs.Generators.Abstractions.Validation.Lifetime? attributeLifetime, Idevs.Generators.Abstractions.Validation.Lifetime? markerLifetime) -> (Idevs.Generators.Abstractions.Validation.Lifetime? Lifetime, Idevs.Generators.Abstractions.Validation.LifetimeConflict? Conflict)
