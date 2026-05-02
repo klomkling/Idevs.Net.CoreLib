@@ -57,4 +57,27 @@ public class INamedTypeSymbolExtensionsTests
         var t = GetType("public class Foo {}", "Foo");
         Assert.False(t.HasAttributeWithFullName("MarkAttribute"));
     }
+
+    [Fact]
+    public void HasAttributeWithFullName_DoesNotMatchHomonymousAttributeInDifferentNamespace()
+    {
+        // Regression: a consumer-defined attribute with the same short name as a
+        // well-known one must not produce a false positive when looked up by FQN.
+        var t = GetType(
+            "namespace Acme { public class ScopedAttribute : System.Attribute {} [Scoped] public class Foo {} }",
+            "Acme.Foo");
+        Assert.False(t.HasAttributeWithFullName("Idevs.ComponentModels.ScopedAttribute"));
+        Assert.True(t.HasAttributeWithFullName("Acme.ScopedAttribute"));
+    }
+
+    [Fact]
+    public void ImplementsInterface_DoesNotMatchHomonymousInterfaceInDifferentNamespace()
+    {
+        // Regression: same short-name interface in another namespace must not match.
+        var t = GetType(
+            "namespace Acme { public interface IFoo {} public class Foo : IFoo {} }",
+            "Acme.Foo");
+        Assert.False(t.ImplementsInterface("Other.IFoo"));
+        Assert.True(t.ImplementsInterface("Acme.IFoo"));
+    }
 }

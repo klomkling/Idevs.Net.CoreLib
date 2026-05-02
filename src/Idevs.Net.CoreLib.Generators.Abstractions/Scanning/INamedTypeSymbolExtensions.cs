@@ -38,6 +38,6 @@ public static class INamedTypeSymbolExtensions
     private static bool MatchesFullName(INamedTypeSymbol symbol, string fullName)
     {
         var symbolName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", string.Empty);
-        return symbolName == fullName || symbol.Name == fullName;
+        return symbolName == fullName;
     }
 }
