@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Idevs.Net.CoreLib.Autofac",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Idevs.Net.CoreLib.Serilog", "src\Idevs.Net.CoreLib.Serilog\Idevs.Net.CoreLib.Serilog.csproj", "{0545B4DD-9B51-4468-B3F1-5CDA618C36AE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Idevs.Net.CoreLib.Generators.Abstractions", "src\Idevs.Net.CoreLib.Generators.Abstractions\Idevs.Net.CoreLib.Generators.Abstractions.csproj", "{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,18 @@ Global
 		{0545B4DD-9B51-4468-B3F1-5CDA618C36AE}.Release|x64.Build.0 = Release|Any CPU
 		{0545B4DD-9B51-4468-B3F1-5CDA618C36AE}.Release|x86.ActiveCfg = Release|Any CPU
 		{0545B4DD-9B51-4468-B3F1-5CDA618C36AE}.Release|x86.Build.0 = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|x64.Build.0 = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Debug|x86.Build.0 = Debug|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|x64.ActiveCfg = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|x64.Build.0 = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|x86.ActiveCfg = Release|Any CPU
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +96,7 @@ Global
 		{813CD86A-B1C2-457C-8C92-EC792384D741} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{E6BF23C5-8808-4569-A3D8-02615D94EA62} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0545B4DD-9B51-4468-B3F1-5CDA618C36AE} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{3BD34D70-5B00-4255-B72F-53B2BF9FC67E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1C524D70-0AAE-4A44-95F3-824733DFB2FE}
