@@ -14,6 +14,7 @@
 
   <ItemGroup Label="Library runtime dependencies">
     <PackageVersion Include="AWSSDK.S3" Version="4.0.14" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" />
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
     <PackageVersion Include="FastMember" Version="1.5.0" />
     <PackageVersion Include="Handlebars.Net" Version="2.1.6" />

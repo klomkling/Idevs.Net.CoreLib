@@ -1,0 +1,3 @@
+Idevs.Extensions.SerilogLogManagerExtensions
+static Idevs.Extensions.SerilogLogManagerExtensions.AddIdevsSerilogLogging(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+static Idevs.Extensions.SerilogLogManagerExtensions.UseIdevsSerilogLogManager(this Microsoft.AspNetCore.Builder.WebApplication app) -> Microsoft.AspNetCore.Builder.WebApplication

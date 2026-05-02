@@ -1,0 +1,13 @@
+Idevs.Extensions.AutofacServiceExtensions
+Idevs.Extensions.AutofacWebApplicationExtensions
+Idevs.Extensions.WebApplicationBuilderExtensions
+Idevs.Extensions.WebApplicationBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder)
+Idevs.Extensions.WebApplicationBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder).UseIdevsAutofac() -> Microsoft.AspNetCore.Builder.WebApplicationBuilder
+Idevs.Extensions.WebApplicationBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder).UseIdevsAutofac(params Autofac.Module[] modules) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder
+Idevs.Extensions.WebApplicationBuilderExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder).UseIdevsAutofac(System.Action<Autofac.ContainerBuilder> containerConfiguration) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder
+Idevs.Modules.IdevsModule
+Idevs.Modules.IdevsModule.IdevsModule() -> void
+override Idevs.Modules.IdevsModule.Load(Autofac.ContainerBuilder builder) -> void
+static Idevs.Extensions.AutofacServiceExtensions.RegisterIdevsModule(this Autofac.ContainerBuilder builder) -> Autofac.ContainerBuilder
+static Idevs.Extensions.AutofacServiceExtensions.UseIdevsAutofac(this Microsoft.Extensions.Hosting.IHostBuilder hostBuilder) -> Microsoft.Extensions.Hosting.IHostBuilder
+static Idevs.Extensions.AutofacWebApplicationExtensions.UseIdevsStaticServiceLocator(this Microsoft.AspNetCore.Builder.WebApplication app, Autofac.ILifetimeScope container) -> Microsoft.AspNetCore.Builder.WebApplication

@@ -1,0 +1,513 @@
+const Idevs.Storage.CloudUploadStorageOptions.DefaultProvider = "Local" -> string
+const Idevs.Storage.CloudUploadStorageOptions.ProviderAws = "AWS" -> string
+const Idevs.Storage.CloudUploadStorageOptions.ProviderCloudflareR2 = "CloudflareR2" -> string
+const Idevs.Storage.CloudUploadStorageOptions.ProviderLocal = "Local" -> string
+const Idevs.Storage.CloudUploadStorageOptions.SectionName = "CloudUploadStorage" -> string
+Idevs.Caching.TwoLevelCacheExtensions
+Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache)
+Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache).GetGloballyCachedAsync<T>(string key, System.TimeSpan duration, string groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
+Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache).GetLocalCachedAsync<T>(string key, System.TimeSpan duration, string groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
+Idevs.ChromeHelper
+Idevs.ComponentModel.CheckboxButtonEditorAttribute
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.CheckboxButtonEditorAttribute() -> void
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.EnumKey.get -> string
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.EnumKey.set -> void
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.EnumType.get -> object
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.EnumType.set -> void
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.IsStringId.get -> bool
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.IsStringId.set -> void
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.LookupKey.get -> string
+Idevs.ComponentModel.CheckboxButtonEditorAttribute.LookupKey.set -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute
+Idevs.ComponentModel.CheckboxFormatterAttribute.CheckboxFormatterAttribute() -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute.CssClass.get -> string
+Idevs.ComponentModel.CheckboxFormatterAttribute.CssClass.set -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute.FalseText.get -> string
+Idevs.ComponentModel.CheckboxFormatterAttribute.FalseText.set -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute.FalseValueIcon.get -> string
+Idevs.ComponentModel.CheckboxFormatterAttribute.FalseValueIcon.set -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute.TrueText.get -> string
+Idevs.ComponentModel.CheckboxFormatterAttribute.TrueText.set -> void
+Idevs.ComponentModel.CheckboxFormatterAttribute.TrueValueIcon.get -> string
+Idevs.ComponentModel.CheckboxFormatterAttribute.TrueValueIcon.set -> void
+Idevs.ComponentModel.ColumnWidthAttribute
+Idevs.ComponentModel.ColumnWidthAttribute.ColumnWidthAttribute() -> void
+Idevs.ComponentModel.ColumnWidthAttribute.ColumnWidthAttribute(string cssClass) -> void
+Idevs.ComponentModel.ColumnWidthAttribute.ExtraExtraLarge.get -> int
+Idevs.ComponentModel.ColumnWidthAttribute.ExtraExtraLarge.set -> void
+Idevs.ComponentModel.ColumnWidthAttribute.ExtraLarge.get -> int
+Idevs.ComponentModel.ColumnWidthAttribute.ExtraLarge.set -> void
+Idevs.ComponentModel.DateMonthEditorAttribute
+Idevs.ComponentModel.DateMonthEditorAttribute.DateMonthEditorAttribute() -> void
+Idevs.ComponentModel.DateMonthEditorAttribute.Display.get -> string
+Idevs.ComponentModel.DateMonthEditorAttribute.Display.set -> void
+Idevs.ComponentModel.DateMonthEditorAttribute.Locale.get -> string
+Idevs.ComponentModel.DateMonthEditorAttribute.Locale.set -> void
+Idevs.ComponentModel.DateMonthFormatterAttribute
+Idevs.ComponentModel.DateMonthFormatterAttribute.DateMonthFormatterAttribute() -> void
+Idevs.ComponentModel.DateMonthFormatterAttribute.Display.get -> string
+Idevs.ComponentModel.DateMonthFormatterAttribute.Display.set -> void
+Idevs.ComponentModel.DateMonthFormatterAttribute.Locale.get -> string
+Idevs.ComponentModel.DateMonthFormatterAttribute.Locale.set -> void
+Idevs.ComponentModel.DisplayDateFormatAttribute
+Idevs.ComponentModel.DisplayDateFormatAttribute.DisplayDateFormatAttribute() -> void
+Idevs.ComponentModel.DisplayDateTimeFormatAttribute
+Idevs.ComponentModel.DisplayDateTimeFormatAttribute.DisplayDateTimeFormatAttribute(bool withSeconds = false) -> void
+Idevs.ComponentModel.DisplayNumberFormatAttribute
+Idevs.ComponentModel.DisplayNumberFormatAttribute.DisplayNumberFormatAttribute(int scale = 2) -> void
+Idevs.ComponentModel.DisplayPercentageAttribute
+Idevs.ComponentModel.DisplayPercentageAttribute.DisplayPercentageAttribute(int scale = 2) -> void
+Idevs.ComponentModel.DisplayTimeFormatAttribute
+Idevs.ComponentModel.DisplayTimeFormatAttribute.DisplayTimeFormatAttribute(bool withSeconds = false) -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.AllowClear.get -> bool
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.AllowClear.set -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.Delimited.get -> bool
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.Delimited.set -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.EnumEditorWithKeyAttribute() -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.EnumKey.get -> string
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.EnumKey.set -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.MinimumResultsForSearch.get -> int
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.MinimumResultsForSearch.set -> void
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.Multiple.get -> bool
+Idevs.ComponentModel.EnumEditorWithKeyAttribute.Multiple.set -> void
+Idevs.ComponentModel.FullColumnWidthAttribute
+Idevs.ComponentModel.FullColumnWidthAttribute.FullColumnWidthAttribute() -> void
+Idevs.ComponentModel.HalfColumnWidthAttribute
+Idevs.ComponentModel.HalfColumnWidthAttribute.HalfColumnWidthAttribute() -> void
+Idevs.ComponentModel.LookupFormatterAttribute
+Idevs.ComponentModel.LookupFormatterAttribute.LookupFormatterAttribute() -> void
+Idevs.ComponentModel.LookupFormatterAttribute.LookupKey.get -> string
+Idevs.ComponentModel.LookupFormatterAttribute.LookupKey.set -> void
+Idevs.ComponentModel.ScopedRegistrationAttribute
+Idevs.ComponentModel.ScopedRegistrationAttribute.ScopedRegistrationAttribute() -> void
+Idevs.ComponentModel.SingletonRegiatrationAttribute
+Idevs.ComponentModel.SingletonRegiatrationAttribute.SingletonRegiatrationAttribute() -> void
+Idevs.ComponentModel.TransientRegistrationAttribute
+Idevs.ComponentModel.TransientRegistrationAttribute.TransientRegistrationAttribute() -> void
+Idevs.ComponentModel.ZeroDisplayFormatterAttribute
+Idevs.ComponentModel.ZeroDisplayFormatterAttribute.DisplayText.get -> string
+Idevs.ComponentModel.ZeroDisplayFormatterAttribute.DisplayText.set -> void
+Idevs.ComponentModel.ZeroDisplayFormatterAttribute.ZeroDisplayFormatterAttribute() -> void
+Idevs.ComponentModels.IServiceRegistrationAttribute
+Idevs.ComponentModels.IServiceRegistrationAttribute.AllowSelfRegistration.get -> bool
+Idevs.ComponentModels.IServiceRegistrationAttribute.Lifetime.get -> Microsoft.Extensions.DependencyInjection.ServiceLifetime
+Idevs.ComponentModels.IServiceRegistrationAttribute.ServiceKey.get -> string
+Idevs.ComponentModels.IServiceRegistrationAttribute.ServiceType.get -> System.Type
+Idevs.ComponentModels.ScopedAttribute
+Idevs.ComponentModels.ScopedAttribute.AllowSelfRegistration.get -> bool
+Idevs.ComponentModels.ScopedAttribute.AllowSelfRegistration.set -> void
+Idevs.ComponentModels.ScopedAttribute.Lifetime.get -> Microsoft.Extensions.DependencyInjection.ServiceLifetime
+Idevs.ComponentModels.ScopedAttribute.ScopedAttribute() -> void
+Idevs.ComponentModels.ScopedAttribute.ServiceKey.get -> string
+Idevs.ComponentModels.ScopedAttribute.ServiceKey.set -> void
+Idevs.ComponentModels.ScopedAttribute.ServiceType.get -> System.Type
+Idevs.ComponentModels.ScopedAttribute.ServiceType.set -> void
+Idevs.ComponentModels.SingletonAttribute
+Idevs.ComponentModels.SingletonAttribute.AllowSelfRegistration.get -> bool
+Idevs.ComponentModels.SingletonAttribute.AllowSelfRegistration.set -> void
+Idevs.ComponentModels.SingletonAttribute.Lifetime.get -> Microsoft.Extensions.DependencyInjection.ServiceLifetime
+Idevs.ComponentModels.SingletonAttribute.ServiceKey.get -> string
+Idevs.ComponentModels.SingletonAttribute.ServiceKey.set -> void
+Idevs.ComponentModels.SingletonAttribute.ServiceType.get -> System.Type
+Idevs.ComponentModels.SingletonAttribute.ServiceType.set -> void
+Idevs.ComponentModels.SingletonAttribute.SingletonAttribute() -> void
+Idevs.ComponentModels.TransientAttribute
+Idevs.ComponentModels.TransientAttribute.AllowSelfRegistration.get -> bool
+Idevs.ComponentModels.TransientAttribute.AllowSelfRegistration.set -> void
+Idevs.ComponentModels.TransientAttribute.Lifetime.get -> Microsoft.Extensions.DependencyInjection.ServiceLifetime
+Idevs.ComponentModels.TransientAttribute.ServiceKey.get -> string
+Idevs.ComponentModels.TransientAttribute.ServiceKey.set -> void
+Idevs.ComponentModels.TransientAttribute.ServiceType.get -> System.Type
+Idevs.ComponentModels.TransientAttribute.ServiceType.set -> void
+Idevs.ComponentModels.TransientAttribute.TransientAttribute() -> void
+Idevs.Extensions.CloudUploadStorageServiceCollectionExtensions
+Idevs.Extensions.CloudUploadStorageServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection)
+Idevs.Extensions.CloudUploadStorageServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection).AddCloudUploadStorage(Microsoft.Extensions.Configuration.IConfiguration configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+Idevs.Extensions.CloudUploadStorageServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection).AddCloudUploadStorage(System.Action<Idevs.Storage.CloudUploadStorageOptions> configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+Idevs.Extensions.ControllerExtensions
+Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller)
+Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller).RenderView<T>(string path, string viewName, T model, bool partial = false) -> string
+Idevs.Extensions.ControllerExtensions.extension(Microsoft.AspNetCore.Mvc.Controller).RenderViewAsync<T>(string path, string viewName, T model, bool partial = false) -> System.Threading.Tasks.Task<string>
+Idevs.Extensions.EntityQueryExtensions
+Idevs.Extensions.EnumExtensions
+Idevs.Extensions.ModelExtensions
+Idevs.Extensions.NumberExtensions
+Idevs.Extensions.NumberExtensions.extension(decimal)
+Idevs.Extensions.NumberExtensions.extension(decimal).RoundNumber(short roundMethod = 0, int decimals = 2) -> decimal
+Idevs.Extensions.NumberExtensions.extension(decimal).RoundVat(int decimals = 2) -> decimal
+Idevs.Extensions.ServiceExtensions
+Idevs.Extensions.TextLocalizerExtension
+Idevs.Extensions.TextLocalizerExtension.extension(string)
+Idevs.Extensions.TextLocalizerExtension.extension(string).TranslateData(string moduleName, Serenity.ITextLocalizer localizer) -> string
+Idevs.Extensions.TextLocalizerExtension.extension(string).TranslateText(string moduleName, Serenity.ITextLocalizer localizer) -> string
+Idevs.Extensions.WebApplicationExtensions
+Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication)
+Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator() -> Microsoft.AspNetCore.Builder.WebApplication
+Idevs.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication).UseIdevsStaticServiceLocator(System.IServiceProvider provider) -> Microsoft.AspNetCore.Builder.WebApplication
+Idevs.Helpers.PdfOptionsBuilder
+Idevs.IdevsExcelExporter
+Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Collections.Generic.IEnumerable<Serenity.Reporting.ReportColumn> columns) -> byte[]
+Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders) -> byte[]
+Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<string> exportColumns, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders) -> byte[]
+Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<string> exportColumns) -> byte[]
+Idevs.IdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType) -> byte[]
+Idevs.IdevsExcelExporter.Generate(System.Collections.IList rows, System.Collections.Generic.IReadOnlyList<Serenity.Reporting.ReportColumn> columns, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders, string sheetName = "Sheet1") -> byte[]
+Idevs.IdevsExcelExporter.IdevsExcelExporter(System.IServiceProvider serviceProvider) -> void
+Idevs.IdevsPdfExporter
+Idevs.IdevsPdfExporter.CreateResponseAsync(string html, string header = null, string footer = null, string downloadName = null, PuppeteerSharp.PdfOptions options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Idevs.Models.IdevsContentResponse>
+Idevs.IdevsPdfExporter.DisposeAsync() -> System.Threading.Tasks.ValueTask
+Idevs.IdevsPdfExporter.ExportByteArrayAsync(string html, PuppeteerSharp.PdfOptions pdfOptions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]>
+Idevs.IdevsPdfExporter.ExportByteArrayAsync(string html, string header = null, string footer = null, PuppeteerSharp.PdfOptions options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]>
+Idevs.IdevsPdfExporter.IdevsPdfExporter() -> void
+Idevs.IIdevsExcelExporter
+Idevs.IIdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Collections.Generic.IEnumerable<Serenity.Reporting.ReportColumn> columns) -> byte[]
+Idevs.IIdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders) -> byte[]
+Idevs.IIdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<string> exportColumns, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders) -> byte[]
+Idevs.IIdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType, System.Collections.Generic.IEnumerable<string> exportColumns) -> byte[]
+Idevs.IIdevsExcelExporter.Export(System.Collections.IEnumerable data, System.Type columnsType) -> byte[]
+Idevs.IIdevsExcelExporter.Generate(System.Collections.IList rows, System.Collections.Generic.IReadOnlyList<Serenity.Reporting.ReportColumn> columns, System.Collections.Generic.IEnumerable<Idevs.Models.ReportHeader> reportHeaders, string sheetName = "Page1") -> byte[]
+Idevs.IIdevsPdfExporter
+Idevs.IIdevsPdfExporter.CreateResponseAsync(string html, string header = null, string footer = null, string downloadName = null, PuppeteerSharp.PdfOptions options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Idevs.Models.IdevsContentResponse>
+Idevs.IIdevsPdfExporter.ExportByteArray(string html, string header = null, string footer = null) -> byte[]
+Idevs.IIdevsPdfExporter.ExportByteArrayAsync(string html, string header = null, string footer = null, PuppeteerSharp.PdfOptions options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<byte[]>
+Idevs.IViewPageRenderer
+Idevs.IViewPageRenderer.RenderViewAsync<TModel>(string viewName, TModel model) -> System.Threading.Tasks.Task<string>
+Idevs.Logging.LogManager
+Idevs.Models.AggregateColumn
+Idevs.Models.AggregateColumn.AggregateColumn() -> void
+Idevs.Models.AggregateColumn.AggregateType.get -> Idevs.Models.AggregateType
+Idevs.Models.AggregateColumn.AggregateType.set -> void
+Idevs.Models.AggregateColumn.ColumnName.get -> string
+Idevs.Models.AggregateColumn.ColumnName.set -> void
+Idevs.Models.AggregateColumn.Title.get -> string
+Idevs.Models.AggregateColumn.Title.set -> void
+Idevs.Models.AggregateType
+Idevs.Models.AggregateType.AVERAGE = 2 -> Idevs.Models.AggregateType
+Idevs.Models.AggregateType.COUNT = 3 -> Idevs.Models.AggregateType
+Idevs.Models.AggregateType.GROUP = 1 -> Idevs.Models.AggregateType
+Idevs.Models.AggregateType.LABEL = 0 -> Idevs.Models.AggregateType
+Idevs.Models.AggregateType.SUM = 4 -> Idevs.Models.AggregateType
+Idevs.Models.FillerRow
+Idevs.Models.FillerRow.FillerRow() -> void
+Idevs.Models.FillerRow.IsFiller.get -> bool
+Idevs.Models.IdevsContentResponse
+Idevs.Models.IdevsContentResponse.Content.get -> string
+Idevs.Models.IdevsContentResponse.Content.set -> void
+Idevs.Models.IdevsContentResponse.ContentType.get -> string
+Idevs.Models.IdevsContentResponse.ContentType.set -> void
+Idevs.Models.IdevsContentResponse.DownloadName.get -> string
+Idevs.Models.IdevsContentResponse.DownloadName.set -> void
+Idevs.Models.IdevsContentResponse.IdevsContentResponse() -> void
+Idevs.Models.IdevsContentResult
+Idevs.Models.IdevsContentResult.IdevsContentResult() -> void
+Idevs.Models.IdevsContentType
+Idevs.Models.IdevsContentType.Excel = 0 -> Idevs.Models.IdevsContentType
+Idevs.Models.IdevsContentType.PDF = 1 -> Idevs.Models.IdevsContentType
+Idevs.Models.IdevsExportRequest
+Idevs.Models.IdevsExportRequest.AggregateColumns.get -> System.Collections.Generic.IEnumerable<Idevs.Models.AggregateColumn>
+Idevs.Models.IdevsExportRequest.AggregateColumns.set -> void
+Idevs.Models.IdevsExportRequest.CompanyName.get -> string
+Idevs.Models.IdevsExportRequest.CompanyName.set -> void
+Idevs.Models.IdevsExportRequest.ConditionRange.get -> string
+Idevs.Models.IdevsExportRequest.ConditionRange.set -> void
+Idevs.Models.IdevsExportRequest.Entity.get -> object
+Idevs.Models.IdevsExportRequest.Entity.set -> void
+Idevs.Models.IdevsExportRequest.IdevsExportRequest() -> void
+Idevs.Models.IdevsExportRequest.Logo.get -> string
+Idevs.Models.IdevsExportRequest.Logo.set -> void
+Idevs.Models.IdevsExportRequest.Margin.get -> Idevs.Models.PageMargin
+Idevs.Models.IdevsExportRequest.Margin.set -> void
+Idevs.Models.IdevsExportRequest.PageSize.get -> Idevs.Models.PageSize
+Idevs.Models.IdevsExportRequest.PageSize.set -> void
+Idevs.Models.IdevsExportRequest.ReportName.get -> string
+Idevs.Models.IdevsExportRequest.ReportName.set -> void
+Idevs.Models.IdevsExportRequest.SelectionRange.get -> string
+Idevs.Models.IdevsExportRequest.SelectionRange.set -> void
+Idevs.Models.IdevsExportRequest.TableTheme.get -> Idevs.Models.TableTheme
+Idevs.Models.IdevsExportRequest.TableTheme.set -> void
+Idevs.Models.IdevsExportRequest.ViewName.get -> string
+Idevs.Models.IdevsExportRequest.ViewName.set -> void
+Idevs.Models.IIdevsExportRequest
+Idevs.Models.IIdevsExportRequest.AggregateColumns.get -> System.Collections.Generic.IEnumerable<Idevs.Models.AggregateColumn>
+Idevs.Models.IIdevsExportRequest.AggregateColumns.set -> void
+Idevs.Models.IIdevsExportRequest.CompanyName.get -> string
+Idevs.Models.IIdevsExportRequest.CompanyName.set -> void
+Idevs.Models.IIdevsExportRequest.ConditionRange.get -> string
+Idevs.Models.IIdevsExportRequest.ConditionRange.set -> void
+Idevs.Models.IIdevsExportRequest.Entity.get -> object
+Idevs.Models.IIdevsExportRequest.Entity.set -> void
+Idevs.Models.IIdevsExportRequest.Logo.get -> string
+Idevs.Models.IIdevsExportRequest.Logo.set -> void
+Idevs.Models.IIdevsExportRequest.Margin.get -> Idevs.Models.PageMargin
+Idevs.Models.IIdevsExportRequest.Margin.set -> void
+Idevs.Models.IIdevsExportRequest.PageSize.get -> Idevs.Models.PageSize
+Idevs.Models.IIdevsExportRequest.PageSize.set -> void
+Idevs.Models.IIdevsExportRequest.ReportName.get -> string
+Idevs.Models.IIdevsExportRequest.ReportName.set -> void
+Idevs.Models.IIdevsExportRequest.SelectionRange.get -> string
+Idevs.Models.IIdevsExportRequest.SelectionRange.set -> void
+Idevs.Models.IIdevsExportRequest.TableTheme.get -> Idevs.Models.TableTheme
+Idevs.Models.IIdevsExportRequest.TableTheme.set -> void
+Idevs.Models.IIdevsExportRequest.ViewName.get -> string
+Idevs.Models.IIdevsExportRequest.ViewName.set -> void
+Idevs.Models.IReportBaseModel<T>
+Idevs.Models.IReportBaseModel<T>.Details.get -> System.Collections.Generic.IEnumerable<T>
+Idevs.Models.IReportBaseModel<T>.Details.set -> void
+Idevs.Models.ItemWithLineNumber<T>
+Idevs.Models.ItemWithLineNumber<T>.Item.get -> T
+Idevs.Models.ItemWithLineNumber<T>.Item.set -> void
+Idevs.Models.ItemWithLineNumber<T>.ItemWithLineNumber() -> void
+Idevs.Models.ItemWithLineNumber<T>.LineNumber.get -> int
+Idevs.Models.ItemWithLineNumber<T>.LineNumber.set -> void
+Idevs.Models.PageData<T>
+Idevs.Models.PageData<T>.Capacity.get -> int
+Idevs.Models.PageData<T>.Capacity.set -> void
+Idevs.Models.PageData<T>.FillerRows.get -> System.Collections.Generic.List<Idevs.Models.FillerRow>
+Idevs.Models.PageData<T>.FillerRows.set -> void
+Idevs.Models.PageData<T>.Index.get -> int
+Idevs.Models.PageData<T>.Index.set -> void
+Idevs.Models.PageData<T>.IsFirst.get -> bool
+Idevs.Models.PageData<T>.IsFirst.set -> void
+Idevs.Models.PageData<T>.IsLast.get -> bool
+Idevs.Models.PageData<T>.IsLast.set -> void
+Idevs.Models.PageData<T>.Items.get -> System.Collections.Generic.List<Idevs.Models.ItemWithLineNumber<T>>
+Idevs.Models.PageData<T>.Items.set -> void
+Idevs.Models.PageData<T>.PageData() -> void
+Idevs.Models.PageData<T>.PageOffset.get -> int
+Idevs.Models.PageData<T>.PageOffset.set -> void
+Idevs.Models.PageMargin
+Idevs.Models.PageMargin.MarginBottom.get -> string
+Idevs.Models.PageMargin.MarginBottom.init -> void
+Idevs.Models.PageMargin.MarginLeft.get -> string
+Idevs.Models.PageMargin.MarginLeft.init -> void
+Idevs.Models.PageMargin.MarginRight.get -> string
+Idevs.Models.PageMargin.MarginRight.init -> void
+Idevs.Models.PageMargin.MarginTop.get -> string
+Idevs.Models.PageMargin.MarginTop.init -> void
+Idevs.Models.PageMargin.PageMargin(string MarginTop = "3.2cm", string MarginLeft = "1cm", string MarginBottom = "1cm", string MarginRight = "1cm") -> void
+Idevs.Models.PageOrientations
+Idevs.Models.PageOrientations.Landscape = 1 -> Idevs.Models.PageOrientations
+Idevs.Models.PageOrientations.Portrait = 0 -> Idevs.Models.PageOrientations
+Idevs.Models.PageSize
+Idevs.Models.PageSize.Orientation.get -> Idevs.Models.PageOrientations
+Idevs.Models.PageSize.Orientation.init -> void
+Idevs.Models.PageSize.PageOrientation.get -> string
+Idevs.Models.PageSize.PageSize(Idevs.Models.PageSizes Size = Idevs.Models.PageSizes.A4, Idevs.Models.PageOrientations Orientation = Idevs.Models.PageOrientations.Landscape) -> void
+Idevs.Models.PageSize.Size.get -> Idevs.Models.PageSizes
+Idevs.Models.PageSize.Size.init -> void
+Idevs.Models.PageSizes
+Idevs.Models.PageSizes.A3 = 1 -> Idevs.Models.PageSizes
+Idevs.Models.PageSizes.A4 = 0 -> Idevs.Models.PageSizes
+Idevs.Models.PageSizes.Legal = 3 -> Idevs.Models.PageSizes
+Idevs.Models.PageSizes.Letter = 2 -> Idevs.Models.PageSizes
+Idevs.Models.PaginationConfig
+Idevs.Models.PaginationConfig.EnableLogging.get -> bool
+Idevs.Models.PaginationConfig.EnableLogging.set -> void
+Idevs.Models.PaginationConfig.FirstPageSize.get -> int
+Idevs.Models.PaginationConfig.FirstPageSize.set -> void
+Idevs.Models.PaginationConfig.LastPageReserveRows.get -> int
+Idevs.Models.PaginationConfig.LastPageReserveRows.set -> void
+Idevs.Models.PaginationConfig.PaginationConfig() -> void
+Idevs.Models.PaginationConfig.RegularPageSize.get -> int
+Idevs.Models.PaginationConfig.RegularPageSize.set -> void
+Idevs.Models.PaginationResult<T>
+Idevs.Models.PaginationResult<T>.Pages.get -> System.Collections.Generic.List<Idevs.Models.PageData<T>>
+Idevs.Models.PaginationResult<T>.Pages.set -> void
+Idevs.Models.PaginationResult<T>.PaginationResult() -> void
+Idevs.Models.PaginationResult<T>.TotalItems.get -> int
+Idevs.Models.PaginationResult<T>.TotalItems.set -> void
+Idevs.Models.PaginationResult<T>.TotalPages.get -> int
+Idevs.Models.ReportHeader
+Idevs.Models.ReportHeader.HeaderLine.get -> string
+Idevs.Models.ReportHeader.HeaderLine.set -> void
+Idevs.Models.ReportHeader.ReportHeader() -> void
+Idevs.Models.ResponseModel
+Idevs.Models.ResponseModel.Data.get -> object
+Idevs.Models.ResponseModel.Data.set -> void
+Idevs.Models.ResponseModel.ErrorMessage.get -> string
+Idevs.Models.ResponseModel.ErrorMessage.set -> void
+Idevs.Models.ResponseModel.Exception.get -> System.Exception
+Idevs.Models.ResponseModel.Exception.set -> void
+Idevs.Models.ResponseModel.GetCollection<T>() -> System.Collections.Generic.IEnumerable<T>
+Idevs.Models.ResponseModel.GetData<T>() -> T
+Idevs.Models.ResponseModel.IsSuccess.get -> bool
+Idevs.Models.ResponseModel.IsSuccess.set -> void
+Idevs.Models.ResponseModel.ResponseModel() -> void
+Idevs.Models.ResponseModel.ResponseModel(bool isSuccess = true, string errorMessage = null, object data = null, System.Exception exception = null) -> void
+Idevs.Models.TableTheme
+Idevs.Models.TableTheme.None = 0 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark1 = 201 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark10 = 210 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark11 = 211 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark2 = 202 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark3 = 203 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark4 = 204 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark5 = 205 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark6 = 206 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark7 = 207 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark8 = 208 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleDark9 = 209 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight1 = 1 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight10 = 10 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight11 = 11 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight12 = 12 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight13 = 13 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight14 = 14 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight15 = 15 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight16 = 16 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight17 = 17 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight18 = 18 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight19 = 19 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight2 = 2 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight20 = 20 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight21 = 21 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight3 = 3 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight4 = 4 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight5 = 5 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight6 = 6 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight7 = 7 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight8 = 8 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleLight9 = 9 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium1 = 101 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium10 = 110 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium11 = 111 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium12 = 112 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium13 = 113 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium14 = 114 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium15 = 115 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium16 = 116 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium17 = 117 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium18 = 118 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium19 = 119 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium2 = 102 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium20 = 120 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium21 = 121 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium22 = 122 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium23 = 123 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium24 = 124 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium25 = 125 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium26 = 126 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium27 = 127 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium28 = 128 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium3 = 103 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium4 = 104 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium5 = 105 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium6 = 106 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium7 = 107 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium8 = 108 -> Idevs.Models.TableTheme
+Idevs.Models.TableTheme.TableStyleMedium9 = 109 -> Idevs.Models.TableTheme
+Idevs.Repositories.ConnectionKeyAttribute
+Idevs.Repositories.ConnectionKeyAttribute.ConnectionKeyAttribute(string key) -> void
+Idevs.Repositories.ConnectionKeyAttribute.Key.get -> string
+Idevs.Repositories.RepositoryBase<TRow, TKey>
+Idevs.Repositories.RepositoryBase<TRow, TKey>.RepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+Idevs.Repositories.RepositoryBase<TRow>
+Idevs.Repositories.RepositoryBase<TRow>.RepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+Idevs.Repositories.SqlServiceBase
+Idevs.Repositories.SqlServiceBase.Dialect.get -> Serenity.Data.ISqlDialect
+Idevs.Repositories.SqlServiceBase.SqlConnections.get -> Serenity.Data.ISqlConnections
+Idevs.Repositories.SqlServiceBase.SqlDelete(string tableName) -> Serenity.Data.SqlDelete
+Idevs.Repositories.SqlServiceBase.SqlInsert(string tableName) -> Serenity.Data.SqlInsert
+Idevs.Repositories.SqlServiceBase.SqlQuery() -> Serenity.Data.SqlQuery
+Idevs.Repositories.SqlServiceBase.SqlServiceBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+Idevs.Repositories.SqlServiceBase.SqlUpdate(string tableName) -> Serenity.Data.SqlUpdate
+Idevs.SmartPagination
+Idevs.StaticServiceLocator
+Idevs.Storage.CloudUploadStorage
+Idevs.Storage.CloudUploadStorage.ArchiveFile(string path) -> string
+Idevs.Storage.CloudUploadStorage.CloudUploadStorage(Microsoft.Extensions.Options.IOptions<Idevs.Storage.CloudUploadStorageOptions> options, Serenity.Web.UploadSettings uploadSettings, Microsoft.Extensions.Logging.ILogger<Idevs.Storage.CloudUploadStorage> logger = null) -> void
+Idevs.Storage.CloudUploadStorage.CopyFrom(Serenity.Web.IUploadStorage source, string sourcePath, string targetPath, Serenity.Web.OverwriteOption overwrite) -> string
+Idevs.Storage.CloudUploadStorage.DeleteFile(string path) -> void
+Idevs.Storage.CloudUploadStorage.Dispose() -> void
+Idevs.Storage.CloudUploadStorage.FileExists(string path) -> bool
+Idevs.Storage.CloudUploadStorage.GetFileMetadata(string path) -> System.Collections.Generic.IDictionary<string, string>
+Idevs.Storage.CloudUploadStorage.GetFiles(string path, string searchPattern) -> string[]
+Idevs.Storage.CloudUploadStorage.GetFileSize(string path) -> long
+Idevs.Storage.CloudUploadStorage.GetFileUrl(string path) -> string
+Idevs.Storage.CloudUploadStorage.OpenFile(string path) -> System.IO.Stream
+Idevs.Storage.CloudUploadStorage.PurgeTemporaryFiles() -> void
+Idevs.Storage.CloudUploadStorage.SetFileMetadata(string path, System.Collections.Generic.IDictionary<string, string> metadata, bool overwriteAll) -> void
+Idevs.Storage.CloudUploadStorage.WriteFile(string path, System.IO.Stream source, Serenity.Web.OverwriteOption overwrite) -> string
+Idevs.Storage.CloudUploadStorageOptions
+Idevs.Storage.CloudUploadStorageOptions.AccessKey.get -> string
+Idevs.Storage.CloudUploadStorageOptions.AccessKey.set -> void
+Idevs.Storage.CloudUploadStorageOptions.AwsProfileName.get -> string
+Idevs.Storage.CloudUploadStorageOptions.AwsProfileName.set -> void
+Idevs.Storage.CloudUploadStorageOptions.BucketName.get -> string
+Idevs.Storage.CloudUploadStorageOptions.BucketName.set -> void
+Idevs.Storage.CloudUploadStorageOptions.CloudflareAccountId.get -> string
+Idevs.Storage.CloudUploadStorageOptions.CloudflareAccountId.set -> void
+Idevs.Storage.CloudUploadStorageOptions.CloudUploadStorageOptions() -> void
+Idevs.Storage.CloudUploadStorageOptions.ForcePathStyle.get -> bool
+Idevs.Storage.CloudUploadStorageOptions.ForcePathStyle.set -> void
+Idevs.Storage.CloudUploadStorageOptions.KeyPrefix.get -> string
+Idevs.Storage.CloudUploadStorageOptions.KeyPrefix.set -> void
+Idevs.Storage.CloudUploadStorageOptions.Provider.get -> string
+Idevs.Storage.CloudUploadStorageOptions.Provider.set -> void
+Idevs.Storage.CloudUploadStorageOptions.Region.get -> string
+Idevs.Storage.CloudUploadStorageOptions.Region.set -> void
+Idevs.Storage.CloudUploadStorageOptions.SecretKey.get -> string
+Idevs.Storage.CloudUploadStorageOptions.SecretKey.set -> void
+Idevs.Storage.CloudUploadStorageOptions.ServiceUrl.get -> string
+Idevs.Storage.CloudUploadStorageOptions.ServiceUrl.set -> void
+Idevs.Storage.CloudUploadStorageOptions.SessionToken.get -> string
+Idevs.Storage.CloudUploadStorageOptions.SessionToken.set -> void
+Idevs.Storage.CloudUploadStorageOptions.TemporaryRetentionHours.get -> int
+Idevs.Storage.CloudUploadStorageOptions.TemporaryRetentionHours.set -> void
+Idevs.ViewPageRenderer
+Idevs.ViewPageRenderer.RenderViewAsync<TModel>(string viewName, TModel model) -> System.Threading.Tasks.Task<string>
+Idevs.ViewPageRenderer.ViewPageRenderer(Microsoft.AspNetCore.Mvc.Razor.IRazorViewEngine viewEngine, Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataProvider tempDataProvider, System.IServiceProvider serviceProvider) -> void
+override Idevs.Models.PageMargin.ToString() -> string
+override Idevs.Models.PageSize.ToString() -> string
+static Idevs.ChromeHelper.DownloadChrome() -> void
+static Idevs.ChromeHelper.DownloadChromeAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task
+static Idevs.ChromeHelper.GetChromePath() -> string
+static Idevs.ChromeHelper.IsChromeDownloaded() -> bool
+static Idevs.Extensions.EntityQueryExtensions.Set<T>(this T self, Serenity.Data.IRow row, params Serenity.Data.Field[] exclude) -> T
+static Idevs.Extensions.EnumExtensions.GetDescription<T>(this T enumValue) -> string
+static Idevs.Extensions.ModelExtensions.TrimModel<T>(System.Collections.Generic.IEnumerable<T> collection, bool emptyStringToNull = false) -> System.Collections.Generic.IEnumerable<T>
+static Idevs.Extensions.ModelExtensions.TrimModel<T>(this T model, bool emptyStringToNull = false) -> T
+static Idevs.Extensions.NumberExtensions.ToThaiBahtText(this string strNumber, bool IsTrillion = false) -> string
+static Idevs.Extensions.ServiceExtensions.AddIdevsCorelibServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+static Idevs.Extensions.ServiceExtensions.RegisterServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+static Idevs.Extensions.TextLocalizerExtension.Translate(this Serenity.ITextLocalizer localizer, string moduleName, string key) -> string
+static Idevs.Helpers.PdfOptionsBuilder.CreateBusiness(PuppeteerSharp.Media.PaperFormat format = null) -> PuppeteerSharp.PdfOptions
+static Idevs.Helpers.PdfOptionsBuilder.CreateClean(PuppeteerSharp.Media.PaperFormat format = null, (string top, string bottom, string left, string right)? margins = null) -> PuppeteerSharp.PdfOptions
+static Idevs.Helpers.PdfOptionsBuilder.CreateWithTemplates(string headerTemplate = null, string footerTemplate = null, PuppeteerSharp.Media.PaperFormat format = null, string headerHeight = "20mm", string footerHeight = "20mm") -> PuppeteerSharp.PdfOptions
+static Idevs.Logging.LogManager.GetLogger<T>() -> Microsoft.Extensions.Logging.ILogger<T>
+static Idevs.Logging.LogManager.Reset() -> void
+static Idevs.Logging.LogManager.SetLoggerFactory(Microsoft.Extensions.Logging.ILoggerFactory factory) -> void
+static Idevs.Logging.LogManager.TryGetLogger<T>() -> Microsoft.Extensions.Logging.ILogger<T>
+static Idevs.Models.IdevsContentResult.Create(byte[] data, Idevs.Models.IdevsContentType contentType, string downloadName = null) -> Microsoft.AspNetCore.Mvc.FileContentResult
+static Idevs.Models.IdevsContentResult.CreatePdfViewResult(Microsoft.AspNetCore.Http.HttpResponse response, byte[] data, string downloadName = null) -> Microsoft.AspNetCore.Mvc.IActionResult
+static Idevs.Models.IdevsContentResult.CreateResponse(byte[] data, Idevs.Models.IdevsContentType contentType, string downloadName = null) -> Idevs.Models.IdevsContentResponse
+static Idevs.SmartPagination.CreatePages<T>(System.Collections.Generic.List<T> items, Idevs.Models.PaginationConfig config) -> Idevs.Models.PaginationResult<T>
+static Idevs.SmartPagination.CreatePaginatedData<T>(System.Collections.Generic.List<T> items, int firstPageSize, int regularPageSize, int lastPageReserveRows, bool enableLogging = true) -> Idevs.Models.PaginationResult<T>
+static Idevs.StaticServiceLocator.CreateScope() -> Microsoft.Extensions.DependencyInjection.IServiceScope
+static Idevs.StaticServiceLocator.Initialize(System.IServiceProvider provider) -> void
+static Idevs.StaticServiceLocator.IsInitialized.get -> bool
+static Idevs.StaticServiceLocator.Reset() -> void
+static Idevs.StaticServiceLocator.Resolve(System.Type serviceType) -> object
+static Idevs.StaticServiceLocator.Resolve<T>() -> T
+static Idevs.StaticServiceLocator.ResolveSingleton<T>() -> T
+static Idevs.StaticServiceLocator.TryResolve(System.Type serviceType) -> object
+static Idevs.StaticServiceLocator.TryResolve<T>() -> T
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.DeleteById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.DeleteByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIds(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIdsAsync(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RepositoryBase<TRow>.Create(TRow row, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RepositoryBase<TRow>.First(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RepositoryBase<TRow>.FirstAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RepositoryBase<TRow>.GetBy<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RepositoryBase<TRow>.GetByAsync<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RepositoryBase<TRow>.List(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+virtual Idevs.Repositories.RepositoryBase<TRow>.ListAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+virtual Idevs.Repositories.SqlServiceBase.ConnectionKey.get -> string
+virtual Idevs.Repositories.SqlServiceBase.ExecuteAsync<T>(System.Func<System.Data.IDbConnection, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> work, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
