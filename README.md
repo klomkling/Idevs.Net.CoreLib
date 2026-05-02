@@ -1,92 +1,145 @@
-
-
 # Idevs.Net.CoreLib
 
-[![NuGet Version](https://img.shields.io/nuget/v/Idevs.Net.CoreLib.svg)](https://www.nuget.org/packages/Idevs.Net.CoreLib)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/klomkling/Idevs.Net.CoreLib/actions/workflows/ci.yml/badge.svg)](https://github.com/klomkling/Idevs.Net.CoreLib/actions/workflows/ci.yml)
+[![Release](https://github.com/klomkling/Idevs.Net.CoreLib/actions/workflows/release.yml/badge.svg)](https://github.com/klomkling/Idevs.Net.CoreLib/actions/workflows/release.yml)
+[![NuGet Version](https://img.shields.io/nuget/v/Idevs.Net.CoreLib.svg?label=nuget)](https://www.nuget.org/packages/Idevs.Net.CoreLib)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Idevs.Net.CoreLib.svg)](https://www.nuget.org/packages/Idevs.Net.CoreLib)
+![Latest](https://img.shields.io/github/v/tag/klomkling/Idevs.Net.CoreLib?sort=semver&label=latest)
+![.NET](https://img.shields.io/badge/.NET-8%20%7C%2010-blueviolet)
+![Serenity](https://img.shields.io/badge/Serenity-Net.Services-0078D4)
+[![License: MIT](https://img.shields.io/github/license/klomkling/Idevs.Net.CoreLib?label=license)](https://opensource.org/licenses/MIT)
+[![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20me%20a%20coffee-ff813f)](https://buymeacoffee.com/klomkling)
 
-A comprehensive extension library for the Serenity Framework that provides enhanced functionality for data export, PDF generation, UI components, and more.
+A focused extension library for the [Serenity Framework](https://serenity.is/) that provides compile-time DI registration, async-first repositories, Excel/PDF export, S3-compatible upload storage, two-level caching helpers, and a curated set of form/grid attributes.
 
-## Features
+Targets **.NET 8** and **.NET 10**.
 
-- 📊 **Excel Export**: Advanced Excel generation with formatting, themes, and aggregation support
-- 📄 **PDF Export**: HTML-to-PDF conversion using Puppeteer Sharp
-- 🎨 **UI Components**: Extended form controls and formatters for Serenity
-- 🔄 **Service Registration**: Automatic dependency injection with attributes
-- 📐 **Bootstrap Grid**: Enhanced column width controls with Bootstrap 5 support
-- 🌍 **Localization**: Enhanced text localization extensions
+## Contents
+
+- [Packages](#packages)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Features](#features)
+  - [Service registration (source generator)](#service-registration-source-generator)
+  - [Autofac integration](#autofac-integration)
+  - [Repositories](#repositories)
+  - [Two-level cache helpers](#two-level-cache-helpers)
+  - [Excel export](#excel-export)
+  - [PDF export](#pdf-export)
+  - [Cloud upload storage](#cloud-upload-storage)
+  - [Logging — LogManager + Serilog](#logging--logmanager--serilog)
+  - [UI attributes — formatters, editors, column widths](#ui-attributes--formatters-editors-column-widths)
+  - [Smart pagination](#smart-pagination)
+  - [Static service locator](#static-service-locator)
+- [Troubleshooting](#troubleshooting)
+- [Migration guide](#migration-guide)
+- [Contributing](#contributing)
+- [Support](#support)
+- [License](#license)
+
+## Packages
+
+| Package | Purpose | Required? |
+|---|---|---|
+| **`Idevs.Net.CoreLib`** | Main library — DI generator output, repositories, exporters, storage, attributes, helpers. | Yes |
+| **`Idevs.Net.CoreLib.Generators.Abstractions`** | Roslyn helpers for consumer-authored source generators that follow CoreLib's DI conventions. | Optional |
+| **`Idevs.Net.CoreLib.Autofac`** | Autofac integration for CoreLib's DI registration model. | Optional |
+| **`Idevs.Net.CoreLib.Serilog`** | `LogManager` bridge for Serilog logger factories. | Optional |
+
+The Roslyn source generator that emits compile-time DI registrations is **bundled** inside `Idevs.Net.CoreLib` (under `analyzers/dotnet/cs/`). You do not need to install a separate generator package.
 
 ## Installation
-
-Install via NuGet Package Manager:
 
 ```bash
 dotnet add package Idevs.Net.CoreLib
 ```
 
-Or via Package Manager Console:
+Add optional packages as needed:
 
-```powershell
-Install-Package Idevs.Net.CoreLib
+```bash
+dotnet add package Idevs.Net.CoreLib.Autofac
+dotnet add package Idevs.Net.CoreLib.Serilog
+dotnet add package Idevs.Net.CoreLib.Generators.Abstractions
 ```
 
-## Quick Start
-
-### 1. Service Registration
-
-From **0.7.0** onward, DI registrations are emitted at compile time by the bundled Roslyn
-source generator. Replace the old call with the generated extension:
+## Quick start
 
 ```csharp
 using Idevs.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Generated at compile time — no runtime assembly scanning.
+// Compile-time DI registration emitted by the bundled Roslyn source generator.
+// Replaces the deprecated AddIdevsCorelibServices() runtime scan.
 builder.Services.AddIdevsServices();
 
-// Your other service registrations
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
-
-// Your middleware configuration
 app.UseRouting();
 app.MapControllers();
-
 app.Run();
 ```
 
-> **Upgrading from 0.6.x?** `AddIdevsCorelibServices()` is still present but marked
-> `[Obsolete]`. Replace it with `AddIdevsServices()`. See
-> [MIGRATION.md](MIGRATION.md#v06x--v070--source-generator-di-registration) for the
-> full guide.
+> **Upgrading from 0.6.x?** `AddIdevsCorelibServices()` is `[Obsolete]` and delegates to the new path. See the [migration guide](MIGRATION.md#v06x--v070--source-generator-di-registration).
 
-#### Service discovery paths
+## Features
 
-The generator supports three ways to declare a service:
+### Service registration (source generator)
 
-1. **Attribute** — `[Scoped]`, `[Singleton]`, or `[Transient]` on the implementation class.
-2. **Marker interface** — implement `IScopedService`, `ISingletonService`, or `ITransientService`
-   (or their generic `<TService>` variants) on the class or a shared base class.
-3. **Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that
-   do not fit the attribute/marker model.
+From **0.7.0** onward, all service registrations are emitted at compile time. There is no `AppDomain.GetAssemblies()` scan at startup. Three discovery paths are supported and can be mixed freely:
 
-Example using a marker interface on a base class (eliminates per-type attributes):
+**1. Attribute** — `[Scoped]`, `[Singleton]`, `[Transient]` on the implementation class.
+
+```csharp
+[Scoped]
+public class OrderService : IOrderService { }
+
+[Scoped(typeof(IInvoiceService))]              // explicit service type
+public class InvoiceService : IInvoiceService { }
+
+[Scoped(AllowSelfRegistration = true)]         // register the concrete type
+public class UtilityService { }
+
+[Transient(ServiceKey = "smtp")]               // named registration (Autofac only)
+public class SmtpEmailService : IEmailService { }
+```
+
+**2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants. Best when applied to a base class so derived types are auto-registered without per-type attributes:
 
 ```csharp
 using Idevs.Repositories;
 
-// Every derived repository is auto-registered as scoped.
 public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
-    : RepositoryBase<TRow, TKey>(c), IScopedService
+    : RepositoryBase<TRow, TKey>(c), IScopedService { }
+
+// All derived repositories are auto-registered.
+public class OrderRepository(ISqlConnections c) : AppRepositoryBase<OrderRow, int>(c) { }
+```
+
+**3. Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that don't fit attribute or marker patterns:
+
+```csharp
+public class CustomRegistrar : IIdevsServiceRegistrar
 {
+    public void Register(IServiceCollection services)
+    {
+        services.AddSingleton<IFoo>(sp => new Foo(sp.GetRequiredService<IBar>()));
+    }
 }
 ```
 
-### 1.1. Autofac Integration
+The generator emits 10 diagnostics (`IDEVSGEN001`–`IDEVSGEN010`) for misuse — attribute/marker conflicts, ambiguous service types, registrar validation, legacy attribute usage, and more. Diagnostics fire at compile time so problems are caught before runtime.
 
-Autofac support is available from the optional `Idevs.Net.CoreLib.Autofac` package:
+#### Legacy attributes
+
+`[ScopedRegistration]`, `[SingletonRegiatration]`, `[TransientRegistration]` are still recognized but `[Obsolete]`. The generator emits `IDEVSGEN001` warning suggesting the standard names.
+
+#### Opting out / falling back
+
+If the generator misbehaves in your build, set `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` in your `.csproj` to fall back to the runtime scan via `AddIdevsCorelibLegacyScan()`. Planned for removal in 0.8.0.
+
+### Autofac integration
 
 ```bash
 dotnet add package Idevs.Net.CoreLib.Autofac
@@ -96,411 +149,214 @@ dotnet add package Idevs.Net.CoreLib.Autofac
 using Idevs.Extensions;
 
 builder.UseIdevsAutofac();
-```
 
-### 1.2. Advanced Autofac Configuration
-
-After installing `Idevs.Net.CoreLib.Autofac`, you can customize the Autofac container:
-
-```csharp
-// With custom container configuration
-builder.UseIdevsAutofac(containerBuilder =>
+// With custom registrations
+builder.UseIdevsAutofac(c =>
 {
-    // Your custom registrations
-    containerBuilder.RegisterType<MyCustomService>()
-        .As<IMyCustomService>()
-        .InstancePerLifetimeScope();
+    c.RegisterType<MyCustomService>().As<IMyCustomService>().InstancePerLifetimeScope();
 });
 
-// With additional modules
+// With Autofac modules
 builder.UseIdevsAutofac(new MyCustomModule(), new AnotherModule());
 ```
 
-### 2. Chrome Setup for PDF Export
+Named-key registrations (`[Transient(ServiceKey = "smtp")]`) resolve through Autofac's keyed services.
 
-**Important**: For PDF export functionality, you need to download Chrome/Chromium:
+### Repositories
+
+Three layered base classes for data access:
+
+- **`SqlServiceBase`** — for services that need raw SQL access without being a typed repository. Provides `ISqlConnections`, lazy `Dialect`, dialect-pre-bound `SqlQuery()` / `SqlInsert(t)` / `SqlUpdate(t)` / `SqlDelete(t)` factories, and a uniform `ExecuteAsync<T>` template that manages connection lifetime and composes with an optional `UnitOfWork`.
+
+- **`RepositoryBase<TRow>`** — typed read/list/getby/create/update/delete on a Serenity `IRow`:
+
+  | Group | Methods |
+  |---|---|
+  | **Reads** | `TryFirstAsync(Action<SqlQuery>)`, `ListAsync(Action<SqlQuery>)`, `GetByAsync<TValue>(Field, value)` |
+  | **Writes** | `CreateAsync(TRow)`, `UpdateAsync(Action<SqlUpdate>, ExpectedRows)`, `UpdateManyAsync(Action<SqlUpdate>)`, `DeleteAsync(Action<SqlDelete>, ExpectedRows)`, `DeleteManyAsync(Action<SqlDelete>)` |
+  | **Deprecated** | `FirstAsync` (use `TryFirstAsync`); all sync wrappers (`*` without `Async`) |
+
+  All write methods default to `ExpectedRows.One` so a wrong WHERE clause fails loudly. Use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations.
+
+- **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`: `GetByIdAsync(TKey)`, `GetByIdsAsync(IEnumerable<TKey>)`, `UpdateAsync(TRow row)` (entity-by-id), `DeleteByIdAsync(TKey)`. Inherits all criteria-based methods from `RepositoryBase<TRow>`. The `UpdateAsync(TRow)` and `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
+
+Connection key is configurable via the virtual `ConnectionKey` property or the `[ConnectionKey("Warehouse")]` attribute (resolved on the derived class).
+
+#### Example
 
 ```csharp
-// In Program.cs Main method (before starting the application)
-public static void Main(string[] args)
+using Idevs.ComponentModels;
+using Idevs.Repositories;
+
+public interface IMappingLotRepository
 {
-    // Download Chrome if not already present
-    ChromeHelper.DownloadChrome();
-    
-    CreateHostBuilder(args).Build().Run();
+    Task<MappingLotSelectionRow?> FindByDocAndProductAsync(
+        string docNo, int productId, IUnitOfWork uow, CancellationToken ct);
+
+    Task UpdateApproveQtyAsync(
+        string docNo, int productId, decimal qty, IUnitOfWork uow, CancellationToken ct);
+}
+
+[Scoped(typeof(IMappingLotRepository))]
+public class MappingLotRepository(ISqlConnections c)
+    : RepositoryBase<MappingLotSelectionRow>(c), IMappingLotRepository
+{
+    private static readonly MappingLotSelectionRow.RowFields cFld = MappingLotSelectionRow.Fields;
+
+    public Task<MappingLotSelectionRow?> FindByDocAndProductAsync(
+        string docNo, int productId, IUnitOfWork uow, CancellationToken ct)
+        => TryFirstAsync(q => q
+            .SelectTableFields()
+            .Where(cFld.DocNo == docNo && cFld.ProductId == productId),
+            uow, ct);
+
+    public Task UpdateApproveQtyAsync(
+        string docNo, int productId, decimal qty, IUnitOfWork uow, CancellationToken ct)
+        => UpdateAsync(u => u
+            .Set(cFld.McApproveQty, qty)
+            .Where(cFld.DocNo == docNo && cFld.ProductId == productId),
+            uow: uow, ct: ct);
 }
 ```
 
-## Usage Examples
+### Two-level cache helpers
 
-### Excel Export
+`Idevs.Caching.TwoLevelCacheExtensions` adds async wrappers around Serenity's `ITwoLevelCache`, plus convenience methods for memory-only and remote-only access patterns:
 
 ```csharp
-public class OrderController : ServiceEndpoint
+using Idevs.Caching;
+
+// Memory-only cache (per-process, never hits remote).
+var amphurs = cache.GetLocalStoreOnly(
+    CacheKey.Base.Amphur,
+    CacheKey.Base.DefaultCacheDuration,
+    CacheKey.Base.GroupKey,
+    () => repo.List(q => q.SelectTableFields()));
+
+// Async variant with cancellation token.
+var amphursAsync = await cache.GetLocalStoreOnlyAsync(
+    CacheKey.Base.Amphur,
+    CacheKey.Base.DefaultCacheDuration,
+    CacheKey.Base.GroupKey,
+    () => repo.ListAsync(q => q.SelectTableFields(), ct: ct),
+    ct);
+```
+
+### Excel export
+
+```csharp
+public class OrderEndpoint : ServiceEndpoint
 {
-    private readonly IIdevsExcelExporter _excelExporter;
-    
-    public OrderController(IIdevsExcelExporter excelExporter)
-    {
-        _excelExporter = excelExporter;
-    }
-    
+    private readonly IIdevsExcelExporter _excel;
+
+    public OrderEndpoint(IIdevsExcelExporter excel) => _excel = excel;
+
     [HttpPost]
-    public IActionResult ExportToExcel(ListRequest request)
+    public IActionResult Export(ListRequest request)
     {
-        var orders = GetOrders(request); // Your data retrieval logic
-        
-        // Simple export
-        var excelBytes = _excelExporter.Export(orders, typeof(OrderColumns));
-        
-        return IdevsContentResult.Create(
-            excelBytes, 
-            IdevsContentType.Excel, 
-            "orders.xlsx"
-        );
+        var orders = GetOrders(request);
+
+        // Simple export against a Serenity columns class.
+        var bytes = _excel.Export(orders, typeof(OrderColumns));
+
+        return IdevsContentResult.Create(bytes, IdevsContentType.Excel, "orders.xlsx");
     }
-    
+
     [HttpPost]
-    public IActionResult ExportWithHeaders(ListRequest request)
+    public IActionResult ExportWithReportHeader(ListRequest request)
     {
         var orders = GetOrders(request);
         var headers = new[]
         {
             new ReportHeader { HeaderLine = "Order Report" },
             new ReportHeader { HeaderLine = $"Generated: {DateTime.Now:yyyy-MM-dd}" },
-            new ReportHeader { HeaderLine = "" } // Empty line
+            new ReportHeader { HeaderLine = "" },
         };
-        
-        var excelBytes = _excelExporter.Export(orders, typeof(OrderColumns), headers);
-        
-        return IdevsContentResult.Create(excelBytes, IdevsContentType.Excel, "order-report.xlsx");
+
+        var bytes = _excel.Export(orders, typeof(OrderColumns), headers);
+        return IdevsContentResult.Create(bytes, IdevsContentType.Excel, "order-report.xlsx");
     }
 }
 ```
 
-### PDF Export
+Customize via `IdevsExportRequest`:
 
 ```csharp
-public class ReportController : ServiceEndpoint
-{
-    private readonly IIdevsPdfExporter _pdfExporter;
-    private readonly IViewPageRenderer _viewRenderer;
-    
-    public ReportController(IIdevsPdfExporter pdfExporter, IViewPageRenderer viewRenderer)
-    {
-        _pdfExporter = pdfExporter;
-        _viewRenderer = viewRenderer;
-    }
-    
-    [HttpPost]
-    public async Task<IActionResult> GenerateReport(ReportRequest request)
-    {
-        // Render HTML from Razor view
-        var model = GetReportData(request);
-        var html = await _viewRenderer.RenderViewAsync("Reports/OrderReport", model);
-        
-        // Convert to PDF
-        var pdfBytes = await _pdfExporter.ExportByteArrayAsync(
-            html,
-            "<div style='text-align: center;'>Order Report</div>", // Header
-            "<div style='text-align: center;'>Page <span class='pageNumber'></span></div>" // Footer
-        );
-        
-        return IdevsContentResult.Create(pdfBytes, IdevsContentType.Pdf, "report.pdf");
-    }
-}
-```
-
-> **Note**
-> From version 0.3.0 onward the PDF exporter expects pre-rendered HTML. Use your preferred templating solution (e.g., Razor via `IViewPageRenderer`) before calling `ExportByteArrayAsync` or `CreateResponseAsync`.
-
-### UI Components
-
-```csharp
-// Enhanced column attributes
-public class OrderColumns
-{
-    [DisplayName("Order ID"), ColumnWidth(ExtraLarge = 2)]
-    public string OrderId { get; set; }
-    
-    [DisplayName("Customer"), FullColumnWidth]
-    public string CustomerName { get; set; }
-    
-    [DisplayName("Order Date"), DisplayDateFormat, HalfWidth]
-    public DateTime OrderDate { get; set; }
-    
-    [DisplayName("Amount"), DisplayNumberFormat("n2")]
-    public decimal Amount { get; set; }
-    
-    [DisplayName("Status"), CheckboxFormatter(TrueText = "Completed", FalseText = "Pending")]
-    public bool IsCompleted { get; set; }
-}
-```
-
-### Service Registration with Attributes
-
-Idevs.Net.CoreLib supports standard attributes for service registration:
-
-#### Standard Attributes
-
-```csharp
-// Basic usage - auto-discovers I{ClassName} interface
-[Scoped]
-public class OrderService : IOrderService
-{
-    // Scoped service implementation
-}
-
-// Explicit service type specification
-[Singleton(ServiceType = typeof(ICacheService))]
-public class CacheService : ICacheService, IDisposable
-{
-    // Singleton service with explicit interface
-}
-
-// Named registrations (Autofac only)
-[Transient(ServiceKey = "smtp")]
-public class EmailService : IEmailService
-{
-    // SMTP email implementation
-}
-```
-
-#### Legacy Attributes (Backward Compatibility)
-
-The legacy `[ScopedRegistration]`, `[SingletonRegiatration]`, and `[TransientRegistration]`
-attributes are still supported but obsolete. Prefer `[Scoped]`, `[Singleton]`, and `[Transient]`
-for new code.
-
-#### Advanced Features
-
-```csharp
-// Named registrations (Autofac only)
-[Transient(ServiceKey = "smtp")]
-public class SmtpEmailService : IEmailService
-{
-    // SMTP email implementation
-}
-
-[Transient(ServiceKey = "sendgrid")]
-public class SendGridEmailService : IEmailService
-{
-    // SendGrid email implementation
-}
-
-// Self-registration without interface
-[Scoped(AllowSelfRegistration = true)]
-public class UtilityService
-{
-    public void DoWork() { }
-}
-```
-
-#### Attribute Comparison
-
-| Feature | Legacy Attributes | Standard Attributes |
-|---------|-------------------|---------------------|
-| Interface Discovery | `I{ClassName}` only | `I{ClassName}` + any interface + self-registration |
-| Service Keys | Not supported | Supported (Autofac only) |
-| Explicit Service Type | Not supported | Supported |
-| Self-registration | Not supported | Supported |
-| Status | Obsolete | Recommended |
-
-### Static Service Resolution
-
-Prefer constructor dependency injection for new code. `StaticServiceLocator` is still supported, but it should be treated as a last-resort compatibility bridge for static methods or legacy code paths that cannot receive dependencies through DI.
-
-```csharp
-// Initialize in your Program.cs only if static or legacy code needs it
-var app = builder.Build();
-app.UseIdevsStaticServiceLocator();
-
-// Use in static methods or legacy code
-public static class LegacyHelper
-{
-    public static void ProcessData()
-    {
-        // Resolve services statically
-        var excelExporter = StaticServiceLocator.Resolve<IIdevsExcelExporter>();
-        var pdfExporter = StaticServiceLocator.Resolve<IIdevsPdfExporter>();
-        
-        // Use try resolve for optional services
-        var optionalService = StaticServiceLocator.TryResolve<IOptionalService>();
-        if (optionalService != null)
-        {
-            // Use the service
-        }
-        
-        // Use scoped resolution for per-request services
-        using var scope = StaticServiceLocator.CreateScope();
-        var scopedService = scope.ServiceProvider.GetService<IScopedService>();
-    }
-    
-    public static void ProcessDataWithCaching()
-    {
-        // Cache only services that are registered as singletons
-        var cachedService = StaticServiceLocator.ResolveSingleton<IMySingletonService>();
-    }
-}
-```
-
-**Important**: Do not use `StaticServiceLocator` from normal application services. Static resolution hides dependencies and can make service lifetime problems harder to diagnose.
-
-## Configuration Options
-
-### Excel Export Customization
-
-```csharp
-// Custom theme
 var request = new IdevsExportRequest
 {
     TableTheme = TableTheme.TableStyleMedium15,
     CompanyName = "My Company",
     ReportName = "Sales Report",
-    PageSize = new PageSize(PageSizes.A4, PageOrientations.Landscape)
+    PageSize = new PageSize(PageSizes.A4, PageOrientations.Landscape),
 };
 ```
 
-### PDF Export Options
+Aggregations: pass `AggregateColumn[]` with `AggregateType.Sum`/`Avg`/`Count`/`Min`/`Max` to attach total rows.
+
+### PDF export
+
+PDF generation uses [PuppeteerSharp](https://github.com/hardkoded/puppeteer-sharp). Render HTML upstream (e.g., via Razor with `IViewPageRenderer`) and pass it to `IIdevsPdfExporter`.
 
 ```csharp
-// Custom page settings in your CSS
-@page {
-    size: A4;
-    margin: 1in;
-}
+public class ReportEndpoint : ServiceEndpoint
+{
+    private readonly IIdevsPdfExporter _pdf;
+    private readonly IViewPageRenderer _view;
 
-// Or use PuppeteerSharp options directly
-var pdfOptions = new PdfOptions
+    public ReportEndpoint(IIdevsPdfExporter pdf, IViewPageRenderer view)
+    {
+        _pdf = pdf;
+        _view = view;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Generate(ReportRequest request, CancellationToken ct)
+    {
+        var model = GetReportData(request);
+        var html = await _view.RenderViewAsync("Reports/OrderReport", model);
+
+        var bytes = await _pdf.ExportByteArrayAsync(
+            html,
+            "<div style='text-align:center;'>Order Report</div>",                       // header
+            "<div style='text-align:center;'>Page <span class='pageNumber'></span></div>"); // footer
+
+        return IdevsContentResult.Create(bytes, IdevsContentType.Pdf, "report.pdf");
+    }
+}
+```
+
+#### Chrome download
+
+Chromium must be available on the host. Trigger the download once at startup:
+
+```csharp
+public static void Main(string[] args)
+{
+    if (!ChromeHelper.IsChromeDownloaded())
+        ChromeHelper.DownloadChrome();
+
+    CreateHostBuilder(args).Build().Run();
+}
+```
+
+#### PDF options
+
+Use `PdfOptionsBuilder` for fluent configuration, or pass a PuppeteerSharp `PdfOptions` directly:
+
+```csharp
+var options = new PdfOptions
 {
     Format = PaperFormat.A4,
-    MarginOptions = new MarginOptions
-    {
-        Top = "1in",
-        Right = "1in",
-        Bottom = "1in",
-        Left = "1in"
-    },
-    PreferCSSPageSize = true
+    PreferCSSPageSize = true,
+    MarginOptions = new MarginOptions { Top = "1in", Right = "1in", Bottom = "1in", Left = "1in" },
 };
 ```
 
-## Troubleshooting
+> **From 0.3.0**: the exporter expects pre-rendered HTML. Razor rendering is the caller's responsibility.
 
-### PDF Export Issues
+### Cloud upload storage
 
-**Problem**: PDF generation fails with "Chrome not found" error
-**Solution**: Ensure Chrome is downloaded:
-
-```csharp
-// Check if Chrome is available
-if (!ChromeHelper.IsChromeDownloaded())
-{
-    ChromeHelper.DownloadChrome();
-}
-```
-
-**Problem**: PDF export hangs or times out
-**Solution**: Ensure your HTML doesn't have external dependencies that can't be loaded:
-
-```html
-<!-- Use inline CSS instead of external links -->
-<style>
-  /* Your styles here */
-</style>
-```
-
-### Excel Export Issues
-
-**Problem**: Column formatting not applied
-**Solution**: Use proper format attributes:
-
-```csharp
-[DisplayNumberFormat("#,##0.00")] // For numbers
-[DisplayDateFormat] // For dates (dd/MM/yyyy)
-[DisplayPercentage] // For percentages
-```
-
-**Problem**: Large datasets cause memory issues
-**Solution**: Process data in chunks or use streaming:
-
-```csharp
-// Process in smaller batches
-const int batchSize = 10000;
-for (int i = 0; i < totalRecords; i += batchSize)
-{
-    var batch = GetDataBatch(i, batchSize);
-    // Process batch
-}
-```
-
-## Migration Guide
-
-Upgrade notes for every version live in [MIGRATION.md](MIGRATION.md). Direct
-links for the most-recent transitions:
-
-- [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
-- [v0.6.x → v0.7.0 — Source-Generator DI Registration](MIGRATION.md#v06x--v070--source-generator-di-registration)
-- [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
-- [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
-- [v0.1.x → v0.2.0 — Autofac Integration](MIGRATION.md#v01x--v020--autofac-integration)
-- [v0.0.x → v0.1.x — Service Registration & Chrome Setup](MIGRATION.md#v00x--v01x--service-registration--chrome-setup)
-
-## Repositories
-
-`Idevs.Net.CoreLib` ships a focused class hierarchy for data access:
-
-- **`SqlServiceBase`** — base for services that need raw SQL access without
-  being a typed-row repository. Provides `ISqlConnections`, lazy `Dialect`,
-  `SqlQuery()`/`SqlInsert(t)`/`SqlUpdate(t)`/`SqlDelete(t)` factories, and a
-  uniform `ExecuteAsync<T>` template that manages connection lifetime and
-  composes with an optional `UnitOfWork`.
-
-- **`RepositoryBase<TRow>`** — typed read/list/getby/create on a Serenity
-  `IRow`. Methods:
-  - **Reads:** `TryFirstAsync` (returns `TRow?`), `ListAsync`,
-    `GetByAsync<TValue>`.
-  - **Writes:** `CreateAsync`, `UpdateAsync(Action<SqlUpdate>, ExpectedRows)`
-    (criteria-based partial update; defaults to `ExpectedRows.One`),
-    `UpdateManyAsync` (batch alias), `DeleteAsync(Action<SqlDelete>, ExpectedRows)`,
-    `DeleteManyAsync`.
-  - `[Obsolete]` sync wrappers for migration.
-  - `FirstAsync` is `[Obsolete]` since 0.7.2 — use `TryFirstAsync` instead
-    (same behavior, name matches Serenity's `Connection.TryFirst`).
-
-- **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`:
-  `GetByIdAsync`, `GetByIdsAsync`, `UpdateAsync(TRow row)`, `DeleteByIdAsync`.
-  Inherits all the criteria-based methods above; the `UpdateAsync(TRow)` and
-  `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
-
-Connection key is configurable via the virtual `ConnectionKey` property or
-the `[ConnectionKey("Warehouse")]` attribute.
-
-### Criteria-based update example
-
-```csharp
-// Throws if zero or more than one row matches (default ExpectedRows.One).
-await mappingLotRepo.UpdateAsync(u => u
-    .Set(cFld.McApproveQty, qty)
-    .Where(cFld.DocNo == docno && cFld.ProductId == productId),
-    uow: uow, ct: ct);
-
-// Batch update (any number of rows accepted).
-await mappingLotRepo.UpdateManyAsync(u => u
-    .Set(cFld.Status, "Cancelled")
-    .Where(cFld.DocNo == docno),
-    uow, ct);
-```
-
-For caching, see `Idevs.Caching.TwoLevelCacheExtensions` — async wrappers
-around Serenity `ITwoLevelCache`.
-
-**Migrating to 0.7.2:** see [MIGRATION.md](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias).
-**Migrating from 0.5.0:** see [MIGRATION.md](MIGRATION.md#v050--v060--repositorybase-redesign).
-
-## Cloud Upload Storage
-
-`Idevs.Net.CoreLib` can replace Serenity upload storage with S3-compatible object storage.
+Replaces Serenity's default upload storage with an S3-compatible backend. Supports **AWS S3**, **Cloudflare R2**, and **Local** (passthrough).
 
 ```csharp
 using Idevs.Extensions;
@@ -509,7 +365,7 @@ builder.Services.AddCloudUploadStorage(builder.Configuration);
 builder.Services.AddUploadStorage();
 ```
 
-AWS S3 configuration:
+**AWS S3** (`appsettings.json`):
 
 ```json
 {
@@ -522,7 +378,7 @@ AWS S3 configuration:
 }
 ```
 
-Cloudflare R2 configuration:
+**Cloudflare R2:**
 
 ```json
 {
@@ -536,23 +392,28 @@ Cloudflare R2 configuration:
 }
 ```
 
-Set `"Provider": "Local"` to keep Serenity's default local upload storage.
+**Local** (no cloud — keep Serenity's default behavior):
 
-## Log Manager
+```json
+{ "CloudUploadStorage": { "Provider": "Local" } }
+```
 
-`LogManager` provides a provider-neutral bridge for code paths that cannot receive `ILogger<T>` through dependency injection.
+AWS credentials follow the standard AWS SDK chain (env vars, profile, IAM role). Set `KeyPrefix` to namespace uploads per tenant or environment.
+
+### Logging — LogManager + Serilog
+
+`LogManager` is a provider-neutral bridge for code that cannot receive `ILogger<T>` through DI (static methods, legacy code paths).
 
 ```csharp
 using Idevs.Logging;
-using Microsoft.Extensions.Logging;
 
 LogManager.SetLoggerFactory(app.Services.GetRequiredService<ILoggerFactory>());
-var logger = LogManager.GetLogger<Program>();
+
+var logger = LogManager.GetLogger<MyClass>();
+logger.LogInformation("Started.");
 ```
 
-### Serilog Integration
-
-Serilog support is available from the optional `Idevs.Net.CoreLib.Serilog` package.
+For Serilog hosts:
 
 ```bash
 dotnet add package Idevs.Net.CoreLib.Serilog
@@ -564,24 +425,182 @@ using Idevs.Extensions;
 app.UseIdevsSerilogLogManager();
 ```
 
-The core package continues to use `Microsoft.Extensions.Logging` abstractions.
+The core package always uses `Microsoft.Extensions.Logging` abstractions; the Serilog package only wires up the factory.
+
+### UI attributes — formatters, editors, column widths
+
+Curated Serenity-compatible attributes for grid columns and form fields:
+
+**Display formatters**
+- `[DisplayDateFormat]` — `dd/MM/yyyy`
+- `[DisplayDateTimeFormat(withSeconds: true)]`
+- `[DisplayTimeFormat(withSeconds: true)]`
+- `[DisplayNumberFormat(scale: 2)]`
+- `[DisplayPercentage(scale: 2)]`
+- `[ZeroDisplayFormatter]` — render `0` as blank
+- `[CheckboxFormatter(TrueText, FalseText, TrueValueIcon, FalseValueIcon)]`
+- `[LookupFormatter]`
+- `[DateMonthFormatter]`
+
+**Editors**
+- `[CheckboxButtonEditor(EnumKey, EnumType, IsStringId)]`
+- `[EnumEditorWithKey]`
+- `[DateMonthEditor]`
+
+**Column widths (Bootstrap-aware)**
+- `[ColumnWidth(ExtraSmall, Small, Medium, Large, ExtraLarge)]`
+- `[FullColumnWidth]`
+- `[HalfColumnWidth]`
+
+```csharp
+public class OrderColumns
+{
+    [DisplayName("Order ID"), ColumnWidth(ExtraLarge = 2)]
+    public string OrderId { get; set; }
+
+    [DisplayName("Customer"), FullColumnWidth]
+    public string CustomerName { get; set; }
+
+    [DisplayName("Order Date"), DisplayDateFormat, HalfColumnWidth]
+    public DateTime OrderDate { get; set; }
+
+    [DisplayName("Amount"), DisplayNumberFormat(scale: 2)]
+    public decimal Amount { get; set; }
+
+    [DisplayName("Status"), CheckboxFormatter(TrueText = "Completed", FalseText = "Pending")]
+    public bool IsCompleted { get; set; }
+}
+```
+
+### Smart pagination
+
+`Idevs.Utilities.SmartPagination` produces page-break-aware row groups for paginated reports (e.g., a 30-row table that needs to break across A4 pages with a header on each page). Includes filler-row support to keep page heights consistent.
+
+```csharp
+var pages = SmartPagination.Build(orders, pageSize: 25, fillToPageSize: true);
+
+foreach (var page in pages)
+{
+    // page.Items, page.PageNumber, page.TotalPages, page.IsFiller
+}
+```
+
+### Static service locator
+
+Last-resort bridge for legacy code paths that cannot receive DI. Prefer constructor injection for new code.
+
+```csharp
+var app = builder.Build();
+app.UseIdevsStaticServiceLocator();
+
+public static class LegacyHelper
+{
+    public static void DoWork()
+    {
+        var excel  = StaticServiceLocator.Resolve<IIdevsExcelExporter>();
+        var maybe  = StaticServiceLocator.TryResolve<IOptionalService>();
+        var single = StaticServiceLocator.ResolveSingleton<IMyCachedService>();
+
+        using var scope = StaticServiceLocator.CreateScope();
+        var scoped = scope.ServiceProvider.GetRequiredService<IScopedThing>();
+    }
+}
+```
+
+> Static resolution hides dependencies and complicates lifetime debugging. Treat it as a bridge, not a primary tool.
+
+## Troubleshooting
+
+### PDF export fails with "Chrome not found"
+
+```csharp
+if (!ChromeHelper.IsChromeDownloaded())
+    ChromeHelper.DownloadChrome();
+```
+
+### PDF export hangs or times out
+
+External CSS/JS that can't be loaded blocks rendering. Inline styles instead:
+
+```html
+<style>/* your styles */</style>
+```
+
+### Excel column formatting not applied
+
+Make sure formatter attributes are on the column class (the `typeof(...)` you pass to `Export`), not the row.
+
+### Excel export memory pressure on large datasets
+
+Process in batches and concatenate worksheets:
+
+```csharp
+const int batch = 10_000;
+for (var i = 0; i < total; i += batch)
+{
+    var slice = GetBatch(i, batch);
+    // accumulate or stream to disk
+}
+```
+
+### Source generator emits unexpected diagnostics
+
+Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The most common ones:
+
+- `IDEVSGEN001` — class uses a legacy registration attribute. Switch to `[Scoped]` / `[Singleton]` / `[Transient]`.
+- `IDEVSGEN002` / `IDEVSGEN003` — multiple registration attributes on the same class, or attribute + marker interface conflict.
+- `IDEVSGEN006` — the declared `ServiceType` is not implemented by the class.
+
+If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` in the consumer csproj to fall back to runtime scanning, then file an issue with a repro.
+
+## Migration guide
+
+Detailed upgrade notes for every minor and major version live in [MIGRATION.md](MIGRATION.md). Latest transitions:
+
+- [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
+- [v0.6.x → v0.7.0 — Source-Generator DI Registration](MIGRATION.md#v06x--v070--source-generator-di-registration)
+- [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
+- [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
+- [v0.1.x → v0.2.0 — Autofac Integration](MIGRATION.md#v01x--v020--autofac-integration)
+- [v0.0.x → v0.1.x — Service Registration & Chrome Setup](MIGRATION.md#v00x--v01x--service-registration--chrome-setup)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Workflow:
+
+1. Fork the repo (or push a branch if you have write access).
+2. Open a PR against `main`. The repo enforces these rules via a ruleset:
+   - CI must pass (`Build & Test` on .NET 8 + .NET 10).
+   - GitHub Copilot is auto-requested as a reviewer.
+   - Force-pushes and direct commits to `main` are blocked.
+3. The maintainer reviews and merges. Squash or rebase, your choice.
+
+### Code conventions
+
+- Match existing patterns in the file you're editing.
+- Keep public-API changes additive when possible. For breaking changes, update `PublicAPI.Unshipped.txt` in the affected project so the analyzer surfaces the diff.
+- Tests live under `tests/` and follow the existing `CapturingRepo`-style dispatch pattern for repository tests.
+
+## Support
+
+If this library has been useful to you, consider supporting its development:
+
+<a href="https://buymeacoffee.com/klomkling" target="_blank">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217" />
+</a>
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
-## Authors
+## Author
 
-- [@klomkling](https://www.github.com/klomkling) - Sarawut Phaekuntod
+[@klomkling](https://github.com/klomkling) — Sarawut Phaekuntod
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
+See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-**Made with ❤️ for the Serenity Framework community**
+**Made for the Serenity Framework community.**
