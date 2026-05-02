@@ -34,14 +34,16 @@ Install-Package Idevs.Net.CoreLib
 
 ### 1. Service Registration
 
-Idevs.Net.CoreLib uses standard `Microsoft.Extensions.DependencyInjection` by default. Add the following to your `Program.cs`:
+From **0.7.0** onward, DI registrations are emitted at compile time by the bundled Roslyn
+source generator. Replace the old call with the generated extension:
 
 ```csharp
 using Idevs.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddIdevsCorelibServices();
+// Generated at compile time — no runtime assembly scanning.
+builder.Services.AddIdevsServices();
 
 // Your other service registrations
 builder.Services.AddControllersWithViews();
@@ -53,6 +55,33 @@ app.UseRouting();
 app.MapControllers();
 
 app.Run();
+```
+
+> **Upgrading from 0.6.x?** `AddIdevsCorelibServices()` is still present but marked
+> `[Obsolete]`. Replace it with `AddIdevsServices()`. See
+> [MIGRATION.md](MIGRATION.md#v06x--v070--source-generator-di-registration) for the
+> full guide.
+
+#### Service discovery paths
+
+The generator supports three ways to declare a service:
+
+1. **Attribute** — `[Scoped]`, `[Singleton]`, or `[Transient]` on the implementation class.
+2. **Marker interface** — implement `IScopedService`, `ISingletonService`, or `ITransientService`
+   (or their generic `<TService>` variants) on the class or a shared base class.
+3. **Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that
+   do not fit the attribute/marker model.
+
+Example using a marker interface on a base class (eliminates per-type attributes):
+
+```csharp
+using Idevs.Repositories;
+
+// Every derived repository is auto-registered as scoped.
+public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
+    : RepositoryBase<TRow, TKey>(c), IScopedService
+{
+}
 ```
 
 ### 1.1. Autofac Integration
@@ -410,6 +439,7 @@ for (int i = 0; i < totalRecords; i += batchSize)
 Upgrade notes for every version live in [MIGRATION.md](MIGRATION.md). Direct
 links for the most-recent transitions:
 
+- [v0.6.x → v0.7.0 — Source-Generator DI Registration](MIGRATION.md#v06x--v070--source-generator-di-registration)
 - [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](MIGRATION.md#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](MIGRATION.md#v01x--v020--autofac-integration)

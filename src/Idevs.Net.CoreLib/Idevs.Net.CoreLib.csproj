@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Idevs.Net.CoreLib</PackageId>
-    <Version>0.6.1</Version>
+    <Version>0.7.0</Version>
     <PackageTags>Idevs; CoreLib; Serenity; Extended</PackageTags>
     <Description>A library to extend Serenity Framework.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
