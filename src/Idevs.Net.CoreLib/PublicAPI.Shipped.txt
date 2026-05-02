@@ -4,10 +4,6 @@ const Idevs.Storage.CloudUploadStorageOptions.ProviderAws = "AWS" -> string
 const Idevs.Storage.CloudUploadStorageOptions.ProviderCloudflareR2 = "CloudflareR2" -> string
 const Idevs.Storage.CloudUploadStorageOptions.ProviderLocal = "Local" -> string
 const Idevs.Storage.CloudUploadStorageOptions.SectionName = "CloudUploadStorage" -> string
-Idevs.Caching.TwoLevelCacheExtensions
-Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache)
-Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache).GetGloballyCachedAsync<T>(string key, System.TimeSpan duration, string groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
-Idevs.Caching.TwoLevelCacheExtensions.extension(Serenity.Abstractions.ITwoLevelCache).GetLocalCachedAsync<T>(string key, System.TimeSpan duration, string groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>> factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
 Idevs.ChromeHelper
 Idevs.ComponentModel.CheckboxButtonEditorAttribute
 Idevs.ComponentModel.CheckboxButtonEditorAttribute.CheckboxButtonEditorAttribute() -> void
@@ -400,6 +396,7 @@ Idevs.Models.TableTheme.TableStyleMedium6 = 106 -> Idevs.Models.TableTheme
 Idevs.Models.TableTheme.TableStyleMedium7 = 107 -> Idevs.Models.TableTheme
 Idevs.Models.TableTheme.TableStyleMedium8 = 108 -> Idevs.Models.TableTheme
 Idevs.Models.TableTheme.TableStyleMedium9 = 109 -> Idevs.Models.TableTheme
+Idevs.Net.CoreLib.Caching.TwoLevelCacheExtensions
 Idevs.Repositories.ConnectionKeyAttribute
 Idevs.Repositories.ConnectionKeyAttribute.ConnectionKeyAttribute(string key) -> void
 Idevs.Repositories.ConnectionKeyAttribute.Key.get -> string
@@ -496,6 +493,8 @@ static Idevs.Logging.LogManager.TryGetLogger<T>() -> Microsoft.Extensions.Loggin
 static Idevs.Models.IdevsContentResult.Create(byte[] data, Idevs.Models.IdevsContentType contentType, string downloadName = null) -> Microsoft.AspNetCore.Mvc.FileContentResult
 static Idevs.Models.IdevsContentResult.CreatePdfViewResult(Microsoft.AspNetCore.Http.HttpResponse response, byte[] data, string downloadName = null) -> Microsoft.AspNetCore.Mvc.IActionResult
 static Idevs.Models.IdevsContentResult.CreateResponse(byte[] data, Idevs.Models.IdevsContentType contentType, string downloadName = null) -> Idevs.Models.IdevsContentResponse
+static Idevs.Net.CoreLib.Caching.TwoLevelCacheExtensions.GetGloballyCachedAsync<T>(this Serenity.Abstractions.ITwoLevelCache! cache, string! key, System.TimeSpan duration, string! groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T!>!>! factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T!>!
+static Idevs.Net.CoreLib.Caching.TwoLevelCacheExtensions.GetLocalCachedAsync<T>(this Serenity.Abstractions.ITwoLevelCache! cache, string! key, System.TimeSpan duration, string! groupKey, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T!>!>! factory, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T!>!
 static Idevs.SmartPagination.CreatePages<T>(System.Collections.Generic.List<T> items, Idevs.Models.PaginationConfig config) -> Idevs.Models.PaginationResult<T>
 static Idevs.SmartPagination.CreatePaginatedData<T>(System.Collections.Generic.List<T> items, int firstPageSize, int regularPageSize, int lastPageReserveRows, bool enableLogging = true) -> Idevs.Models.PaginationResult<T>
 static Idevs.StaticServiceLocator.CreateScope() -> Microsoft.Extensions.DependencyInjection.IServiceScope
