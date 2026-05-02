@@ -43,10 +43,17 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
         var collectedRegistrars = registrarSyntax.Collect();
 
 
-        var combined = collectedTypes.Combine(collectedRegistrars);
+        // Read the MSBuild flag; default to true (use source generator).
+        var useSourceGeneratorFlag = context.AnalyzerConfigOptionsProvider.Select((provider, _) =>
+            provider.GlobalOptions.TryGetValue("build_property.IdevsCoreLibUseSourceGenerator", out var v)
+                && bool.TryParse(v, out var b)
+                ? b
+                : true /* default: use source generator */);
+
+        var combined = collectedTypes.Combine(collectedRegistrars).Combine(useSourceGeneratorFlag);
         context.RegisterSourceOutput(combined, (ctx, both) =>
         {
-            var (typeInfos, registrars) = both;
+            var ((typeInfos, registrars), useSourceGenerator) = both;
 
             var writer = new IdevsSourceWriter()
                 .WithFileHeader()
@@ -56,64 +63,72 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
                 .OpenMethod("public static IServiceCollection AddIdevsServices(this IServiceCollection services)")
                 .AppendLine("services.AddIdevsCorelibCore();");
 
-            var registrations = new List<RegistrationRecord>();
-
-            foreach (var info in typeInfos)
+            if (!useSourceGenerator)
             {
-                ProcessTypeInfo(ctx, info, registrations);
+                // Flag off: delegate to runtime scan; skip all discovered registrations.
+                writer.AppendLine("services.AddIdevsCorelibLegacyScan();");
             }
-
-            // De-dup by (impl, service) pair and sort for deterministic output.
-            var sorted = registrations
-                .GroupBy(r => (r.ImplementationFullName, r.ServiceFullName))
-                .Select(g => g.First())
-                .OrderBy(r => r.ImplementationFullName, System.StringComparer.Ordinal)
-                .ToImmutableArray();
-
-            if (sorted.Length > 0)
+            else
             {
-                writer.AppendLine();
-                foreach (var reg in sorted)
-                {
-                    writer.AppendLine($"services.Add{reg.Lifetime}<{reg.ServiceFullName}, {reg.ImplementationFullName}>();");
-                }
-            }
+                var registrations = new List<RegistrationRecord>();
 
-            // Process registrar candidates: emit diagnostics, collect valid ones.
-            var validRegistrars = new List<string>();
-            foreach (var candidate in registrars)
-            {
-                if (!candidate.HasPublicParameterlessCtor)
+                foreach (var info in typeInfos)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.RegistrarMissingPublicCtor,
-                        candidate.Location,
-                        candidate.Name));
-                    continue;
+                    ProcessTypeInfo(ctx, info, registrations);
                 }
 
-                if (candidate.IsInternal)
+                // De-dup by (impl, service) pair and sort for deterministic output.
+                var sorted = registrations
+                    .GroupBy(r => (r.ImplementationFullName, r.ServiceFullName))
+                    .Select(g => g.First())
+                    .OrderBy(r => r.ImplementationFullName, System.StringComparer.Ordinal)
+                    .ToImmutableArray();
+
+                if (sorted.Length > 0)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.RegistrarIsInternal,
-                        candidate.Location,
-                        candidate.Name));
-                    // Still emit the registration even though it's internal.
+                    writer.AppendLine();
+                    foreach (var reg in sorted)
+                    {
+                        writer.AppendLine($"services.Add{reg.Lifetime}<{reg.ServiceFullName}, {reg.ImplementationFullName}>();");
+                    }
                 }
 
-                validRegistrars.Add(candidate.GlobalQualifiedName);
-            }
-
-            var sortedRegistrars = validRegistrars
-                .OrderBy(r => r, System.StringComparer.Ordinal)
-                .ToImmutableArray();
-
-            if (sortedRegistrars.Length > 0)
-            {
-                writer.AppendLine();
-                foreach (var registrar in sortedRegistrars)
+                // Process registrar candidates: emit diagnostics, collect valid ones.
+                var validRegistrars = new List<string>();
+                foreach (var candidate in registrars)
                 {
-                    writer.AppendLine($"new {registrar}().Register(services);");
+                    if (!candidate.HasPublicParameterlessCtor)
+                    {
+                        ctx.ReportDiagnostic(Diagnostic.Create(
+                            DiagnosticDescriptors.RegistrarMissingPublicCtor,
+                            candidate.Location,
+                            candidate.Name));
+                        continue;
+                    }
+
+                    if (candidate.IsInternal)
+                    {
+                        ctx.ReportDiagnostic(Diagnostic.Create(
+                            DiagnosticDescriptors.RegistrarIsInternal,
+                            candidate.Location,
+                            candidate.Name));
+                        // Still emit the registration even though it's internal.
+                    }
+
+                    validRegistrars.Add(candidate.GlobalQualifiedName);
+                }
+
+                var sortedRegistrars = validRegistrars
+                    .OrderBy(r => r, System.StringComparer.Ordinal)
+                    .ToImmutableArray();
+
+                if (sortedRegistrars.Length > 0)
+                {
+                    writer.AppendLine();
+                    foreach (var registrar in sortedRegistrars)
+                    {
+                        writer.AppendLine($"new {registrar}().Register(services);");
+                    }
                 }
             }
 
