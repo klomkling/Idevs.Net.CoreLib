@@ -1,0 +1,8 @@
+Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibAnalyzersRange = "IDEVSGEN100-IDEVSGEN199" -> string!
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.CoreLibDIRange = "IDEVSGEN001-IDEVSGEN099" -> string!
+const Idevs.Generators.Abstractions.Diagnostics.DiagnosticIdRange.ConsumerRange = "IDEVSGEN200+" -> string!
+Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateError(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateInfo(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
+static Idevs.Generators.Abstractions.Diagnostics.IdevsDiagnostics.CreateWarning(string! id, string! title, string! messageFormat) -> Microsoft.CodeAnalysis.DiagnosticDescriptor!
