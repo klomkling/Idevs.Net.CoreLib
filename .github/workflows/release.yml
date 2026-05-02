@@ -13,8 +13,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check:
+    name: Check version & tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.tag_check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from csproj
+        id: version
+        run: |
+          VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read <Version> from src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION"
+
+      - name: Check if tag already exists
+        id: tag_check
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} already exists; skipping release."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} does not exist; proceeding with release."
+          fi
+
   release:
     name: Tag, Pack & Publish
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     environment: nuget
     steps:
@@ -36,45 +74,16 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
           restore-keys: ${{ runner.os }}-nuget-
 
-      - name: Read version from csproj
-        id: version
-        run: |
-          VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj | head -1)
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not read <Version> from src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Detected version: $VERSION"
-
-      - name: Check if tag already exists
-        id: tag_check
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          TAG="v${VERSION}"
-          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} already exists; skipping release."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} does not exist; proceeding with release."
-          fi
-
       - name: Restore
-        if: steps.tag_check.outputs.exists == 'false'
         run: dotnet restore
 
       - name: Build
-        if: steps.tag_check.outputs.exists == 'false'
         run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        if: steps.tag_check.outputs.exists == 'false'
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Pack
-        if: steps.tag_check.outputs.exists == 'false'
         run: |
           mkdir -p ./artifacts
           dotnet pack src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj \
@@ -87,14 +96,12 @@ jobs:
             --configuration Release --no-build --output ./artifacts
 
       - name: Upload artifacts
-        if: steps.tag_check.outputs.exists == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: nupkgs
           path: ./artifacts/*.nupkg
 
       - name: Publish to NuGet
-        if: steps.tag_check.outputs.exists == 'false'
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
@@ -108,9 +115,8 @@ jobs:
             --skip-duplicate
 
       - name: Create and push tag
-        if: steps.tag_check.outputs.exists == 'false'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.check.outputs.version }}
         run: |
           TAG="v${VERSION}"
           git config user.name "github-actions[bot]"
