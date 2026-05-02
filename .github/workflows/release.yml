@@ -124,3 +124,14 @@ jobs:
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "${TAG}"
           echo "Created and pushed tag ${TAG}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          gh release create "${TAG}" \
+            --title "${TAG}" \
+            --generate-notes \
+            ./artifacts/*.nupkg
