@@ -254,7 +254,7 @@ public class MappingLotRepository(ISqlConnections c)
 | `GetLocalCachedAsync<T>` | `GetLocalStoreOnly<T>` | Per-process memory cache; never hits the remote (distributed) layer. |
 | `GetGloballyCachedAsync<T>` | `Get<T>` (full two-level path) | Memory + remote; survives across processes/instances. |
 
-Both helpers take a `Func<CancellationToken, Task<T>>` factory, so the cancellation token is forwarded into the underlying load:
+Both helpers take a `Func<CancellationToken, Task<T>>` factory, and the cancellation token is forwarded into that factory. However, Serenity's cache surface is synchronous, so these wrappers bridge that gap with sync-over-async blocking (`factory(ct).GetAwaiter().GetResult()`) inside the cache call. Use them only when that blocking behavior is acceptable, and avoid I/O-heavy loaders where possible because they can contribute to thread-pool starvation or deadlocks.
 
 ```csharp
 using Idevs.Net.CoreLib.Caching;
