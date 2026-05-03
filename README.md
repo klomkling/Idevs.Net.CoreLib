@@ -609,7 +609,7 @@ Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column i
 | `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; set `ServiceType` explicitly on the attribute or use the matching generic lifetime marker (`IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`). |
 | `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved and `AllowSelfRegistration` is false. |
 | `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | The attribute's named service type conflicts with `IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`. |
-| `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public ctor. |
+| `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public parameterless ctor. |
 | `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
 | `IDEVSGEN010` | Warning | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. |
 
