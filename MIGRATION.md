@@ -4,12 +4,120 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)](#v072--v073--unit-of-work-helpers-beginunitofwork--commitonsuccessasync)
 - [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
 - [v0.6.x → v0.7.0 — Source-Generator DI Registration](#v06x--v070--source-generator-di-registration)
 - [v0.5.0 → v0.6.0 — RepositoryBase Redesign](#v050--v060--repositorybase-redesign)
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)
+
+### What changed
+
+Two new helpers on `SqlServiceBase` (so they're available on every typed
+repository and every custom service that extends it) that close a real
+gap: a parent repository method that didn't accept an `IUnitOfWork`
+parameter previously had no way to coordinate atomic writes across
+child repositories — each call opened its own connection and committed
+independently.
+
+| Helper | Shape | When to use |
+|---|---|---|
+| `BeginUnitOfWork(uow?)` → `UnitOfWorkScope` | Scope (`using` block + explicit `Commit()`) | Long methods, sequential statements, conditional returns |
+| `CommitOnSuccessAsync(work, uow?, ct?)` | Lambda (auto-commit on return / rollback on throw) | Short blocks; the whole transaction body fits in one expression |
+
+Both share the same caller-provides-or-we-own semantics — pick by code
+shape, not semantic.
+
+### When you DON'T need to migrate
+
+If your existing repository methods either (a) always receive an
+`IUnitOfWork` from the caller and pass it through, or (b) only do a
+single write and don't need to coordinate with child repos, nothing
+changes for you. The existing `IUnitOfWork? uow = null` parameter on
+every CoreLib repository method continues to work as before.
+
+### When you SHOULD migrate
+
+Any method that:
+
+1. Takes no `IUnitOfWork` parameter (or accepts an optional one), AND
+2. Calls into more than one repository / service to make changes that
+   should be atomic.
+
+Before:
+
+```csharp
+public bool UpdateAll(MyRow row)
+{
+    UpdateAsync(...).GetAwaiter().GetResult();          // connection #1
+    childRepo.UpdateChild(row.Id);                      // connection #2 — different transaction!
+    auditRepo.LogChange(row.Id, "updated");             // connection #3 — different transaction!
+    return true;
+}
+```
+
+After (long-method shape — `BeginUnitOfWork`):
+
+```csharp
+public async Task<bool> UpdateAllAsync(
+    MyRow row,
+    IUnitOfWork? uow = null,
+    CancellationToken ct = default)
+{
+    ArgumentNullException.ThrowIfNull(row);
+
+    using var scope = BeginUnitOfWork(uow);
+
+    await UpdateAsync(u => u
+        .Set(MyRow.Fields.Name, row.Name)
+        .Where(MyRow.Fields.Id == row.Id), uow: scope.Uow, ct: ct);
+
+    await childRepo.UpdateChildAsync(row.Id!.Value, uow: scope.Uow, ct: ct);
+    await auditRepo.LogChangeAsync(row.Id!.Value, "updated", uow: scope.Uow, ct: ct);
+
+    scope.Commit();   // explicit; forgetting this rolls back
+    return true;
+}
+```
+
+After (short-block shape — `CommitOnSuccessAsync`):
+
+```csharp
+public Task<bool> RenameAndStampAsync(
+    int id, string name,
+    IUnitOfWork? uow = null,
+    CancellationToken ct = default)
+{
+    return CommitOnSuccessAsync(async (txn, token) =>
+    {
+        await UpdateAsync(u => u.Set(MyRow.Fields.Name, name).Where(MyRow.Fields.Id == id),
+            uow: txn, ct: token);
+        await auditRepo.LogChangeAsync(id, "rename", uow: txn, ct: token);
+        return true;
+    }, uow, ct);
+}
+```
+
+### One trap to know
+
+When using `BeginUnitOfWork`, **every call inside the using block must
+pass `scope.Uow`**. If you forget on one call, that call opens its own
+connection and runs outside the transaction — silent atomicity bug. The
+lambda form has the same trap with `txn`. Code review should flag any
+repo call inside one of these blocks that doesn't thread the UoW
+through.
+
+### Sync wrappers
+
+Both `CommitOnSuccess<T>(Func<IUnitOfWork, T>, IUnitOfWork?)` and
+`CommitOnSuccess(Action<IUnitOfWork>, IUnitOfWork?)` exist and are
+marked `[Obsolete]` with the standard migration message. Use them only
+during the transition; prefer the async versions in new code.
 
 ---
 

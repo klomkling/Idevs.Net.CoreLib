@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.7.3 (2026-05-03)
+
+### Added
+
+- `SqlServiceBase.BeginUnitOfWork(IUnitOfWork? uow = null)` returns a new
+  `UnitOfWorkScope` (`IDisposable` + `IAsyncDisposable`). When a caller-owned
+  `IUnitOfWork` is supplied, the scope wraps it without taking ownership
+  (Commit/Dispose are no-ops). Otherwise the scope opens a fresh connection
+  + `UnitOfWork`; the caller MUST call `Commit()` before the using block
+  exits, otherwise dispose rolls back. Designed for long methods with
+  sequential statements, conditional branches, and early returns.
+- `SqlServiceBase.CommitOnSuccessAsync<T>(work, uow?, ct?)` and the
+  non-generic `CommitOnSuccessAsync(work, uow?, ct?)` — lambda form that
+  opens a scope, runs the delegate, commits on normal return, and rolls
+  back on exception. Designed for short blocks where the whole transaction
+  body fits in one expression.
+- `SqlServiceBase.CommitOnSuccess<T>` / `CommitOnSuccess` sync
+  `[Obsolete]` wrappers following the existing migration pattern.
+- New public type `Idevs.Repositories.UnitOfWorkScope`.
+
+### Why
+
+Closes a real gap: a parent repository method that didn't accept an
+`IUnitOfWork` parameter could not coordinate atomic writes across child
+repositories — each call opened its own connection and ran in a separate
+transaction. The new helpers implement the canonical "use caller's UoW
+if provided, otherwise open one and commit/rollback" pattern. Pick the
+shape that matches the call site: lambda for short blocks, scope for
+long methods.
+
 ## 0.7.2 (2026-05-02)
 
 ### Added
