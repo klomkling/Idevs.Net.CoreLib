@@ -529,7 +529,7 @@ var result = SmartPagination.CreatePaginatedData(orders,
 // result.TotalPages  — int
 // each PageData<T> exposes:
 //   Index       — 0-based page index (use Index + 1 to display "Page N")
-//   Items       — rows on this page
+//   Items       — List<ItemWithLineNumber<T>> for this page's rows and line numbers
 //   FillerRows  — empty rows added to keep page height consistent
 //   IsFirst / IsLast
 //   PageOffset  — running row offset (useful for line numbers)
