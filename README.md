@@ -105,7 +105,11 @@ public class UtilityService { }
 public class SmtpEmailService : IEmailService { }
 ```
 
-**2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants. Best when applied to a base class so derived types are auto-registered without per-type attributes:
+**2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants.
+
+The non-generic markers (`IScopedService` etc.) declare a **lifetime only**, not a service type. To be registered, the concrete class still needs a service type the generator can resolve via the **`I{ClassName}` convention** (the class implements an interface whose name is `I` + the class name) or via the generic marker `IScopedService<TService>`. Without one of those, the generator emits `IDEVSGEN006` ("Cannot register type") and skips the type.
+
+The base-class pattern below sets the lifetime once on the abstract base, then each concrete repository declares its service type by implementing a matching `I{ClassName}` interface:
 
 ```csharp
 using Idevs.Repositories;
@@ -117,9 +121,23 @@ public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
 {
 }
 
-// All derived repositories are auto-registered.
-public class OrderRepository(ISqlConnections c) : AppRepositoryBase<OrderRow, int>(c) { }
+// IOrderRepository matches OrderRepository via the I{ClassName} convention,
+// so the generator registers IOrderRepository -> OrderRepository as scoped
+// (lifetime inherited from the base's IScopedService marker).
+public interface IOrderRepository
+{
+    Task<OrderRow?> GetByCodeAsync(string code, CancellationToken ct);
+}
+
+public class OrderRepository(ISqlConnections c)
+    : AppRepositoryBase<OrderRow, int>(c), IOrderRepository
+{
+    public Task<OrderRow?> GetByCodeAsync(string code, CancellationToken ct) =>
+        TryFirstAsync(q => q.SelectTableFields().WhereEqual(OrderRow.Fields.Code, code), ct: ct);
+}
 ```
+
+If you don't want a separate interface, use the generic marker on the concrete class to declare the service type explicitly: `IScopedService<IOrderRepository>` (or `[Scoped(typeof(IOrderRepository))]`).
 
 **3. Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that don't fit attribute or marker patterns:
 
@@ -509,8 +527,13 @@ var result = SmartPagination.CreatePaginatedData(orders,
 
 // result.Pages       — List<PageData<T>>
 // result.TotalPages  — int
-// each PageData<T> exposes: Index (page number), Items, FillerRows,
-//   IsFirst, IsLast, PageOffset, Capacity.
+// each PageData<T> exposes:
+//   Index       — 0-based page index (use Index + 1 to display "Page N")
+//   Items       — rows on this page
+//   FillerRows  — empty rows added to keep page height consistent
+//   IsFirst / IsLast
+//   PageOffset  — running row offset (useful for line numbers)
+//   Capacity    — total rows the page is sized for (Items + FillerRows)
 ```
 
 ### Static service locator
@@ -575,18 +598,20 @@ for (var i = 0; i < total; i += batch)
 
 Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The most common ones:
 
-| ID | Severity | Title |
-|---|---|---|
-| `IDEVSGEN001` | Error | Multiple lifetime attributes on the same class |
-| `IDEVSGEN002` | Error | Multiple lifetime marker interfaces with distinct lifetimes |
-| `IDEVSGEN003` | Error | Attribute and marker interface specify different lifetimes |
-| `IDEVSGEN004` | Warning | Redundant — attribute and marker specify the same lifetime |
-| `IDEVSGEN005` | Warning | Ambiguous service type — multiple candidate interfaces, none picked |
-| `IDEVSGEN006` | Warning | Cannot register — no service interface and `AllowSelfRegistration` is false |
-| `IDEVSGEN007` | Error | Attribute `ServiceType` conflicts with the generic marker's service type |
-| `IDEVSGEN008` | Error | `IIdevsServiceRegistrar` type has no accessible public constructor |
-| `IDEVSGEN009` | Warning | `IIdevsServiceRegistrar` is internal — consider making it public |
-| `IDEVSGEN010` | Warning | Legacy registration attribute used — migrate to `[Scoped]` / `[Singleton]` / `[Transient]` |
+Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column is a one-line plain-English summary.
+
+| ID | Severity | Title (as emitted) | Notes |
+|---|---|---|---|
+| `IDEVSGEN001` | Error | Multiple lifetime attributes | Class has more than one of `[Scoped]` / `[Singleton]` / `[Transient]`. |
+| `IDEVSGEN002` | Error | Multiple lifetime marker interfaces | Class implements marker interfaces with distinct lifetimes. |
+| `IDEVSGEN003` | Error | Attribute and marker lifetime disagree | The attribute lifetime differs from the marker-interface lifetime. |
+| `IDEVSGEN004` | Warning | Redundant lifetime attribute and marker | Attribute and marker specify the same lifetime; pick one. |
+| `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; specify with `[Scoped(typeof(...))]` or `IScopedService<TService>`. |
+| `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved and `AllowSelfRegistration` is false. |
+| `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | `[Scoped(typeof(X))]` disagrees with `IScopedService<Y>`. |
+| `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public ctor. |
+| `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
+| `IDEVSGEN010` | Warning | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. |
 
 If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` in the consumer csproj to fall back to runtime scanning, then file an issue with a repro.
 
