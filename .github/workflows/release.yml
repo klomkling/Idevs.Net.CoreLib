@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to (re-)publish (e.g. 0.7.3). Bypasses the tag-exists check; use to recover from a partial run that left the tag in place but missing nupkgs / GitHub Release. The job will checkout the existing v{version} tag before building so the published packages match the original release."
+        required: false
 
 permissions:
   contents: write
@@ -17,8 +21,9 @@ jobs:
     name: Check version & tag
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      should_release: ${{ steps.tag_check.outputs.should_release }}
+      version: ${{ steps.decide.outputs.version }}
+      should_release: ${{ steps.decide.outputs.should_release }}
+      checkout_ref: ${{ steps.decide.outputs.checkout_ref }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,21 +37,62 @@ jobs:
             echo "::error::Could not read <Version> from src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj"
             exit 1
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Detected version: $VERSION"
+          echo "csproj_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version (csproj on this ref): $VERSION"
 
-      - name: Check if tag already exists
-        id: tag_check
+      - name: Decide whether to release
+        id: decide
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          DISPATCH_VERSION: ${{ github.event.inputs.version }}
+          CSPROJ_VERSION: ${{ steps.version.outputs.csproj_version }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          TAG="v${VERSION}"
+          # Default: auto-trigger from `push: main`. Compare csproj
+          # version to the matching tag and skip if it already exists.
+          if [ -z "${DISPATCH_VERSION}" ]; then
+            TAG="v${CSPROJ_VERSION}"
+            if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+              echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+              echo "Tag ${TAG} already exists; skipping release."
+            else
+              echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+              echo "Tag ${TAG} does not exist; proceeding with release at ${GITHUB_SHA}."
+            fi
+            exit 0
+          fi
+
+          # Recovery path: workflow_dispatch with an explicit version.
+          # The release job MUST build the source that matches the
+          # requested version, otherwise we'd attach the wrong nupkgs
+          # to the existing tag (e.g. main has moved to 0.7.4 but the
+          # user is recovering 0.7.3).
+          TAG="v${DISPATCH_VERSION}"
           if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} already exists; skipping release."
-          else
+            # Tag exists — recovery from a partial run after tag-push.
+            # Build from the tagged commit so the published packages
+            # are identical to the original release attempt.
+            echo "version=${DISPATCH_VERSION}" >> "$GITHUB_OUTPUT"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} does not exist; proceeding with release."
+            echo "checkout_ref=refs/tags/${TAG}" >> "$GITHUB_OUTPUT"
+            echo "Recovery mode: tag ${TAG} exists; release job will checkout that tag."
+          elif [ "${CSPROJ_VERSION}" = "${DISPATCH_VERSION}" ]; then
+            # Tag does not exist yet, but csproj on this ref matches.
+            # This covers the rare case where a previous run failed
+            # before the tag was pushed (e.g. NuGet auth blip). Build
+            # from the current ref.
+            echo "version=${DISPATCH_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "Recovery mode: tag ${TAG} not found; csproj matches, building from ${GITHUB_SHA}."
+          else
+            echo "::error::Refusing to release. The csproj <Version> on the selected ref is ${CSPROJ_VERSION}, but you requested v${DISPATCH_VERSION} and no matching tag exists. Either:"
+            echo "::error::  1. Re-run the workflow against an existing v${DISPATCH_VERSION} tag (Run workflow → choose ref: tags/v${DISPATCH_VERSION}), or"
+            echo "::error::  2. Push the version bump for ${DISPATCH_VERSION} to main and let the auto-trigger handle it."
+            exit 1
           fi
 
   release:
@@ -59,6 +105,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.check.outputs.checkout_ref }}
+
+      - name: Verify checked-out csproj matches release version
+        env:
+          EXPECTED: ${{ needs.check.outputs.version }}
+        run: |
+          ACTUAL=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj | head -1)
+          if [ "${ACTUAL}" != "${EXPECTED}" ]; then
+            echo "::error::csproj <Version> on the checked-out ref is '${ACTUAL}' but the release is for v'${EXPECTED}'. Refusing to publish wrong-version artifacts."
+            exit 1
+          fi
+          echo "Verified: csproj <Version> = ${ACTUAL} matches release v${EXPECTED}."
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -114,13 +172,39 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
-      - name: Create and push tag
+      - name: Create and push tag (skip if exists)
         env:
           VERSION: ${{ needs.check.outputs.version }}
         run: |
           TAG="v${VERSION}"
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists locally; skipping create/push."
+            exit 0
+          fi
+          git fetch --tags
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists on remote; skipping create/push."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "${TAG}"
           echo "Created and pushed tag ${TAG}"
+
+      - name: Create or update GitHub Release (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} exists; uploading any missing/changed assets (--clobber)."
+            gh release upload "${TAG}" ./artifacts/*.nupkg --clobber
+          else
+            echo "Creating new release ${TAG}."
+            gh release create "${TAG}" \
+              --title "${TAG}" \
+              --generate-notes \
+              ./artifacts/*.nupkg
+          fi
