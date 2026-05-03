@@ -325,7 +325,7 @@ var request = new IdevsExportRequest
 };
 ```
 
-Aggregations: pass `AggregateColumn[]` with `AggregateType.SUM` / `AVERAGE` / `COUNT` / `GROUP` / `LABEL` to attach total/group rows. (`SUM`, `AVERAGE`, `COUNT` are the actual aggregate operations; `GROUP` and `LABEL` produce grouping markers and label cells.)
+Use `IdevsExportRequest` to control supported export presentation options such as table theme, company/report naming, and page size.
 
 ### PDF export
 
