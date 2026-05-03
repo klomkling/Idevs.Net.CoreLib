@@ -8,7 +8,7 @@ namespace Idevs.Net.CoreLib.Tests.Repositories;
 public class UnitOfWorkHelperTests
 {
     // Test subject that exposes BeginUnitOfWork / CommitOnSuccessAsync via a
-    // public surface. Overrides ExecuteAsync isn't needed because the helpers
+    // public surface. Overriding ExecuteAsync isn't needed because the helpers
     // talk to UnitOfWork directly.
     private sealed class TestService : Idevs.Repositories.RepositoryBase<TestSampleRow>
     {
@@ -165,5 +165,124 @@ public class UnitOfWorkHelperTests
         }, callerUow);
 
         Assert.True(ran);
+    }
+
+    // --- Owned-transaction commit/rollback path ---
+    //
+    // These tests exercise the path where uow == null, so the helper opens
+    // its own connection + UnitOfWork. We substitute IDbConnection +
+    // IDbTransaction and assert that BeginTransaction is called once and
+    // either Commit (success path) or Rollback (exception path) follows.
+
+    private static (ISqlConnections sqlConnections, IDbConnection connection, IDbTransaction transaction)
+        CreateOwnedTransactionFixture()
+    {
+        var transaction = Substitute.For<IDbTransaction>();
+        var connection = Substitute.For<IDbConnection>();
+        connection.BeginTransaction().Returns(transaction);
+        connection.State.Returns(ConnectionState.Open);
+        transaction.Connection.Returns(connection);
+
+        var sqlConnections = Substitute.For<ISqlConnections>();
+        sqlConnections.NewByKey(Arg.Any<string>()).Returns(connection);
+
+        return (sqlConnections, connection, transaction);
+    }
+
+    [Fact]
+    public async Task CommitOnSuccessAsync_OwnedUow_CommitsTransactionOnSuccess()
+    {
+        var (sqlConnections, connection, transaction) = CreateOwnedTransactionFixture();
+        var service = new TestService(sqlConnections);
+
+        var result = await service.CommitOnSuccessAsync(
+            (u, _) => Task.FromResult("ok"));
+
+        Assert.Equal("ok", result);
+        connection.Received(1).BeginTransaction();
+        transaction.Received(1).Commit();
+        transaction.DidNotReceive().Rollback();
+        connection.Received().Dispose();
+    }
+
+    [Fact]
+    public async Task CommitOnSuccessAsync_OwnedUow_DoesNotCommitOnException_AndDisposesEverything()
+    {
+        var (sqlConnections, connection, transaction) = CreateOwnedTransactionFixture();
+        var service = new TestService(sqlConnections);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CommitOnSuccessAsync<int>(
+                (_, _) => throw new InvalidOperationException("boom")));
+
+        connection.Received(1).BeginTransaction();
+        // Commit must NOT be called on the transaction when the work threw.
+        transaction.DidNotReceive().Commit();
+        // Serenity's UnitOfWork rolls back via transaction.Dispose() (the
+        // standard IDbTransaction contract: dispose without commit = rollback),
+        // not via an explicit Rollback() call. So we assert dispose chains:
+        // transaction disposed + connection disposed.
+        transaction.Received().Dispose();
+        connection.Received().Dispose();
+    }
+
+    [Fact]
+    public void BeginUnitOfWork_OwnedUow_DisposeWithoutCommit_DisposesTransactionWithoutCommit()
+    {
+        var (sqlConnections, connection, transaction) = CreateOwnedTransactionFixture();
+        var service = new TestService(sqlConnections);
+
+        using (var scope = service.BeginUnitOfWork())
+        {
+            Assert.True(scope.OwnsUnitOfWork);
+            // Intentionally NOT calling scope.Commit() — leaving the using
+            // block without commit must NOT call Commit and must dispose
+            // the transaction (which rolls back per IDbTransaction contract).
+        }
+
+        connection.Received(1).BeginTransaction();
+        transaction.DidNotReceive().Commit();
+        transaction.Received().Dispose();
+        connection.Received().Dispose();
+    }
+
+    [Fact]
+    public void BeginUnitOfWork_OwnedUow_ExplicitCommitThenDispose_CommitsExactlyOnce()
+    {
+        var (sqlConnections, connection, transaction) = CreateOwnedTransactionFixture();
+        var service = new TestService(sqlConnections);
+
+        using (var scope = service.BeginUnitOfWork())
+        {
+            scope.Commit();
+            // Calling Commit() again should be a no-op; final Commit count must still be 1.
+            scope.Commit();
+        }
+
+        transaction.Received(1).Commit();
+        connection.Received().Dispose();
+    }
+
+    [Fact]
+    public void BeginUnitOfWork_BeginTransactionThrows_DisposesConnectionAndPropagates()
+    {
+        // Reproduces the leak the reviewer flagged: if creating the
+        // UnitOfWork (which calls connection.BeginTransaction internally)
+        // throws, BeginUnitOfWork must dispose the just-opened connection
+        // before propagating, not leak it.
+        var connection = Substitute.For<IDbConnection>();
+        connection.State.Returns(ConnectionState.Open);
+        connection
+            .When(c => c.BeginTransaction())
+            .Do(_ => throw new InvalidOperationException("transaction boom"));
+
+        var sqlConnections = Substitute.For<ISqlConnections>();
+        sqlConnections.NewByKey(Arg.Any<string>()).Returns(connection);
+        var service = new TestService(sqlConnections);
+
+        Assert.Throws<InvalidOperationException>(() => service.BeginUnitOfWork());
+
+        // The connection must have been disposed even though we never returned a scope.
+        connection.Received(1).Dispose();
     }
 }

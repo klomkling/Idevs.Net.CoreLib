@@ -101,8 +101,19 @@ public abstract class SqlServiceBase
             return new UnitOfWorkScope(uow);
 
         var connection = SqlConnections.NewByKey(ConnectionKey);
-        var newUow = new UnitOfWork(connection);
-        return new UnitOfWorkScope(connection, newUow);
+        try
+        {
+            // BeginTransaction (called inside UnitOfWork's ctor) can throw —
+            // dispose the just-opened connection before propagating so we
+            // don't leak it.
+            var newUow = new UnitOfWork(connection);
+            return new UnitOfWorkScope(connection, newUow);
+        }
+        catch
+        {
+            connection.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
