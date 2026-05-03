@@ -107,7 +107,7 @@ public class SmtpEmailService : IEmailService { }
 
 **2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants.
 
-The non-generic markers (`IScopedService` etc.) declare a **lifetime only**, not a service type. To be registered, the concrete class still needs a service type the generator can resolve via the **`I{ClassName}` convention** (the class implements an interface whose name is `I` + the class name) or via the generic marker `IScopedService<TService>`. Without one of those, the generator emits `IDEVSGEN006` ("Cannot register type") and skips the type.
+The non-generic markers (`IScopedService` etc.) declare a **lifetime only**, not a service type. To be registered, the concrete class still needs a service type the generator can resolve via the **`I{ClassName}` convention** (the class implements an interface whose name is `I` + the class name) or via the generic marker `IScopedService<TService>`. Without one of those, the generator skips the type and reports a diagnostic such as `IDEVSGEN006` ("Cannot register type"); if the class implements multiple non-marker interfaces, the ambiguity may instead be reported as `IDEVSGEN005`.
 
 The base-class pattern below sets the lifetime once on the abstract base, then each concrete repository declares its service type by implementing a matching `I{ClassName}` interface:
 
