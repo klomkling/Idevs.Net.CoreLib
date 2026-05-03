@@ -596,7 +596,7 @@ for (var i = 0; i < total; i += batch)
 
 ### Source generator emits unexpected diagnostics
 
-Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The most common ones:
+Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The diagnostics are listed below:
 
 Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column is a one-line plain-English summary.
 
