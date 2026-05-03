@@ -137,7 +137,7 @@ public class OrderRepository(ISqlConnections c)
 }
 ```
 
-If you don't want a separate interface, use the generic marker on the concrete class to declare the service type explicitly: `IScopedService<IOrderRepository>` or `[Scoped(ServiceType = typeof(IOrderRepository))]`.
+If you don't want a separate interface in this base-class pattern, rely on the inherited `IScopedService` marker and register the concrete type as itself. Use `IScopedService<IOrderRepository>` or `[Scoped(ServiceType = typeof(IOrderRepository))]` only on classes that do **not** already inherit a non-generic lifetime marker such as `IScopedService` from a base class.
 
 **3. Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that don't fit attribute or marker patterns:
 
