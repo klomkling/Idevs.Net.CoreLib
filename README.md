@@ -65,7 +65,7 @@ dotnet add package Idevs.Net.CoreLib.Generators.Abstractions
 ## Quick start
 
 ```csharp
-using Idevs.Extensions;
+using Idevs.Generated; // AddIdevsServices() is generated into this namespace
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,7 +81,7 @@ app.MapControllers();
 app.Run();
 ```
 
-> **Upgrading from 0.6.x?** `AddIdevsCorelibServices()` is `[Obsolete]` and delegates to the new path. See the [migration guide](MIGRATION.md#v06x--v070--source-generator-di-registration).
+> **Upgrading from 0.6.x?** `AddIdevsCorelibServices()` is `[Obsolete]` but **does not** delegate to `AddIdevsServices()` — it preserves the legacy reflection scan via `AddIdevsCorelibCore()` + `AddIdevsCorelibLegacyScan()` so existing consumers keep working until you migrate. Switch to `AddIdevsServices()` to opt into compile-time generation. See the [migration guide](MIGRATION.md#v06x--v070--source-generator-di-registration).
 
 ## Features
 
@@ -105,17 +105,39 @@ public class UtilityService { }
 public class SmtpEmailService : IEmailService { }
 ```
 
-**2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants. Best when applied to a base class so derived types are auto-registered without per-type attributes:
+**2. Marker interface** — implement `IScopedService` / `ISingletonService` / `ITransientService`, or their generic `<TService>` variants.
+
+The non-generic markers (`IScopedService` etc.) declare a **lifetime only**, not a service type. To be registered, the concrete class still needs a service type the generator can resolve via the **`I{ClassName}` convention** (the class implements an interface whose name is `I` + the class name) or via the generic marker `IScopedService<TService>`. Without one of those, the generator skips the type and reports a diagnostic such as `IDEVSGEN006` ("Cannot register type"); if the class implements multiple non-marker interfaces, the ambiguity may instead be reported as `IDEVSGEN005`.
+
+The base-class pattern below sets the lifetime once on the abstract base, then each concrete repository declares its service type by implementing a matching `I{ClassName}` interface:
 
 ```csharp
 using Idevs.Repositories;
+using Serenity.Data; // ISqlConnections, IRow, IIdRow
 
 public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
-    : RepositoryBase<TRow, TKey>(c), IScopedService { }
+    : RepositoryBase<TRow, TKey>(c), IScopedService
+    where TRow : class, IRow, IIdRow, new()
+{
+}
 
-// All derived repositories are auto-registered.
-public class OrderRepository(ISqlConnections c) : AppRepositoryBase<OrderRow, int>(c) { }
+// IOrderRepository matches OrderRepository via the I{ClassName} convention,
+// so the generator registers IOrderRepository -> OrderRepository as scoped
+// (lifetime inherited from the base's IScopedService marker).
+public interface IOrderRepository
+{
+    Task<OrderRow?> GetByCodeAsync(string code, CancellationToken ct);
+}
+
+public class OrderRepository(ISqlConnections c)
+    : AppRepositoryBase<OrderRow, int>(c), IOrderRepository
+{
+    public Task<OrderRow?> GetByCodeAsync(string code, CancellationToken ct) =>
+        TryFirstAsync(q => q.SelectTableFields().WhereEqual(OrderRow.Fields.Code, code), ct: ct);
+}
 ```
+
+If you don't want to rely on the `I{ClassName}` convention in this base-class pattern, use an explicit registration shape the generator recognizes, such as `IScopedService<IOrderRepository>`. An inherited non-generic lifetime marker such as `IScopedService` does **not** self-register the concrete type by itself, so without the naming convention, a generic marker, or an explicit `ServiceType`, the generator skips the type and reports `IDEVSGEN006`.
 
 **3. Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that don't fit attribute or marker patterns:
 
@@ -133,7 +155,7 @@ The generator emits 10 diagnostics (`IDEVSGEN001`–`IDEVSGEN010`) for misuse �
 
 #### Legacy attributes
 
-`[ScopedRegistration]`, `[SingletonRegiatration]`, `[TransientRegistration]` are still recognized but `[Obsolete]`. The generator emits `IDEVSGEN001` warning suggesting the standard names.
+`[ScopedRegistration]`, `[SingletonRegiatration]`, `[TransientRegistration]` are still recognized but `[Obsolete]`. The generator emits `IDEVSGEN010` (legacy attribute usage) suggesting the standard names.
 
 #### Opting out / falling back
 
@@ -162,11 +184,13 @@ builder.UseIdevsAutofac(new MyCustomModule(), new AnotherModule());
 
 Named-key registrations (`[Transient(ServiceKey = "smtp")]`) resolve through Autofac's keyed services.
 
+> **Limitation.** The Autofac path is not yet behaviorally identical to `AddIdevsServices()`. `IdevsModule` performs a **reflection scan for registration attributes only** (`[Scoped]`, `[Singleton]`, `[Transient]` and the legacy variants), so it does **not** discover marker-interface (`IScopedService`, etc.) or `IIdevsServiceRegistrar` registrations the way the source generator does. There are also differences for attribute-based registrations: `IdevsModule` honors `ServiceKey` / `AllowSelfRegistration` and can fall back to another implemented interface, while the source generator currently only inspects `ServiceType`. If you rely on those discovery or registration behaviors, register them imperatively in the Autofac container builder until parity lands in a future release.
+
 ### Repositories
 
 Three layered base classes for data access:
 
-- **`SqlServiceBase`** — for services that need raw SQL access without being a typed repository. Provides `ISqlConnections`, lazy `Dialect`, dialect-pre-bound `SqlQuery()` / `SqlInsert(t)` / `SqlUpdate(t)` / `SqlDelete(t)` factories, and a uniform `ExecuteAsync<T>` template that manages connection lifetime and composes with an optional `UnitOfWork`.
+- **`SqlServiceBase`** — for services that need raw SQL access without being a typed repository. Provides `ISqlConnections`, lazy `Dialect`, dialect-pre-bound `SqlQuery()` / `SqlInsert(t)` / `SqlUpdate(t)` factories, a `SqlDelete(t)` factory (Serenity's `SqlDelete` exposes no chainable `Dialect()` setter, so the active connection's dialect is used at `Execute` time), and a uniform `ExecuteAsync<T>` template that manages connection lifetime and composes with an optional `UnitOfWork`.
 
 - **`RepositoryBase<TRow>`** — typed read/list/getby/create/update/delete on a Serenity `IRow`:
 
@@ -176,7 +200,7 @@ Three layered base classes for data access:
   | **Writes** | `CreateAsync(TRow)`, `UpdateAsync(Action<SqlUpdate>, ExpectedRows)`, `UpdateManyAsync(Action<SqlUpdate>)`, `DeleteAsync(Action<SqlDelete>, ExpectedRows)`, `DeleteManyAsync(Action<SqlDelete>)` |
   | **Deprecated** | `FirstAsync` (use `TryFirstAsync`); all sync wrappers (`*` without `Async`) |
 
-  All write methods default to `ExpectedRows.One` so a wrong WHERE clause fails loudly. Use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations.
+  `UpdateAsync` and `DeleteAsync` default to `ExpectedRows.One` so a wrong WHERE clause fails loudly — use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations. `CreateAsync` is an insert and has no row-count assertion: it returns the new identity for rows that implement `IIdRow`, or `0` otherwise.
 
 - **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`: `GetByIdAsync(TKey)`, `GetByIdsAsync(IEnumerable<TKey>)`, `UpdateAsync(TRow row)` (entity-by-id), `DeleteByIdAsync(TKey)`. Inherits all criteria-based methods from `RepositoryBase<TRow>`. The `UpdateAsync(TRow)` and `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
 
@@ -187,13 +211,14 @@ Connection key is configurable via the virtual `ConnectionKey` property or the `
 ```csharp
 using Idevs.ComponentModels;
 using Idevs.Repositories;
+using Serenity.Data; // ISqlConnections, IUnitOfWork
 
 public interface IMappingLotRepository
 {
     Task<MappingLotSelectionRow?> FindByDocAndProductAsync(
         string docNo, int productId, IUnitOfWork uow, CancellationToken ct);
 
-    Task UpdateApproveQtyAsync(
+    Task<int> UpdateApproveQtyAsync(
         string docNo, int productId, decimal qty, IUnitOfWork uow, CancellationToken ct);
 }
 
@@ -210,7 +235,8 @@ public class MappingLotRepository(ISqlConnections c)
             .Where(cFld.DocNo == docNo && cFld.ProductId == productId),
             uow, ct);
 
-    public Task UpdateApproveQtyAsync(
+    // Returns rows affected (1 on success; throws on 0 or >1 because of ExpectedRows.One default).
+    public Task<int> UpdateApproveQtyAsync(
         string docNo, int productId, decimal qty, IUnitOfWork uow, CancellationToken ct)
         => UpdateAsync(u => u
             .Set(cFld.McApproveQty, qty)
@@ -221,24 +247,32 @@ public class MappingLotRepository(ISqlConnections c)
 
 ### Two-level cache helpers
 
-`Idevs.Caching.TwoLevelCacheExtensions` adds async wrappers around Serenity's `ITwoLevelCache`, plus convenience methods for memory-only and remote-only access patterns:
+`Idevs.Net.CoreLib.Caching.TwoLevelCacheExtensions` adds async wrappers around Serenity's `ITwoLevelCache`. Two helpers ship today:
+
+| Method | Backing Serenity call | Use when |
+|---|---|---|
+| `GetLocalCachedAsync<T>` | `GetLocalStoreOnly<T>` | Per-process memory cache; never hits the remote (distributed) layer. |
+| `GetGloballyCachedAsync<T>` | `Get<T>` (full two-level path) | Memory + remote; survives across processes/instances. |
+
+Both helpers take a `Func<CancellationToken, Task<T>>` factory, and the cancellation token is forwarded into that factory. However, Serenity's cache surface is synchronous, so these wrappers bridge that gap with sync-over-async blocking (`factory(ct).GetAwaiter().GetResult()`) inside the cache call. Use them only when that blocking behavior is acceptable, and avoid I/O-heavy loaders where possible because they can contribute to thread-pool starvation or deadlocks.
 
 ```csharp
-using Idevs.Caching;
+using Idevs.Net.CoreLib.Caching;
 
 // Memory-only cache (per-process, never hits remote).
-var amphurs = cache.GetLocalStoreOnly(
+var amphurs = await cache.GetLocalCachedAsync(
     CacheKey.Base.Amphur,
     CacheKey.Base.DefaultCacheDuration,
     CacheKey.Base.GroupKey,
-    () => repo.List(q => q.SelectTableFields()));
+    token => repo.ListAsync(q => q.SelectTableFields(), ct: token),
+    ct);
 
-// Async variant with cancellation token.
-var amphursAsync = await cache.GetLocalStoreOnlyAsync(
-    CacheKey.Base.Amphur,
+// Two-level cache (memory + remote/distributed).
+var lookups = await cache.GetGloballyCachedAsync(
+    CacheKey.Base.Lookups,
     CacheKey.Base.DefaultCacheDuration,
     CacheKey.Base.GroupKey,
-    () => repo.ListAsync(q => q.SelectTableFields(), ct: ct),
+    token => repo.ListAsync(q => q.SelectTableFields(), ct: token),
     ct);
 ```
 
@@ -291,7 +325,7 @@ var request = new IdevsExportRequest
 };
 ```
 
-Aggregations: pass `AggregateColumn[]` with `AggregateType.Sum`/`Avg`/`Count`/`Min`/`Max` to attach total rows.
+Use `IdevsExportRequest` to control supported export presentation options such as table theme, company/report naming, and page size.
 
 ### PDF export
 
@@ -474,15 +508,32 @@ public class OrderColumns
 
 ### Smart pagination
 
-`Idevs.Utilities.SmartPagination` produces page-break-aware row groups for paginated reports (e.g., a 30-row table that needs to break across A4 pages with a header on each page). Includes filler-row support to keep page heights consistent.
+`Idevs.SmartPagination` produces page-break-aware row groups for paginated reports — useful when a table must split across fixed-height pages (A4, letter, etc.) with a different first-page or last-page row count to leave room for headers, totals, or signature blocks.
+
+Two entry points:
+
+- `CreatePages<T>(List<T> items, PaginationConfig config)` — full control. `PaginationConfig` exposes `FirstPageSize`, `RegularPageSize`, `LastPageReserveRows`, and `EnableLogging`.
+- `CreatePaginatedData<T>(List<T> items, int firstPageSize, int regularPageSize, int lastPageReserveRows, bool enableLogging = true)` — convenience overload that builds the config inline.
+
+Filler rows are added automatically by `SmartPagination` to keep page heights consistent (no opt-in flag required).
 
 ```csharp
-var pages = SmartPagination.Build(orders, pageSize: 25, fillToPageSize: true);
+using Idevs;
 
-foreach (var page in pages)
-{
-    // page.Items, page.PageNumber, page.TotalPages, page.IsFiller
-}
+var result = SmartPagination.CreatePaginatedData(orders,
+    firstPageSize: 20,
+    regularPageSize: 25,
+    lastPageReserveRows: 6); // leave 6 rows on the last page for the totals block
+
+// result.Pages       — List<PageData<T>>
+// result.TotalPages  — int
+// each PageData<T> exposes:
+//   Index       — 0-based page index (use Index + 1 to display "Page N")
+//   Items       — List<ItemWithLineNumber<T>>; each entry has .Item (the original row) and .LineNumber
+//   FillerRows  — List<FillerRow> containing blank rows for page-height consistency; use FillerRows.Count for the number of filler rows
+//   IsFirst / IsLast
+//   PageOffset  — running row offset (useful for line numbers)
+//   Capacity    — total rows the page is sized for (Items.Count + FillerRows.Count)
 ```
 
 ### Static service locator
@@ -545,11 +596,22 @@ for (var i = 0; i < total; i += batch)
 
 ### Source generator emits unexpected diagnostics
 
-Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The most common ones:
+Each `IDEVSGEN001`–`IDEVSGEN010` diagnostic includes the offending type/member and an explanatory message. The diagnostics are listed below:
 
-- `IDEVSGEN001` — class uses a legacy registration attribute. Switch to `[Scoped]` / `[Singleton]` / `[Transient]`.
-- `IDEVSGEN002` / `IDEVSGEN003` — multiple registration attributes on the same class, or attribute + marker interface conflict.
-- `IDEVSGEN006` — the declared `ServiceType` is not implemented by the class.
+Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column is a one-line plain-English summary.
+
+| ID | Severity | Title (as emitted) | Notes |
+|---|---|---|---|
+| `IDEVSGEN001` | Error | Multiple lifetime attributes | Class has more than one of `[Scoped]` / `[Singleton]` / `[Transient]`. |
+| `IDEVSGEN002` | Error | Multiple lifetime marker interfaces | Class implements marker interfaces with distinct lifetimes. |
+| `IDEVSGEN003` | Error | Attribute and marker lifetime disagree | The attribute lifetime differs from the marker-interface lifetime. |
+| `IDEVSGEN004` | Warning | Redundant lifetime attribute and marker | Attribute and marker specify the same lifetime; pick one. |
+| `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; set `ServiceType` explicitly on the attribute or use the matching generic lifetime marker (`IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`). |
+| `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved; set `ServiceType` explicitly on the attribute or use the matching generic lifetime marker so the generator can determine the service type. |
+| `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | The attribute's named service type conflicts with `IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`. |
+| `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public parameterless ctor. |
+| `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
+| `IDEVSGEN010` | Warning | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. |
 
 If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` in the consumer csproj to fall back to runtime scanning, then file an issue with a repro.
 
