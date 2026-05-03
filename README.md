@@ -529,11 +529,11 @@ var result = SmartPagination.CreatePaginatedData(orders,
 // result.TotalPages  — int
 // each PageData<T> exposes:
 //   Index       — 0-based page index (use Index + 1 to display "Page N")
-//   Items       — List<ItemWithLineNumber<T>> for this page's rows and line numbers
-//   FillerRows  — empty rows added to keep page height consistent
+//   Items       — List<ItemWithLineNumber<T>>; each entry has .Item (the original row) and .LineNumber
+//   FillerRows  — number of blank rows to render for page-height consistency; these are separate from Items
 //   IsFirst / IsLast
 //   PageOffset  — running row offset (useful for line numbers)
-//   Capacity    — total rows the page is sized for (Items + FillerRows)
+//   Capacity    — total rows the page is sized for (Items.Count + FillerRows)
 ```
 
 ### Static service locator
