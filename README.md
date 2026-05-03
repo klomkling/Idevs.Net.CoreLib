@@ -607,7 +607,7 @@ Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column i
 | `IDEVSGEN003` | Error | Attribute and marker lifetime disagree | The attribute lifetime differs from the marker-interface lifetime. |
 | `IDEVSGEN004` | Warning | Redundant lifetime attribute and marker | Attribute and marker specify the same lifetime; pick one. |
 | `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; set `ServiceType` explicitly on the attribute or use the matching generic lifetime marker (`IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`). |
-| `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved and `AllowSelfRegistration` is false. |
+| `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved; set `ServiceType` explicitly on the attribute or use the matching generic lifetime marker so the generator can determine the service type. |
 | `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | The attribute's named service type conflicts with `IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`. |
 | `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public parameterless ctor. |
 | `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
