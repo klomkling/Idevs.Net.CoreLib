@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to (re-)publish (e.g. 0.7.3). Bypasses the tag-exists check; use to recover from a partial run that left the tag in place but missing nupkgs / GitHub Release."
+        description: "Version to (re-)publish (e.g. 0.7.3). Bypasses the tag-exists check; use to recover from a partial run that left the tag in place but missing nupkgs / GitHub Release. The job will checkout the existing v{version} tag before building so the published packages match the original release."
         required: false
 
 permissions:
@@ -23,6 +23,7 @@ jobs:
     outputs:
       version: ${{ steps.decide.outputs.version }}
       should_release: ${{ steps.decide.outputs.should_release }}
+      checkout_ref: ${{ steps.decide.outputs.checkout_ref }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,34 +38,61 @@ jobs:
             exit 1
           fi
           echo "csproj_version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Detected version (csproj): $VERSION"
+          echo "Detected version (csproj on this ref): $VERSION"
 
       - name: Decide whether to release
         id: decide
         env:
           DISPATCH_VERSION: ${{ github.event.inputs.version }}
           CSPROJ_VERSION: ${{ steps.version.outputs.csproj_version }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          # workflow_dispatch with an explicit version forces a (re-)run
-          # regardless of whether the tag exists, so partial-run recovery is
-          # possible (NuGet push uses --skip-duplicate, tag step is no-op
-          # when the tag exists, and GitHub Release step is idempotent).
-          if [ -n "${DISPATCH_VERSION}" ]; then
-            echo "version=${DISPATCH_VERSION}" >> "$GITHUB_OUTPUT"
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "Manual dispatch: forcing release of v${DISPATCH_VERSION} (recovery mode)."
+          # Default: auto-trigger from `push: main`. Compare csproj
+          # version to the matching tag and skip if it already exists.
+          if [ -z "${DISPATCH_VERSION}" ]; then
+            TAG="v${CSPROJ_VERSION}"
+            if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
+              echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+              echo "Tag ${TAG} already exists; skipping release."
+            else
+              echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+              echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+              echo "Tag ${TAG} does not exist; proceeding with release at ${GITHUB_SHA}."
+            fi
             exit 0
           fi
 
-          TAG="v${CSPROJ_VERSION}"
+          # Recovery path: workflow_dispatch with an explicit version.
+          # The release job MUST build the source that matches the
+          # requested version, otherwise we'd attach the wrong nupkgs
+          # to the existing tag (e.g. main has moved to 0.7.4 but the
+          # user is recovering 0.7.3).
+          TAG="v${DISPATCH_VERSION}"
           if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} already exists; skipping release."
-          else
-            echo "version=${CSPROJ_VERSION}" >> "$GITHUB_OUTPUT"
+            # Tag exists — recovery from a partial run after tag-push.
+            # Build from the tagged commit so the published packages
+            # are identical to the original release attempt.
+            echo "version=${DISPATCH_VERSION}" >> "$GITHUB_OUTPUT"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${TAG} does not exist; proceeding with release."
+            echo "checkout_ref=refs/tags/${TAG}" >> "$GITHUB_OUTPUT"
+            echo "Recovery mode: tag ${TAG} exists; release job will checkout that tag."
+          elif [ "${CSPROJ_VERSION}" = "${DISPATCH_VERSION}" ]; then
+            # Tag does not exist yet, but csproj on this ref matches.
+            # This covers the rare case where a previous run failed
+            # before the tag was pushed (e.g. NuGet auth blip). Build
+            # from the current ref.
+            echo "version=${DISPATCH_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "Recovery mode: tag ${TAG} not found; csproj matches, building from ${GITHUB_SHA}."
+          else
+            echo "::error::Refusing to release. The csproj <Version> on the selected ref is ${CSPROJ_VERSION}, but you requested v${DISPATCH_VERSION} and no matching tag exists. Either:"
+            echo "::error::  1. Re-run the workflow against an existing v${DISPATCH_VERSION} tag (Run workflow → choose ref: tags/v${DISPATCH_VERSION}), or"
+            echo "::error::  2. Push the version bump for ${DISPATCH_VERSION} to main and let the auto-trigger handle it."
+            exit 1
           fi
 
   release:
@@ -77,6 +105,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.check.outputs.checkout_ref }}
+
+      - name: Verify checked-out csproj matches release version
+        env:
+          EXPECTED: ${{ needs.check.outputs.version }}
+        run: |
+          ACTUAL=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj | head -1)
+          if [ "${ACTUAL}" != "${EXPECTED}" ]; then
+            echo "::error::csproj <Version> on the checked-out ref is '${ACTUAL}' but the release is for v'${EXPECTED}'. Refusing to publish wrong-version artifacts."
+            exit 1
+          fi
+          echo "Verified: csproj <Version> = ${ACTUAL} matches release v${EXPECTED}."
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
