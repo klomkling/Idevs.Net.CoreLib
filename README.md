@@ -606,9 +606,9 @@ Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column i
 | `IDEVSGEN002` | Error | Multiple lifetime marker interfaces | Class implements marker interfaces with distinct lifetimes. |
 | `IDEVSGEN003` | Error | Attribute and marker lifetime disagree | The attribute lifetime differs from the marker-interface lifetime. |
 | `IDEVSGEN004` | Warning | Redundant lifetime attribute and marker | Attribute and marker specify the same lifetime; pick one. |
-| `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; specify with `[Scoped(typeof(...))]` or `IScopedService<TService>`. |
+| `IDEVSGEN005` | Warning | Ambiguous service type | Multiple candidate interfaces; specify an explicit service type on `[Scoped]` or use `IScopedService<TService>`. |
 | `IDEVSGEN006` | Warning | Cannot register type | No service interface resolved and `AllowSelfRegistration` is false. |
-| `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | `[Scoped(typeof(X))]` disagrees with `IScopedService<Y>`. |
+| `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | The explicit service type on the attribute disagrees with `IScopedService<Y>`. |
 | `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public ctor. |
 | `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
 | `IDEVSGEN010` | Warning | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. |
