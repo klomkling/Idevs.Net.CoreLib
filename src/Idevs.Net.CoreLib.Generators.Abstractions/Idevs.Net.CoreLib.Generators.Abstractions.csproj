@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>Idevs.Net.CoreLib.Generators.Abstractions</PackageId>
-    <Version>0.7.2</Version>
+    <Version>0.7.3</Version>
     <PackageTags>Idevs; CoreLib; Roslyn; SourceGenerator; Helpers</PackageTags>
     <Description>Reusable Roslyn helpers for source generators that integrate with Idevs.Net.CoreLib's DI conventions.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

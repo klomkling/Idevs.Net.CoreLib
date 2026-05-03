@@ -80,6 +80,94 @@ public abstract class SqlServiceBase
         return await work(connection, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Acquire a unit of work for the duration of a <c>using</c> block.
+    /// </summary>
+    /// <remarks>
+    /// When <paramref name="uow"/> is supplied, the returned scope wraps it
+    /// without taking ownership — <see cref="UnitOfWorkScope.Commit"/> and
+    /// <see cref="UnitOfWorkScope.Dispose"/> are no-ops, the caller's outer
+    /// transaction wins. When <paramref name="uow"/> is null, the scope opens
+    /// a connection from <see cref="ConnectionKey"/> and a fresh
+    /// <see cref="UnitOfWork"/> on it; the caller MUST call
+    /// <see cref="UnitOfWorkScope.Commit"/> before the scope leaves the using
+    /// block, otherwise dispose rolls back. Use this form for long methods
+    /// with sequential statements, conditional branches, or early returns.
+    /// For short blocks, prefer <see cref="CommitOnSuccessAsync{T}"/>.
+    /// </remarks>
+    protected UnitOfWorkScope BeginUnitOfWork(IUnitOfWork? uow = null)
+    {
+        if (uow is not null)
+            return new UnitOfWorkScope(uow);
+
+        var connection = SqlConnections.NewByKey(ConnectionKey);
+        var newUow = new UnitOfWork(connection);
+        return new UnitOfWorkScope(connection, newUow);
+    }
+
+    /// <summary>
+    /// Run <paramref name="work"/> inside a unit of work; commit on success,
+    /// roll back on exception.
+    /// </summary>
+    /// <remarks>
+    /// If <paramref name="uow"/> is supplied, the caller's transaction is used
+    /// and this method does not commit/rollback — the caller wins. If null,
+    /// a fresh connection + UoW is opened, the work runs, and Commit() is
+    /// called when the work returns normally. If the work throws, Commit() is
+    /// skipped and the underlying scope rolls back via dispose.
+    /// </remarks>
+    protected async Task<T> CommitOnSuccessAsync<T>(
+        Func<IUnitOfWork, CancellationToken, Task<T>> work,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ct.ThrowIfCancellationRequested();
+
+        using var scope = BeginUnitOfWork(uow);
+        var result = await work(scope.Uow, ct).ConfigureAwait(false);
+        scope.Commit();
+        return result;
+    }
+
+    /// <summary>
+    /// Non-generic <see cref="CommitOnSuccessAsync{T}"/> overload for void work.
+    /// </summary>
+    protected async Task CommitOnSuccessAsync(
+        Func<IUnitOfWork, CancellationToken, Task> work,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ct.ThrowIfCancellationRequested();
+
+        using var scope = BeginUnitOfWork(uow);
+        await work(scope.Uow, ct).ConfigureAwait(false);
+        scope.Commit();
+    }
+
+    private const string ObsoleteSyncMessage =
+        "Sync wrapper kept for migration. Prefer the *Async variant. " +
+        "Will be removed once underlying SQL APIs become real-async (~1.0).";
+
+    /// <summary>Sync wrapper for <see cref="CommitOnSuccessAsync{T}"/>.</summary>
+    [Obsolete(ObsoleteSyncMessage)]
+    protected T CommitOnSuccess<T>(Func<IUnitOfWork, T> work, IUnitOfWork? uow = null)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        return CommitOnSuccessAsync((u, _) => Task.FromResult(work(u)), uow)
+            .GetAwaiter().GetResult();
+    }
+
+    /// <summary>Sync wrapper for the non-generic <see cref="CommitOnSuccessAsync(Func{IUnitOfWork, CancellationToken, Task}, IUnitOfWork?, CancellationToken)"/>.</summary>
+    [Obsolete(ObsoleteSyncMessage)]
+    protected void CommitOnSuccess(Action<IUnitOfWork> work, IUnitOfWork? uow = null)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        CommitOnSuccessAsync((u, _) => { work(u); return Task.CompletedTask; }, uow)
+            .GetAwaiter().GetResult();
+    }
+
     /// <summary>Creates a new <see cref="SqlQuery"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
     protected SqlQuery SqlQuery() => new SqlQuery().Dialect(Dialect);
 
