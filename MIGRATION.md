@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)
 - [v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)](#v072--v073--unit-of-work-helpers-beginunitofwork--commitonsuccessasync)
 - [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
 - [v0.6.x → v0.7.0 — Source-Generator DI Registration](#v06x--v070--source-generator-di-registration)
@@ -11,6 +12,123 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling
+
+### What changed
+
+Four new helpers on `RepositoryBase` for surgical control over which columns
+end up in INSERT/UPDATE statements. Plus integration-test-verified behavior
+documentation for `[NotMapped]` and `[Expression]` fields.
+
+| Helper | Lives on | When to use |
+|---|---|---|
+| `CreateAsync(TRow row, Field[] fields, ...)` | `RepositoryBase<TRow>` | Insert ONLY the listed columns. Bypasses Serenity's IsAssigned tracking. |
+| `CreateExcludingAsync(TRow row, Field[] excludeFields, ...)` | `RepositoryBase<TRow>` | Insert all assigned, table-mapped fields EXCEPT the listed ones. |
+| `UpdateAsync(TRow row, Field[] fields, ...)` | `RepositoryBase<TRow, TKey>` | Update ONLY the listed columns. The row's Id must be set. |
+| `UpdateExcludingAsync(TRow row, Field[] excludeFields, ...)` | `RepositoryBase<TRow, TKey>` | Update all assigned, table-mapped fields EXCEPT the listed ones. |
+
+### NotMapped / Expression — the actual behavior (verified end-to-end)
+
+A common assumption is that Serenity automatically skips `[NotMapped]` and
+`[Expression]` fields from INSERT/UPDATE. The truth is more nuanced:
+
+#### `[NotMapped]` properties
+
+**Production-correct pattern: declare them as plain CLR auto-properties WITH
+NO backing `Field` in `RowFields`.**
+
+```csharp
+[NotMapped]
+public string? TransientNote { get; set; }   // no fields.X[this] backing
+```
+
+The property exists on the row in memory, but Serenity has no `Field`
+metadata for it, so it cannot appear in any SQL. Setting it is silent.
+
+If you instead declare a `Field` for it (e.g., `public StringField TransientNote;`
+in `RowFields`), Serenity's writes WILL include it (default flag set has
+`Insertable | Updatable` on by default, which the `[NotMapped]` attribute does
+not clear automatically). To make a backing-field NotMapped column actually
+not write, pair it with `[SetFieldFlags(FieldFlags.None, FieldFlags.Insertable | FieldFlags.Updatable)]`.
+
+#### `[Expression]` fields
+
+These ARE meant for SELECT-time materialization (e.g., joined columns,
+computed values). Serenity reads them. **But Serenity's `InsertAndGetID` /
+`UpdateById` use an IsAssigned-based filter** — if you ASSIGN a value to an
+Expression field on the row instance, Serenity will include it in the
+INSERT/UPDATE column list, and SQL Server will reject it with "Invalid
+column name 'X'".
+
+Three ways to avoid the trap:
+
+1. **Don't assign Expression fields on a write path** (the natural pattern —
+   they're outputs of SELECT, not inputs).
+2. **Use `CreateExcludingAsync` / `UpdateExcludingAsync`** to drop them
+   explicitly even when assigned.
+3. **Use the include-only `CreateAsync(row, fields)` / `UpdateAsync(row, fields)`**
+   to specify the column list explicitly.
+
+### Migration steps
+
+1. Bump to `0.7.4` in your consumer project:
+   ```xml
+   <PackageReference Include="Idevs.Net.CoreLib" Version="0.7.4" />
+   ```
+2. **Audit any rows with `[Expression]` properties.** If your code paths
+   assign these (e.g., during deserialization from a DTO that includes the
+   computed value), either stop assigning them or switch the call to one
+   of the new exclude/include helpers.
+3. **(Optional) Replace partial-update patterns** that previously used the
+   criteria-based `UpdateAsync(Action<SqlUpdate>)` with the new
+   `UpdateAsync(TRow row, Field[] fields)` for cases where the value comes
+   from an existing row instance.
+
+### Examples
+
+**Insert only specific columns:**
+
+```csharp
+await repo.CreateAsync(row, [MyRow.Fields.Code, MyRow.Fields.Total],
+    uow: uow, ct: ct);
+```
+
+**Insert everything except a few:**
+
+```csharp
+await repo.CreateExcludingAsync(row, [MyRow.Fields.CreatedAt],
+    uow: uow, ct: ct);
+```
+
+**Update only one column on an existing row:**
+
+```csharp
+row.Total = recalculated;
+await repo.UpdateAsync(row, [MyRow.Fields.Total], uow: uow, ct: ct);
+```
+
+**Update everything except an audit column:**
+
+```csharp
+await repo.UpdateExcludingAsync(row, [MyRow.Fields.LastEditedBy],
+    uow: uow, ct: ct);
+```
+
+### Sync wrappers
+
+Each new async helper has a sync `[Obsolete]` companion (`Create`,
+`CreateExcluding`, `Update`, `UpdateExcluding`) following the existing
+migration pattern.
+
+### Test infrastructure note
+
+0.7.4 also adds Testcontainers-based integration tests against a real SQL
+Server 2022 container. They live under `tests/Idevs.Net.CoreLib.Tests/Integration/`
+and are tagged `[Trait("Category", "Integration")]`. Skip them with
+`dotnet test --filter "Category!=Integration"` if Docker isn't available.
 
 ---
 
