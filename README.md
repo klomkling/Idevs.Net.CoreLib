@@ -184,7 +184,7 @@ builder.UseIdevsAutofac(new MyCustomModule(), new AnotherModule());
 
 Named-key registrations (`[Transient(ServiceKey = "smtp")]`) resolve through Autofac's keyed services.
 
-> **Limitation.** `IdevsModule` performs a **reflection scan for registration attributes only** (`[Scoped]`, `[Singleton]`, `[Transient]` and the legacy variants). It does **not** discover marker-interface (`IScopedService`, etc.) or `IIdevsServiceRegistrar` registrations the way the source generator does. If you rely on those discovery paths, register them imperatively in the Autofac container builder until parity lands in a future release.
+> **Limitation.** The Autofac path is not yet behaviorally identical to `AddIdevsServices()`. `IdevsModule` performs a **reflection scan for registration attributes only** (`[Scoped]`, `[Singleton]`, `[Transient]` and the legacy variants), so it does **not** discover marker-interface (`IScopedService`, etc.) or `IIdevsServiceRegistrar` registrations the way the source generator does. There are also differences for attribute-based registrations: `IdevsModule` honors `ServiceKey` / `AllowSelfRegistration` and can fall back to another implemented interface, while the source generator currently only inspects `ServiceType`. If you rely on those discovery or registration behaviors, register them imperatively in the Autofac container builder until parity lands in a future release.
 
 ### Repositories
 
