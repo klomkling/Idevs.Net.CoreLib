@@ -137,7 +137,7 @@ public class OrderRepository(ISqlConnections c)
 }
 ```
 
-If you don't want to rely on the `I{ClassName}` convention in this base-class pattern, rely on the inherited `IScopedService` marker and register the concrete type as itself. Use `IScopedService<IOrderRepository>` or `[Scoped(ServiceType = typeof(IOrderRepository))]` only on classes that do **not** already inherit a non-generic lifetime marker such as `IScopedService` from a base class.
+If you don't want to rely on the `I{ClassName}` convention in this base-class pattern, use an explicit registration shape the generator recognizes, such as `IScopedService<IOrderRepository>` or `[Scoped(ServiceType = typeof(IOrderRepository))]`. An inherited non-generic lifetime marker such as `IScopedService` does **not** self-register the concrete type by itself, so without the naming convention, a generic marker, or an explicit `ServiceType`, the generator skips the type and reports `IDEVSGEN006`.
 
 **3. Registrar** — implement `IIdevsServiceRegistrar` for arbitrary imperative registrations that don't fit attribute or marker patterns:
 
