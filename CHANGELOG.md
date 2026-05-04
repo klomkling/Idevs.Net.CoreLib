@@ -4,15 +4,20 @@
 
 ### Added
 
-- `RepositoryBase<TRow>.CountAsync(Action<SqlQuery>, ...)` — count rows
-  matching the configured query. Emits `SELECT COUNT(*) FROM table WHERE ...`
-  via `SqlHelper.ExecuteScalar`. Pass `_ => { }` to count every row.
-- `RepositoryBase<TRow>.ExistsAsync(Action<SqlQuery>, ...)` — check whether
-  any row matches. Emits `SELECT 1 FROM table WHERE ... LIMIT 1` so the
-  engine can short-circuit at the first match instead of counting all
-  matching rows.
-- Sync `[Obsolete]` wrappers (`Count`, `Exists`) following the existing
-  migration pattern.
+- `RepositoryBase<TRow>.CountAsync(Action<SqlQuery>, ...)` — returns
+  `Task<long>` (not `Task<int>`, to accommodate 64-bit `COUNT(*)` columns
+  on PostgreSQL / MySQL `BIGINT UNSIGNED`). Emits `SELECT COUNT(*) FROM
+  table WHERE ...` via `SqlHelper.ExecuteScalar`. Pass `_ => { }` to count
+  every row. Does NOT support `GROUP BY` / `HAVING` (would silently return
+  only the first group's count) — use `ListAsync` + LINQ `GroupBy` or a
+  manual subquery via `ExecuteAsync` for grouped counts.
+- `RepositoryBase<TRow>.ExistsAsync(Action<SqlQuery>, ...)` — returns
+  `Task<bool>`. Emits `SELECT 1 FROM table WHERE ...` plus a dialect-
+  specific row-limit clause (`TOP 1` on SQL Server, `LIMIT 1` on
+  MySQL/PostgreSQL/SQLite, `FETCH FIRST 1 ROWS ONLY` on Oracle) via
+  `SqlQuery.Take(1)`, so the engine can short-circuit at the first match.
+- Sync `[Obsolete]` wrappers (`Count` returns `long`, `Exists` returns
+  `bool`) following the existing migration pattern.
 
 ### Verified (integration tests against SQL Server 2022)
 

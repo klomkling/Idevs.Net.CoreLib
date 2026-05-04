@@ -24,10 +24,10 @@ Two new read-side helpers on `RepositoryBase<TRow>` that complete the
 read surface alongside the existing `TryFirstAsync` / `ListAsync` /
 `GetByAsync`:
 
-| Helper | Emits | Use for |
-|---|---|---|
-| `CountAsync(Action<SqlQuery>, ...)` | `SELECT COUNT(*) FROM table WHERE ...` | Counting matching rows. Pass `_ => { }` for total. |
-| `ExistsAsync(Action<SqlQuery>, ...)` | `SELECT 1 FROM table WHERE ... LIMIT 1` | Existence check; short-circuits at first match. |
+| Helper | Returns | Emits | Use for |
+|---|---|---|---|
+| `CountAsync(Action<SqlQuery>, ...)` | `Task<long>` | `SELECT COUNT(*) FROM table WHERE ...` | Counting matching rows. Pass `_ => { }` for total. |
+| `ExistsAsync(Action<SqlQuery>, ...)` | `Task<bool>` | `SELECT 1 FROM table WHERE ...` + a dialect-specific row-limit clause (`TOP 1` on SQL Server, `LIMIT 1` on MySQL/PostgreSQL/SQLite, `FETCH FIRST 1 ROWS ONLY` on Oracle), via `SqlQuery.Take(1)` | Existence check; short-circuits at first match. |
 
 Both share the same shape as `ListAsync` — caller adds `Where(...)` (and
 optional joins, group-by, etc.) inside the lambda.
@@ -35,17 +35,19 @@ optional joins, group-by, etc.) inside the lambda.
 ### Examples
 
 ```csharp
-// Count
-var activeCount = await repo.CountAsync(q => q
+// Count — returns long
+long activeCount = await repo.CountAsync(q => q
     .Where(SaleOrderRow.Fields.Status == "Active"), uow, ct);
 
-var todayPending = await repo.CountAsync(q => q
+long todayPending = await repo.CountAsync(q => q
     .Where(SaleOrderRow.Fields.OrderDate == DateTime.Today
         && SaleOrderRow.Fields.Status == "Pending"), uow, ct);
 
-var totalRows = await repo.CountAsync(_ => { }, uow, ct);
+long totalRows = await repo.CountAsync(_ => { }, uow, ct);
 
-// Existence check (efficient on large tables — uses LIMIT 1)
+// Existence check — efficient on large tables (engine short-circuits at
+// the first match via SqlQuery.Take(1), which emits TOP/LIMIT/FETCH FIRST
+// depending on the active dialect)
 var hasOrder = await repo.ExistsAsync(q => q
     .Where(SaleOrderRow.Fields.CustomerCode == code), uow, ct);
 ```
@@ -60,10 +62,32 @@ If your code currently does any of these, the new helpers are clearer:
 | `(await repo.TryFirstAsync(q => q.Where(...))) is not null` | `await repo.ExistsAsync(q => q.Where(...))` (smaller projection, LIMIT 1) |
 | Hand-built `SqlHelper.ExecuteScalar` for counts | `await repo.CountAsync(...)` |
 
+### Why `Task<long>` (not `Task<int>`)
+
+`COUNT(*)` returns a 64-bit value on PostgreSQL and on MySQL (`BIGINT
+UNSIGNED`). SQL Server's `COUNT(*)` is 32-bit but upcasts cleanly. Using
+`long` for the return type avoids `OverflowException` on large tables on
+non-SQL-Server providers, with no downside on SQL Server. Cast to `int`
+at the call site if you need it (and you know your count fits):
+
+```csharp
+int n = (int)await repo.CountAsync(_ => { });   // explicit narrowing
+```
+
+### Limitations
+
+- **No `GROUP BY` / `HAVING` support.** Both clauses make the underlying
+  query return multiple rows; `SqlHelper.ExecuteScalar` only reads the
+  first row's value, so a grouped count would silently return only the
+  first group's count. For grouped counts, use `ListAsync` + LINQ
+  `GroupBy`, or build the query manually via `ExecuteAsync` with a
+  wrapping `SELECT COUNT(*) FROM (...) g` subquery.
+
 ### Sync wrappers
 
-`Count(Action<SqlQuery>, IUnitOfWork?)` and `Exists(Action<SqlQuery>, IUnitOfWork?)`
-both exist and are marked `[Obsolete]` — use the async variants in new code.
+`Count(Action<SqlQuery>, IUnitOfWork?)` (returns `long`) and
+`Exists(Action<SqlQuery>, IUnitOfWork?)` (returns `bool`) exist and are
+marked `[Obsolete]` — use the async variants in new code.
 
 ### MySQL note (does NOT apply here)
 

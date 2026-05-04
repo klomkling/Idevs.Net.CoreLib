@@ -4,9 +4,12 @@ using Serenity.Data;
 namespace Idevs.Net.CoreLib.Tests.Integration;
 
 /// <summary>
-/// Integration tests for <c>CountAsync</c> and <c>ExistsAsync</c> against a
-/// real SQL Server (Testcontainers). Verifies that the SQL emitted matches
-/// what the engine expects and that the scalar result is returned correctly.
+/// Behavioral integration tests for <c>CountAsync</c> and <c>ExistsAsync</c>
+/// against a real SQL Server (Testcontainers). Validates the observable
+/// results — counts match the seeded data, existence checks return the
+/// expected bool — without inspecting the generated SQL text. If the
+/// generated SQL ever became invalid for SQL Server, these tests would
+/// fail at execute time.
 /// </summary>
 [Collection(nameof(MsSqlContainerCollection))]
 [Trait("Category", "Integration")]
@@ -46,7 +49,7 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
     public async Task CountAsync_EmptyTable_ReturnsZero()
     {
         var n = await _repo.CountAsync(_ => { });
-        Assert.Equal(0, n);
+        Assert.Equal(0L, n);
     }
 
     [Fact]
@@ -58,7 +61,7 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
             ("C", 3m, "Inactive"));
 
         var n = await _repo.CountAsync(_ => { });
-        Assert.Equal(3, n);
+        Assert.Equal(3L, n);
     }
 
     [Fact]
@@ -71,10 +74,10 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
             ("D", 4m, "Active"));
 
         var active = await _repo.CountAsync(q => q.Where(Fld.Status == "Active"));
-        Assert.Equal(3, active);
+        Assert.Equal(3L, active);
 
         var inactive = await _repo.CountAsync(q => q.Where(Fld.Status == "Inactive"));
-        Assert.Equal(1, inactive);
+        Assert.Equal(1L, inactive);
     }
 
     [Fact]
@@ -89,7 +92,7 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
         var n = await _repo.CountAsync(q => q
             .Where(Fld.Status == "Active" && Fld.Amount >= 5m));
 
-        Assert.Equal(2, n);
+        Assert.Equal(2L, n);
     }
 
     [Fact]
@@ -99,7 +102,19 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
 
         var n = await _repo.CountAsync(q => q.Where(Fld.Code == "DOES-NOT-EXIST"));
 
-        Assert.Equal(0, n);
+        Assert.Equal(0L, n);
+    }
+
+    [Fact]
+    public async Task CountAsync_ReturnsLong_NotInt()
+    {
+        // Documents the API: COUNT(*) is returned as long to accommodate
+        // 64-bit count columns on PostgreSQL/MySQL even though SQL Server's
+        // COUNT(*) is 32-bit. Compile-time check via target type:
+        await SeedAsync(("A", 1m, "Active"));
+
+        long n = await _repo.CountAsync(_ => { });   // long, not int
+        Assert.Equal(1L, n);
     }
 
     // ---- ExistsAsync ----

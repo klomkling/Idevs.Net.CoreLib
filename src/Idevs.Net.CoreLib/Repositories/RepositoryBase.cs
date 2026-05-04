@@ -58,11 +58,26 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// </summary>
     /// <remarks>
     /// Builds <c>SELECT COUNT(*) FROM table</c>, applies the caller's WHERE
-    /// (and any joins / group-by, etc.), and reads back a scalar. Pre-bound
-    /// to <see cref="SqlServiceBase.Dialect"/> via the <see cref="SqlServiceBase.SqlQuery"/>
-    /// factory.
+    /// (and any joins) inside <paramref name="configure"/>, and reads back a
+    /// scalar via <see cref="SqlHelper.ExecuteScalar(System.Data.IDbConnection, SqlQuery, Microsoft.Extensions.Logging.ILogger)"/>.
+    /// Pre-bound to <see cref="SqlServiceBase.Dialect"/> via the
+    /// <see cref="SqlServiceBase.SqlQuery"/> factory.
+    /// <para>
+    /// Returns <see cref="long"/> to accommodate <c>COUNT(*)</c> values from
+    /// providers whose count column is 64-bit (PostgreSQL, MySQL
+    /// <c>BIGINT UNSIGNED</c>); SQL Server's <c>COUNT(*)</c> is 32-bit but
+    /// upcasts cleanly.
+    /// </para>
+    /// <para>
+    /// <b>Not supported:</b> queries that include <c>GROUP BY</c> / <c>HAVING</c>.
+    /// Those return multiple rows; <see cref="SqlHelper.ExecuteScalar(System.Data.IDbConnection, SqlQuery, Microsoft.Extensions.Logging.ILogger)"/>
+    /// only reads the first row's count, which is silently wrong. For grouped
+    /// counts, materialize via <see cref="ListAsync"/> + LINQ <c>GroupBy</c>,
+    /// or build the query manually via <see cref="SqlServiceBase.ExecuteAsync{T}"/>
+    /// with a wrapping <c>SELECT COUNT(*) FROM (...) g</c> subquery.
+    /// </para>
     /// </remarks>
-    public virtual Task<int> CountAsync(
+    public virtual Task<long> CountAsync(
         Action<SqlQuery> configure,
         IUnitOfWork? uow = null,
         CancellationToken ct = default)
@@ -79,7 +94,7 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
                 .Select("COUNT(*)");
             configure(query);
             var result = SqlHelper.ExecuteScalar(c, query, logger: null);
-            return Task.FromResult(Convert.ToInt32(result));
+            return Task.FromResult(Convert.ToInt64(result));
         }, uow, ct);
     }
 
@@ -88,8 +103,12 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// </summary>
     /// <remarks>
     /// More efficient than <c>CountAsync(...) &gt; 0</c> for large tables —
-    /// emits <c>SELECT 1 FROM table WHERE ... LIMIT 1</c> so the engine can
-    /// short-circuit at the first match instead of counting every matching row.
+    /// emits <c>SELECT 1 FROM table WHERE ...</c> with a row-limit clause so
+    /// the engine can short-circuit at the first match instead of counting
+    /// every matching row. The limit is applied via <c>SqlQuery.Take(1)</c>;
+    /// the actual SQL is dialect-specific (<c>TOP 1</c> on SQL Server,
+    /// <c>LIMIT 1</c> on MySQL/PostgreSQL/SQLite, <c>FETCH FIRST 1 ROWS ONLY</c>
+    /// on Oracle).
     /// </remarks>
     public virtual Task<bool> ExistsAsync(
         Action<SqlQuery> configure,
@@ -370,7 +389,7 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
         ListAsync(configure, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
-    public virtual int Count(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+    public virtual long Count(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
         CountAsync(configure, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
