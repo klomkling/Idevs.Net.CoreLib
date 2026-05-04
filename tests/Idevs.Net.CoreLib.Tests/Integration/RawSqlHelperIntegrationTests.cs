@@ -87,6 +87,32 @@ public sealed class RawSqlHelperIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteScalarAsync_NullableInt_NonNullValue_ConvertsCorrectly()
+    {
+        // Regression: Convert.ChangeType throws InvalidCastException for
+        // Nullable<T> targets. The helper must unwrap T to its underlying
+        // value type before converting.
+        await SeedAsync(("A", 1m, "Active"), ("B", 2m, "Active"), ("C", 3m, "Active"));
+
+        var count = await _svc.ExecuteScalarAsync<int?>(
+            "SELECT COUNT(*) FROM dbo.IntegrationTestRows WHERE Status = 'Active'");
+
+        Assert.NotNull(count);
+        Assert.Equal(3, count!.Value);
+    }
+
+    [Fact]
+    public async Task ExecuteScalarAsync_NullableLong_NullValue_ReturnsNull()
+    {
+        // Counterpart: when SQL returns NULL/DBNull, helper short-circuits
+        // to default(T) BEFORE attempting conversion.
+        var max = await _svc.ExecuteScalarAsync<long?>(
+            "SELECT MAX(Id) FROM dbo.IntegrationTestRows");
+
+        Assert.Null(max);
+    }
+
+    [Fact]
     public async Task ExecuteScalarAsync_ParameterizedQuery_HonorsParam()
     {
         await SeedAsync(

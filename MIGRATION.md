@@ -59,7 +59,7 @@ If your code currently does any of these, the new helpers are clearer:
 | Before | After |
 |---|---|
 | `(await repo.ListAsync(q => q.Where(...))).Count` | `await repo.CountAsync(q => q.Where(...))` (avoids materializing rows) |
-| `(await repo.TryFirstAsync(q => q.Where(...))) is not null` | `await repo.ExistsAsync(q => q.Where(...))` (smaller projection, LIMIT 1) |
+| `(await repo.TryFirstAsync(q => q.Where(...))) is not null` | `await repo.ExistsAsync(q => q.Where(...))` (smaller projection, dialect-specific row-limit clause) |
 | Hand-built `SqlHelper.ExecuteScalar` for counts | `await repo.CountAsync(...)` |
 
 ### Why `Task<long>` (not `Task<int>`)

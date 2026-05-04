@@ -191,7 +191,12 @@ public abstract class SqlServiceBase
             var result = SqlHelper.ExecuteScalar(c, sql, paramDict, logger: null);
             if (result is null || result == DBNull.Value)
                 return Task.FromResult<T?>(default);
-            return Task.FromResult<T?>((T)Convert.ChangeType(result, typeof(T))!);
+
+            // Convert.ChangeType throws InvalidCastException for Nullable<T>
+            // targets. Resolve to the underlying value type before
+            // conversion, then cast back to T (which is nullable-aware).
+            var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+            return Task.FromResult<T?>((T)Convert.ChangeType(result, targetType)!);
         }, uow, ct);
     }
 
