@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.7.4 (2026-05-04)
+
+### Added
+
+- `RepositoryBase<TRow>.CreateAsync(TRow row, Field[] fields, ...)` — insert
+  only the listed columns. Use when you want surgical control over the
+  INSERT regardless of which fields are "assigned" on the row instance.
+- `RepositoryBase<TRow>.CreateExcludingAsync(TRow row, Field[] excludeFields, ...)`
+  — insert all assigned, table-mapped fields EXCEPT the listed ones. Honors
+  Serenity's auto-exclusion rules and additionally drops the explicit
+  excludes.
+- `RepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Field[] fields, ...)` —
+  update only the listed columns, bypassing Serenity's "assigned-field"
+  tracking. The row's Id must be set.
+- `RepositoryBase<TRow, TKey>.UpdateExcludingAsync(TRow row, Field[] excludeFields, ...)`
+  — update all assigned, table-mapped fields EXCEPT the listed ones.
+- Sync `[Obsolete]` wrappers for each new async method following the
+  existing migration pattern.
+- New test infrastructure: Testcontainers-based SQL Server 2022 fixture
+  (`MsSqlContainerFixture`) shared across integration test classes via
+  `MsSqlContainerCollection`. Integration tests are tagged
+  `[Trait("Category", "Integration")]` for easy filtering.
+
+### Verified (integration tests against SQL Server 2022, pinned image tag)
+
+- `[NotMapped]` properties (declared without a backing `Field` in
+  `RowFields`) are silently dropped from INSERT/UPDATE — the field has no
+  SQL representation, so Serenity has nothing to write.
+- `[Expression]` fields are read-only outputs of the SELECT projection.
+  When **assigned** on a write path they DO end up in the SQL (per
+  Serenity's IsAssigned-based filter) and SQL Server rejects them with
+  "Invalid column name". The cure: do not assign Expression fields, or use
+  `CreateExcludingAsync` / `UpdateExcludingAsync` to drop them explicitly.
+- Both include-only and exclude variants emit exactly the expected column
+  lists end-to-end. Trap and cure are demonstrated symmetrically for both
+  INSERT and UPDATE paths.
+
+### Validation guards on the include-only overloads
+
+- `CreateAsync(row, fields)` rejects fields with `NotMapped` set or without
+  the `Insertable` flag (covers identity columns and `[Expression]` fields
+  with `Insertable=false`). Throws `ArgumentException` listing offending
+  field names — fail at API boundary instead of generating SQL the database
+  rejects.
+- `UpdateAsync(row, fields)` additionally rejects the Id field (which
+  belongs in WHERE, not SET).
+
 ## 0.7.3 (2026-05-03)
 
 ### Added

@@ -47,6 +47,23 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     /// Update <paramref name="row"/> by its Id field. Returns true when at least
     /// one row was affected. The row's Id must be set before calling.
     /// </summary>
+    /// <remarks>
+    /// Delegates to Serenity's <c>UpdateById</c>, which uses an
+    /// IsAssigned-based filter: any field on the row that has been assigned a
+    /// value AND has the <c>Updatable</c> flag set goes into the UPDATE.
+    /// Practical implications:
+    /// <list type="bullet">
+    /// <item><description><c>[NotMapped]</c> properties declared as plain CLR auto-properties
+    /// (no backing <see cref="Field"/> in <c>RowFields</c>) are silently dropped — they
+    /// have no SQL representation.</description></item>
+    /// <item><description><c>[Expression]</c> fields are NOT auto-skipped on writes. If you
+    /// assign a value to one, it WILL be included in the UPDATE and SQL Server will reject
+    /// it with "Invalid column name". Either don't assign Expression fields, or use
+    /// <see cref="UpdateExcludingAsync"/> /
+    /// <see cref="UpdateAsync(TRow, Serenity.Data.Field[], Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
+    /// to drop them.</description></item>
+    /// </list>
+    /// </remarks>
     public virtual Task<bool> UpdateAsync(
         TRow row,
         IUnitOfWork? uow = null,
@@ -57,6 +74,140 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
         return ExecuteAsync((c, _) =>
         {
             var affected = c.UpdateById(row);
+            return Task.FromResult(affected > 0);
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Update only the listed <paramref name="fields"/> on the row identified by
+    /// <paramref name="row"/>'s Id. Returns true when at least one row was affected.
+    /// </summary>
+    /// <remarks>
+    /// Surgical control over the UPDATE column list, bypassing IsAssigned
+    /// tracking. Validates each listed field up front:
+    /// <list type="bullet">
+    /// <item><description>The Id field is rejected (it belongs in WHERE, not SET).</description></item>
+    /// <item><description>Fields with <c>NotMapped</c> set are rejected.</description></item>
+    /// <item><description>Fields without the <c>Updatable</c> flag are rejected (covers
+    /// computed columns, <c>[Expression]</c> fields with <c>Updatable</c> cleared, and any
+    /// field marked <c>Updatable=false</c> via <c>[SetFieldFlags]</c>).</description></item>
+    /// </list>
+    /// Throws <see cref="ArgumentException"/> with the offending field names instead of
+    /// generating SQL the database would reject. The row's Id must be set before calling.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown if <paramref name="fields"/> is empty, or if any listed field is the Id
+    /// column, <c>NotMapped</c>, or has <c>Updatable=false</c>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the row's Id has not been assigned.
+    /// </exception>
+    public virtual Task<bool> UpdateAsync(
+        TRow row,
+        Field[] fields,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(fields);
+        if (fields.Length == 0)
+            throw new ArgumentException("At least one field must be specified.", nameof(fields));
+
+        var idRow = (IIdRow)row;
+        var idField = idRow.IdField;
+        var idValue = idField.AsObject(row);
+        if (idValue is null)
+            throw new InvalidOperationException(
+                "Row's Id must be set before calling UpdateAsync(row, fields, ...).");
+
+        var rejected = fields
+            .Where(f => ReferenceEquals(f, idField)
+                     || (f.Flags & FieldFlags.NotMapped) != 0
+                     || (f.Flags & FieldFlags.Updatable) != FieldFlags.Updatable)
+            .Select(f => ReferenceEquals(f, idField) ? $"{f.Name} (Id column)" : f.Name)
+            .ToArray();
+        if (rejected.Length > 0)
+            throw new ArgumentException(
+                $"Cannot UPDATE field(s) in SET list: {string.Join(", ", rejected)}. " +
+                "These are the Id column, NotMapped, Expression-decorated, or otherwise " +
+                "have FieldFlags.Updatable=false. The Id is used in WHERE; do not include " +
+                "it in the SET list. Drop to SqlUpdate via ExecuteAsync to bypass.",
+                nameof(fields));
+
+        return ExecuteAsync((c, _) =>
+        {
+            var update = SqlUpdate(row.Table);
+            foreach (var f in fields)
+                update.Set(f, f.AsObject(row));
+            update.Where(new BinaryCriteria(
+                new Criteria(idField),
+                CriteriaOperator.EQ,
+                new ValueCriteria(idValue)));
+
+            var affected = update.Execute(c);
+            return Task.FromResult(affected > 0);
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Update all assigned, table-mapped fields on <paramref name="row"/>
+    /// EXCEPT those listed in <paramref name="excludeFields"/>. Returns true
+    /// when at least one row was affected.
+    /// </summary>
+    /// <remarks>
+    /// Filter applied per field, in order: caller's <paramref name="excludeFields"/>,
+    /// then the Id field (which goes in WHERE, not SET), then <c>IsAssigned</c>,
+    /// then <c>NotMapped</c>, then <c>Updatable</c> flag. The <c>Updatable</c>-flag
+    /// check excludes computed/identity columns and any field where
+    /// <c>[SetFieldFlags]</c> has cleared the flag. Note that an
+    /// <c>[Expression]</c>-decorated field with the default flag set is NOT
+    /// auto-skipped — list it in <paramref name="excludeFields"/> if it might
+    /// be assigned on the row instance. The row's Id must be set before calling.
+    /// </remarks>
+    public virtual Task<bool> UpdateExcludingAsync(
+        TRow row,
+        Field[] excludeFields,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(excludeFields);
+
+        var idRow = (IIdRow)row;
+        var idField = idRow.IdField;
+        var idValue = idField.AsObject(row);
+        if (idValue is null)
+            throw new InvalidOperationException(
+                "Row's Id must be set before calling UpdateExcludingAsync(row, excludeFields, ...).");
+
+        var exclude = new HashSet<Field>(excludeFields);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var update = SqlUpdate(row.Table);
+            var anySet = false;
+            foreach (var f in row.GetFields())
+            {
+                // Never SET the Id column itself — it goes in WHERE.
+                if (ReferenceEquals(f, idField)) continue;
+                if (exclude.Contains(f)) continue;
+                if (!row.IsAssigned(f)) continue;
+                if ((f.Flags & FieldFlags.NotMapped) != 0) continue;
+                if ((f.Flags & FieldFlags.Updatable) != FieldFlags.Updatable) continue;
+
+                update.Set(f, f.AsObject(row));
+                anySet = true;
+            }
+
+            if (!anySet)
+                return Task.FromResult(false);
+
+            update.Where(new BinaryCriteria(
+                new Criteria(idField),
+                CriteriaOperator.EQ,
+                new ValueCriteria(idValue)));
+
+            var affected = update.Execute(c);
             return Task.FromResult(affected > 0);
         }, uow, ct);
     }
@@ -96,6 +247,14 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     [Obsolete(ObsoleteSyncMessage)]
     public virtual bool Update(TRow row, IUnitOfWork? uow = null) =>
         UpdateAsync(row, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool Update(TRow row, Field[] fields, IUnitOfWork? uow = null) =>
+        UpdateAsync(row, fields, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool UpdateExcluding(TRow row, Field[] excludeFields, IUnitOfWork? uow = null) =>
+        UpdateExcludingAsync(row, excludeFields, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
     public virtual bool DeleteById(TKey id, IUnitOfWork? uow = null) =>

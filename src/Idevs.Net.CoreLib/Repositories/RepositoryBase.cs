@@ -57,8 +57,22 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// type does not implement <see cref="IIdRow"/>).
     /// </summary>
     /// <remarks>
-    /// For updates, use <c>UpdateAsync</c>. The explicit Create/Update split mirrors
-    /// Serenity's endpoint convention.
+    /// Delegates to Serenity's <c>InsertAndGetID</c>, which uses an
+    /// IsAssigned-based filter: any field on the row that has been assigned a
+    /// value AND has the <c>Insertable</c> flag set goes into the INSERT.
+    /// Practical implications:
+    /// <list type="bullet">
+    /// <item><description><c>[NotMapped]</c> properties declared as plain CLR auto-properties
+    /// (no backing <see cref="Field"/> in <c>RowFields</c>) are silently dropped — they
+    /// have no SQL representation. This is the production-correct pattern.</description></item>
+    /// <item><description><c>[Expression]</c> fields are NOT auto-skipped on writes. If you
+    /// assign a value to one, it WILL be included in the INSERT and SQL Server will reject
+    /// it with "Invalid column name". Either don't assign Expression fields, or use
+    /// <see cref="CreateExcludingAsync"/> / <see cref="CreateAsync(TRow, Serenity.Data.Field[], Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
+    /// to drop them.</description></item>
+    /// <item><description>Identity columns are skipped automatically by Serenity (their
+    /// <c>Insertable</c> flag is off).</description></item>
+    /// </list>
     /// </remarks>
     public virtual Task<long> CreateAsync(
         TRow row,
@@ -70,6 +84,104 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
         return ExecuteAsync((c, _) =>
             Task.FromResult<long>(c.InsertAndGetID(row) ?? 0L),
             uow, ct);
+    }
+
+    /// <summary>
+    /// Insert <paramref name="row"/> writing only the listed <paramref name="fields"/>.
+    /// Returns the new identity, or 0 when the row has no identity column.
+    /// </summary>
+    /// <remarks>
+    /// Surgical control over the INSERT column list, bypassing
+    /// IsAssigned tracking. Validates each listed field up front:
+    /// <list type="bullet">
+    /// <item><description>Fields with <c>NotMapped</c> set are rejected (they have no SQL column).</description></item>
+    /// <item><description>Fields without the <c>Insertable</c> flag are rejected (covers identity
+    /// columns and <c>[Expression]</c> fields that cleared <c>Insertable</c> via <c>[SetFieldFlags]</c>).</description></item>
+    /// </list>
+    /// Throws <see cref="ArgumentException"/> with the offending field names instead of
+    /// generating SQL that the database would reject. If you need to write to such a
+    /// field anyway (rare), drop to <c>SqlInsert</c> directly via <c>ExecuteAsync</c>.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown if <paramref name="fields"/> is empty, or if any listed field is
+    /// <c>NotMapped</c> or has <c>Insertable=false</c>.
+    /// </exception>
+    public virtual Task<long> CreateAsync(
+        TRow row,
+        Field[] fields,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(fields);
+        if (fields.Length == 0)
+            throw new ArgumentException("At least one field must be specified.", nameof(fields));
+
+        var rejected = fields
+            .Where(f => (f.Flags & FieldFlags.NotMapped) != 0
+                     || (f.Flags & FieldFlags.Insertable) != FieldFlags.Insertable)
+            .Select(f => f.Name)
+            .ToArray();
+        if (rejected.Length > 0)
+            throw new ArgumentException(
+                $"Cannot INSERT non-insertable field(s): {string.Join(", ", rejected)}. " +
+                "These are NotMapped, Expression-decorated, identity columns, or otherwise " +
+                "have FieldFlags.Insertable=false. Drop to SqlInsert via ExecuteAsync if you " +
+                "need to bypass this check.",
+                nameof(fields));
+
+        return ExecuteAsync((c, _) =>
+        {
+            var insert = SqlInsert(row.Table);
+            foreach (var f in fields)
+                insert.Set(f, f.AsObject(row));
+            return Task.FromResult<long>(insert.ExecuteAndGetID(c) ?? 0L);
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Insert <paramref name="row"/> writing all assigned, table-mapped fields
+    /// EXCEPT those listed in <paramref name="excludeFields"/>. Returns the new
+    /// identity, or 0 when the row has no identity column.
+    /// </summary>
+    /// <remarks>
+    /// Filter applied per field, in order: caller's <paramref name="excludeFields"/>,
+    /// then <c>IsAssigned</c>, then <c>NotMapped</c>, then <c>Insertable</c> flag.
+    /// The <c>Insertable</c>-flag check excludes identity columns and any field
+    /// where <c>[SetFieldFlags]</c> has cleared the flag. Note that an
+    /// <c>[Expression]</c>-decorated field with the default flag set is NOT
+    /// auto-skipped — list it in <paramref name="excludeFields"/> if it might
+    /// be assigned on the row instance.
+    /// </remarks>
+    public virtual Task<long> CreateExcludingAsync(
+        TRow row,
+        Field[] excludeFields,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(excludeFields);
+
+        var exclude = new HashSet<Field>(excludeFields);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var insert = SqlInsert(row.Table);
+            foreach (var f in row.GetFields())
+            {
+                if (exclude.Contains(f)) continue;
+                if (!row.IsAssigned(f)) continue;
+                if ((f.Flags & FieldFlags.NotMapped) != 0) continue;
+                // The Insertable check excludes [Expression]-decorated fields
+                // (they are flagged Calculated/Foreign without Insertable),
+                // identity columns, computed columns, and any field marked
+                // Insertable=false.
+                if ((f.Flags & FieldFlags.Insertable) != FieldFlags.Insertable) continue;
+
+                insert.Set(f, f.AsObject(row));
+            }
+            return Task.FromResult<long>(insert.ExecuteAndGetID(c) ?? 0L);
+        }, uow, ct);
     }
 
     /// <summary>
@@ -206,6 +318,14 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     [Obsolete(ObsoleteSyncMessage)]
     public virtual long Create(TRow row, IUnitOfWork? uow = null) =>
         CreateAsync(row, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual long Create(TRow row, Field[] fields, IUnitOfWork? uow = null) =>
+        CreateAsync(row, fields, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual long CreateExcluding(TRow row, Field[] excludeFields, IUnitOfWork? uow = null) =>
+        CreateExcludingAsync(row, excludeFields, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
     public virtual int Update(

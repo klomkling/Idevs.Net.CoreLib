@@ -19,3 +19,11 @@ virtual Idevs.Repositories.RepositoryBase<TRow>.Update(System.Action<Serenity.Da
 virtual Idevs.Repositories.RepositoryBase<TRow>.UpdateMany(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.IUnitOfWork uow = null) -> int
 virtual Idevs.Repositories.RepositoryBase<TRow>.Delete(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null) -> int
 virtual Idevs.Repositories.RepositoryBase<TRow>.DeleteMany(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.IUnitOfWork uow = null) -> int
+virtual Idevs.Repositories.RepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RepositoryBase<TRow>.Create(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RepositoryBase<TRow>.CreateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RepositoryBase<TRow>.CreateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> bool
