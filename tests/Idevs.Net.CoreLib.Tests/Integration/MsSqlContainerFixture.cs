@@ -25,10 +25,19 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
     public ISqlConnections SqlConnections { get; private set; } = default!;
     public string ConnectionString => _container.GetConnectionString();
 
+    /// <summary>
+    /// Pinned SQL Server image. We deliberately don't use the floating
+    /// <c>2022-latest</c> tag — Microsoft retags it on every CU release,
+    /// which can change startup behavior or SQL semantics and break CI
+    /// without any change in this repo. Bump this constant intentionally
+    /// when we want to validate against a newer CU.
+    /// </summary>
+    private const string MsSqlImage = "mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04";
+
     public MsSqlContainerFixture()
     {
         _container = new MsSqlBuilder()
-            .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+            .WithImage(MsSqlImage)
             .WithPassword(SaPassword)
             .Build();
     }

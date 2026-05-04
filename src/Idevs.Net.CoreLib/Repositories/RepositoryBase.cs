@@ -57,12 +57,22 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// type does not implement <see cref="IIdRow"/>).
     /// </summary>
     /// <remarks>
-    /// Serenity's <c>InsertAndGetID</c> automatically skips fields with
-    /// <c>FieldFlags.NotMapped</c>, <c>FieldFlags.Expression</c>, or
-    /// <c>FieldFlags.Insertable=false</c>. Setting a value on those fields is a
-    /// no-op as far as the SQL is concerned. For explicit column control, use
-    /// the <see cref="CreateAsync(TRow, Serenity.Data.Field[], Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
-    /// overload.
+    /// Delegates to Serenity's <c>InsertAndGetID</c>, which uses an
+    /// IsAssigned-based filter: any field on the row that has been assigned a
+    /// value AND has the <c>Insertable</c> flag set goes into the INSERT.
+    /// Practical implications:
+    /// <list type="bullet">
+    /// <item><description><c>[NotMapped]</c> properties declared as plain CLR auto-properties
+    /// (no backing <see cref="Field"/> in <c>RowFields</c>) are silently dropped — they
+    /// have no SQL representation. This is the production-correct pattern.</description></item>
+    /// <item><description><c>[Expression]</c> fields are NOT auto-skipped on writes. If you
+    /// assign a value to one, it WILL be included in the INSERT and SQL Server will reject
+    /// it with "Invalid column name". Either don't assign Expression fields, or use
+    /// <see cref="CreateExcludingAsync"/> / <see cref="CreateAsync(TRow, Serenity.Data.Field[], Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
+    /// to drop them.</description></item>
+    /// <item><description>Identity columns are skipped automatically by Serenity (their
+    /// <c>Insertable</c> flag is off).</description></item>
+    /// </list>
     /// </remarks>
     public virtual Task<long> CreateAsync(
         TRow row,
@@ -81,14 +91,21 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// Returns the new identity, or 0 when the row has no identity column.
     /// </summary>
     /// <remarks>
-    /// Use when you want surgical control over which columns end up in the
-    /// INSERT, regardless of which fields are "assigned" on the row instance.
-    /// The default <see cref="CreateAsync(TRow, IUnitOfWork?, CancellationToken)"/>
-    /// already auto-skips <c>NotMapped</c> / <c>Expression</c> / non-insertable
-    /// fields; this overload is for cases where you want to also exclude
-    /// regular columns (e.g., let the database fill defaults, or split a row
-    /// across multiple inserts).
+    /// Surgical control over the INSERT column list, bypassing
+    /// IsAssigned tracking. Validates each listed field up front:
+    /// <list type="bullet">
+    /// <item><description>Fields with <c>NotMapped</c> set are rejected (they have no SQL column).</description></item>
+    /// <item><description>Fields without the <c>Insertable</c> flag are rejected (covers identity
+    /// columns and <c>[Expression]</c> fields that cleared <c>Insertable</c> via <c>[SetFieldFlags]</c>).</description></item>
+    /// </list>
+    /// Throws <see cref="ArgumentException"/> with the offending field names instead of
+    /// generating SQL that the database would reject. If you need to write to such a
+    /// field anyway (rare), drop to <c>SqlInsert</c> directly via <c>ExecuteAsync</c>.
     /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown if <paramref name="fields"/> is empty, or if any listed field is
+    /// <c>NotMapped</c> or has <c>Insertable=false</c>.
+    /// </exception>
     public virtual Task<long> CreateAsync(
         TRow row,
         Field[] fields,
@@ -99,6 +116,19 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
         ArgumentNullException.ThrowIfNull(fields);
         if (fields.Length == 0)
             throw new ArgumentException("At least one field must be specified.", nameof(fields));
+
+        var rejected = fields
+            .Where(f => (f.Flags & FieldFlags.NotMapped) != 0
+                     || (f.Flags & FieldFlags.Insertable) != FieldFlags.Insertable)
+            .Select(f => f.Name)
+            .ToArray();
+        if (rejected.Length > 0)
+            throw new ArgumentException(
+                $"Cannot INSERT non-insertable field(s): {string.Join(", ", rejected)}. " +
+                "These are NotMapped, Expression-decorated, identity columns, or otherwise " +
+                "have FieldFlags.Insertable=false. Drop to SqlInsert via ExecuteAsync if you " +
+                "need to bypass this check.",
+                nameof(fields));
 
         return ExecuteAsync((c, _) =>
         {
@@ -115,13 +145,13 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// identity, or 0 when the row has no identity column.
     /// </summary>
     /// <remarks>
-    /// Honors the same auto-exclusion rules as the default
-    /// <see cref="CreateAsync(TRow, IUnitOfWork?, CancellationToken)"/>
-    /// (skips <c>NotMapped</c>, <c>Expression</c>, and non-insertable fields)
-    /// AND additionally skips the explicit <paramref name="excludeFields"/>.
-    /// Useful when most of the row should be inserted but a few columns must
-    /// be omitted (e.g., let the database default <c>CreatedAt</c>, skip a
-    /// derived column you populated for downstream code).
+    /// Filter applied per field, in order: caller's <paramref name="excludeFields"/>,
+    /// then <c>IsAssigned</c>, then <c>NotMapped</c>, then <c>Insertable</c> flag.
+    /// The <c>Insertable</c>-flag check excludes identity columns and any field
+    /// where <c>[SetFieldFlags]</c> has cleared the flag. Note that an
+    /// <c>[Expression]</c>-decorated field with the default flag set is NOT
+    /// auto-skipped — list it in <paramref name="excludeFields"/> if it might
+    /// be assigned on the row instance.
     /// </remarks>
     public virtual Task<long> CreateExcludingAsync(
         TRow row,

@@ -30,20 +30,49 @@ public sealed class RepositoryWriteIntegrationTests : IDisposable
 
     private static readonly IntegrationTestRow.RowFields Fld = IntegrationTestRow.Fields;
 
+    /// <summary>
+    /// Asserts the field-flag baseline assumed by every other test in this
+    /// suite. If Serenity changes how it derives flags from row attributes
+    /// (or our row's attribute usage drifts), this test fails first with a
+    /// clear message — instead of cascading into N opaque "Invalid column
+    /// name" failures elsewhere.
+    /// </summary>
     [Fact]
-    public void Diagnose_FieldFlags()
+    public void RowFieldFlags_MatchExpectedBaseline()
     {
-        foreach (var f in IntegrationTestRow.Fields)
+        static (bool Insertable, bool Updatable, bool NotMapped, bool Calculated, bool Foreign)
+            Read(Field f) => (
+                (f.Flags & FieldFlags.Insertable) == FieldFlags.Insertable,
+                (f.Flags & FieldFlags.Updatable) == FieldFlags.Updatable,
+                (f.Flags & FieldFlags.NotMapped) != 0,
+                (f.Flags & FieldFlags.Calculated) != 0,
+                (f.Flags & FieldFlags.Foreign) != 0);
+
+        // Identity column — auto-managed by SQL Server, neither insertable nor updatable.
+        var id = Read(Fld.Id);
+        Assert.False(id.Insertable, "Id (identity) must not be Insertable.");
+        Assert.False(id.Updatable, "Id (identity) must not be Updatable.");
+
+        // Regular table columns — must be both insertable and updatable.
+        foreach (var (name, f) in new[] {
+            (nameof(Fld.Code), (Field)Fld.Code),
+            (nameof(Fld.Amount), (Field)Fld.Amount),
+            (nameof(Fld.Status), (Field)Fld.Status)})
         {
-            var insertable = (f.Flags & FieldFlags.Insertable) == FieldFlags.Insertable;
-            var updatable = (f.Flags & FieldFlags.Updatable) == FieldFlags.Updatable;
-            var notMapped = (f.Flags & FieldFlags.NotMapped) != 0;
-            var calculated = (f.Flags & FieldFlags.Calculated) != 0;
-            var foreign = (f.Flags & FieldFlags.Foreign) != 0;
-            Console.WriteLine(
-                $"{f.Name}: Flags={f.Flags} Insertable={insertable} Updatable={updatable} " +
-                $"NotMapped={notMapped} Calculated={calculated} Foreign={foreign}");
+            var r = Read(f);
+            Assert.True(r.Insertable, $"{name}: expected Insertable=true.");
+            Assert.True(r.Updatable, $"{name}: expected Updatable=true.");
+            Assert.False(r.NotMapped, $"{name}: expected NotMapped=false.");
+            Assert.False(r.Calculated, $"{name}: expected Calculated=false.");
+            Assert.False(r.Foreign, $"{name}: expected Foreign=false.");
         }
+
+        // [Expression]-decorated AmountDoubled — Serenity sets Foreign+Calculated.
+        // Note: in this row the attribute does NOT clear Insertable/Updatable
+        // automatically; that's the whole point of the expression-trap tests.
+        var ad = Read(Fld.AmountDoubled);
+        Assert.True(ad.Calculated, "AmountDoubled: expected Calculated=true (from [Expression]).");
+        Assert.True(ad.Foreign, "AmountDoubled: expected Foreign=true (from [Expression]).");
     }
 
     /// <summary>Read columns from the test table via raw ADO.NET — avoids any
@@ -298,5 +327,91 @@ public sealed class RepositoryWriteIntegrationTests : IDisposable
         var (code, amount, _) = ReadRow((int)newId);
         Assert.Equal("X-002", code);
         Assert.Equal(1m, amount);
+    }
+
+    /// <summary>
+    /// Symmetric trap on the UPDATE path: assigning an Expression field on a
+    /// row passed to UpdateAsync(row) puts it in the SET list and SQL Server
+    /// rejects the statement. Documents that the trap is not INSERT-only.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_AssignedExpressionField_FailsAtSqlBecauseExpressionIsNotARealColumn()
+    {
+        var seedId = await _repo.CreateAsync(new IntegrationTestRow
+        {
+            Code = "X-003",
+            Amount = 2m,
+            Status = "Initial",
+        });
+
+        var update = new IntegrationTestRow
+        {
+            Id = (int)seedId,
+            Status = "Updated",
+            AmountDoubled = 8888m,    // Expression — assigning puts it in SET
+        };
+
+        await Assert.ThrowsAsync<Microsoft.Data.SqlClient.SqlException>(() =>
+            _repo.UpdateAsync(update));
+    }
+
+    /// <summary>
+    /// And the cure on the UPDATE path:
+    /// <see cref="RepositoryBase{TRow, TKey}.UpdateExcludingAsync"/> drops
+    /// the assigned Expression field before building the SET list.
+    /// </summary>
+    [Fact]
+    public async Task UpdateExcludingAsync_DropsAssignedExpressionField()
+    {
+        var seedId = await _repo.CreateAsync(new IntegrationTestRow
+        {
+            Code = "X-004",
+            Amount = 3m,
+            Status = "Initial",
+        });
+
+        var update = new IntegrationTestRow
+        {
+            Id = (int)seedId,
+            Status = "Updated",
+            AmountDoubled = 7777m,    // assigned, but excluded below
+        };
+
+        var ok = await _repo.UpdateExcludingAsync(update, [Fld.AmountDoubled]);
+        Assert.True(ok);
+
+        var (code, amount, status) = ReadRow((int)seedId);
+        Assert.Equal("X-004", code);          // unchanged
+        Assert.Equal(3m, amount);             // unchanged
+        Assert.Equal("Updated", status);      // updated
+    }
+
+    /// <summary>
+    /// Validation guard on UpdateAsync(row, fields): cannot include the Id
+    /// column in the SET list. The Id belongs in WHERE.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_WithFieldsContainingIdField_ThrowsArgumentException()
+    {
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _repo.UpdateAsync(
+                new IntegrationTestRow { Id = 1, Code = "x" },
+                [Fld.Id, Fld.Code]));
+        Assert.Contains("Id", ex.Message);
+    }
+
+    /// <summary>
+    /// Validation guard on CreateAsync(row, fields): cannot include
+    /// non-insertable fields (identity column, NotMapped, Expression with
+    /// Insertable=false, etc.).
+    /// </summary>
+    [Fact]
+    public async Task CreateAsync_WithFieldsContainingNonInsertable_ThrowsArgumentException()
+    {
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _repo.CreateAsync(
+                new IntegrationTestRow { Code = "x" },
+                [Fld.Code, Fld.Id])); // Id is identity, not insertable
+        Assert.Contains("Id", ex.Message);
     }
 }

@@ -48,12 +48,21 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     /// one row was affected. The row's Id must be set before calling.
     /// </summary>
     /// <remarks>
-    /// Serenity's <c>UpdateById</c> only writes fields that have been "assigned"
-    /// on the row instance, and automatically skips fields with
-    /// <c>FieldFlags.NotMapped</c>, <c>FieldFlags.Expression</c>, or
-    /// <c>FieldFlags.Updatable=false</c>. For explicit column control, use the
+    /// Delegates to Serenity's <c>UpdateById</c>, which uses an
+    /// IsAssigned-based filter: any field on the row that has been assigned a
+    /// value AND has the <c>Updatable</c> flag set goes into the UPDATE.
+    /// Practical implications:
+    /// <list type="bullet">
+    /// <item><description><c>[NotMapped]</c> properties declared as plain CLR auto-properties
+    /// (no backing <see cref="Field"/> in <c>RowFields</c>) are silently dropped — they
+    /// have no SQL representation.</description></item>
+    /// <item><description><c>[Expression]</c> fields are NOT auto-skipped on writes. If you
+    /// assign a value to one, it WILL be included in the UPDATE and SQL Server will reject
+    /// it with "Invalid column name". Either don't assign Expression fields, or use
+    /// <see cref="UpdateExcludingAsync"/> /
     /// <see cref="UpdateAsync(TRow, Serenity.Data.Field[], Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
-    /// overload.
+    /// to drop them.</description></item>
+    /// </list>
     /// </remarks>
     public virtual Task<bool> UpdateAsync(
         TRow row,
@@ -74,10 +83,25 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     /// <paramref name="row"/>'s Id. Returns true when at least one row was affected.
     /// </summary>
     /// <remarks>
-    /// Use when the row instance has many assigned fields but you want only a
-    /// specific subset to land in the UPDATE — bypasses Serenity's
-    /// "assigned-field" tracking. The row's Id must be set before calling.
+    /// Surgical control over the UPDATE column list, bypassing IsAssigned
+    /// tracking. Validates each listed field up front:
+    /// <list type="bullet">
+    /// <item><description>The Id field is rejected (it belongs in WHERE, not SET).</description></item>
+    /// <item><description>Fields with <c>NotMapped</c> set are rejected.</description></item>
+    /// <item><description>Fields without the <c>Updatable</c> flag are rejected (covers
+    /// computed columns, <c>[Expression]</c> fields with <c>Updatable</c> cleared, and any
+    /// field marked <c>Updatable=false</c> via <c>[SetFieldFlags]</c>).</description></item>
+    /// </list>
+    /// Throws <see cref="ArgumentException"/> with the offending field names instead of
+    /// generating SQL the database would reject. The row's Id must be set before calling.
     /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// Thrown if <paramref name="fields"/> is empty, or if any listed field is the Id
+    /// column, <c>NotMapped</c>, or has <c>Updatable=false</c>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the row's Id has not been assigned.
+    /// </exception>
     public virtual Task<bool> UpdateAsync(
         TRow row,
         Field[] fields,
@@ -90,10 +114,25 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
             throw new ArgumentException("At least one field must be specified.", nameof(fields));
 
         var idRow = (IIdRow)row;
-        var idValue = idRow.IdField.AsObject(row);
+        var idField = idRow.IdField;
+        var idValue = idField.AsObject(row);
         if (idValue is null)
             throw new InvalidOperationException(
                 "Row's Id must be set before calling UpdateAsync(row, fields, ...).");
+
+        var rejected = fields
+            .Where(f => ReferenceEquals(f, idField)
+                     || (f.Flags & FieldFlags.NotMapped) != 0
+                     || (f.Flags & FieldFlags.Updatable) != FieldFlags.Updatable)
+            .Select(f => ReferenceEquals(f, idField) ? $"{f.Name} (Id column)" : f.Name)
+            .ToArray();
+        if (rejected.Length > 0)
+            throw new ArgumentException(
+                $"Cannot UPDATE field(s) in SET list: {string.Join(", ", rejected)}. " +
+                "These are the Id column, NotMapped, Expression-decorated, or otherwise " +
+                "have FieldFlags.Updatable=false. The Id is used in WHERE; do not include " +
+                "it in the SET list. Drop to SqlUpdate via ExecuteAsync to bypass.",
+                nameof(fields));
 
         return ExecuteAsync((c, _) =>
         {
@@ -101,7 +140,7 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
             foreach (var f in fields)
                 update.Set(f, f.AsObject(row));
             update.Where(new BinaryCriteria(
-                new Criteria(idRow.IdField),
+                new Criteria(idField),
                 CriteriaOperator.EQ,
                 new ValueCriteria(idValue)));
 
@@ -116,14 +155,14 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     /// when at least one row was affected.
     /// </summary>
     /// <remarks>
-    /// Honors the same auto-exclusion rules as the default
-    /// <see cref="UpdateAsync(TRow, IUnitOfWork?, CancellationToken)"/>
-    /// (skips <c>NotMapped</c>, expression/calculated, and non-updatable
-    /// fields) AND additionally skips the explicit
-    /// <paramref name="excludeFields"/>. Useful when most of the row should be
-    /// updated but a specific column must be preserved (e.g., never overwrite
-    /// an audit timestamp from this code path). The row's Id must be set
-    /// before calling.
+    /// Filter applied per field, in order: caller's <paramref name="excludeFields"/>,
+    /// then the Id field (which goes in WHERE, not SET), then <c>IsAssigned</c>,
+    /// then <c>NotMapped</c>, then <c>Updatable</c> flag. The <c>Updatable</c>-flag
+    /// check excludes computed/identity columns and any field where
+    /// <c>[SetFieldFlags]</c> has cleared the flag. Note that an
+    /// <c>[Expression]</c>-decorated field with the default flag set is NOT
+    /// auto-skipped — list it in <paramref name="excludeFields"/> if it might
+    /// be assigned on the row instance. The row's Id must be set before calling.
     /// </remarks>
     public virtual Task<bool> UpdateExcludingAsync(
         TRow row,

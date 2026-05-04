@@ -23,7 +23,7 @@
   `MsSqlContainerCollection`. Integration tests are tagged
   `[Trait("Category", "Integration")]` for easy filtering.
 
-### Verified (integration tests against SQL Server 2022)
+### Verified (integration tests against SQL Server 2022, pinned image tag)
 
 - `[NotMapped]` properties (declared without a backing `Field` in
   `RowFields`) are silently dropped from INSERT/UPDATE — the field has no
@@ -34,7 +34,18 @@
   "Invalid column name". The cure: do not assign Expression fields, or use
   `CreateExcludingAsync` / `UpdateExcludingAsync` to drop them explicitly.
 - Both include-only and exclude variants emit exactly the expected column
-  lists end-to-end.
+  lists end-to-end. Trap and cure are demonstrated symmetrically for both
+  INSERT and UPDATE paths.
+
+### Validation guards on the include-only overloads
+
+- `CreateAsync(row, fields)` rejects fields with `NotMapped` set or without
+  the `Insertable` flag (covers identity columns and `[Expression]` fields
+  with `Insertable=false`). Throws `ArgumentException` listing offending
+  field names — fail at API boundary instead of generating SQL the database
+  rejects.
+- `UpdateAsync(row, fields)` additionally rejects the Id field (which
+  belongs in WHERE, not SET).
 
 ## 0.7.3 (2026-05-03)
 
