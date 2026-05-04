@@ -83,6 +83,66 @@ public class RepositoryBaseTests
     }
 
     [Fact]
+    public async Task CountAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.CountAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task CountAsync_PassesUowAndCancellationToken()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var uow = new UnitOfWork(Substitute.For<IDbConnection>());
+        using var cts = new CancellationTokenSource();
+
+        await repo.CountAsync(_ => { }, uow, cts.Token);
+
+        Assert.Same(uow, repo.LastUow);
+        Assert.Equal(cts.Token, repo.LastCt);
+    }
+
+    [Fact]
+    public async Task CountAsync_NullConfigure_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.CountAsync(null!));
+    }
+
+    [Fact]
+    public async Task ExistsAsync_DispatchesViaExecuteAsync()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+
+        await repo.ExistsAsync(_ => { });
+
+        Assert.Equal(1, repo.ExecuteAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task ExistsAsync_PassesUowAndCancellationToken()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        var uow = new UnitOfWork(Substitute.For<IDbConnection>());
+        using var cts = new CancellationTokenSource();
+
+        await repo.ExistsAsync(_ => { }, uow, cts.Token);
+
+        Assert.Same(uow, repo.LastUow);
+        Assert.Equal(cts.Token, repo.LastCt);
+    }
+
+    [Fact]
+    public async Task ExistsAsync_NullConfigure_Throws()
+    {
+        var repo = new CapturingRepo(Substitute.For<ISqlConnections>());
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repo.ExistsAsync(null!));
+    }
+
+    [Fact]
     public async Task UpdateAsync_DispatchesViaExecuteAsync()
     {
         var repo = new CapturingRepo(Substitute.For<ISqlConnections>());

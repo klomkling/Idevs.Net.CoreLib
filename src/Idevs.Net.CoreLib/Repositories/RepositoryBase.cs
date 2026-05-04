@@ -53,6 +53,83 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     }
 
     /// <summary>
+    /// Count rows that match the configured query. Pass an empty configure
+    /// (<c>_ =&gt; { }</c>) to count every row in the table.
+    /// </summary>
+    /// <remarks>
+    /// Builds <c>SELECT COUNT(*) FROM table</c>, applies the caller's WHERE
+    /// (and any joins) inside <paramref name="configure"/>, and reads back a
+    /// scalar via <see cref="SqlHelper.ExecuteScalar(System.Data.IDbConnection, SqlQuery, Microsoft.Extensions.Logging.ILogger)"/>.
+    /// Pre-bound to <see cref="SqlServiceBase.Dialect"/> via the
+    /// <see cref="SqlServiceBase.SqlQuery"/> factory.
+    /// <para>
+    /// Returns <see cref="long"/> to accommodate <c>COUNT(*)</c> values from
+    /// providers whose count column is 64-bit (PostgreSQL, MySQL
+    /// <c>BIGINT UNSIGNED</c>); SQL Server's <c>COUNT(*)</c> is 32-bit but
+    /// upcasts cleanly.
+    /// </para>
+    /// <para>
+    /// <b>Not supported:</b> queries that include <c>GROUP BY</c> / <c>HAVING</c>.
+    /// Those return multiple rows; <see cref="SqlHelper.ExecuteScalar(System.Data.IDbConnection, SqlQuery, Microsoft.Extensions.Logging.ILogger)"/>
+    /// only reads the first row's count, which is silently wrong. For grouped
+    /// counts, materialize via <see cref="ListAsync"/> + LINQ <c>GroupBy</c>,
+    /// or build the query manually via <see cref="SqlServiceBase.ExecuteAsync{T}"/>
+    /// with a wrapping <c>SELECT COUNT(*) FROM (...) g</c> subquery.
+    /// </para>
+    /// </remarks>
+    public virtual Task<long> CountAsync(
+        Action<SqlQuery> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            // From(IRow) — not From(string) — registers the row's alias (T0
+            // by default) so field criteria like Fld.Status == "x" bind to
+            // the correct table reference.
+            var query = SqlQuery()
+                .From(new TRow())
+                .Select("COUNT(*)");
+            configure(query);
+            var result = SqlHelper.ExecuteScalar(c, query, logger: null);
+            return Task.FromResult(Convert.ToInt64(result));
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Return <c>true</c> when at least one row matches the configured query.
+    /// </summary>
+    /// <remarks>
+    /// More efficient than <c>CountAsync(...) &gt; 0</c> for large tables —
+    /// emits <c>SELECT 1 FROM table WHERE ...</c> with a row-limit clause so
+    /// the engine can short-circuit at the first match instead of counting
+    /// every matching row. The limit is applied via <c>SqlQuery.Take(1)</c>;
+    /// the actual SQL is dialect-specific (<c>TOP 1</c> on SQL Server,
+    /// <c>LIMIT 1</c> on MySQL/PostgreSQL/SQLite, <c>FETCH FIRST 1 ROWS ONLY</c>
+    /// on Oracle).
+    /// </remarks>
+    public virtual Task<bool> ExistsAsync(
+        Action<SqlQuery> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var query = SqlQuery()
+                .From(new TRow())
+                .Select("1")
+                .Take(1);
+            configure(query);
+            var result = SqlHelper.ExecuteScalar(c, query, logger: null);
+            return Task.FromResult(result is not null && result != DBNull.Value);
+        }, uow, ct);
+    }
+
+    /// <summary>
     /// Insert <paramref name="row"/> and return the new identity (or 0 if the row
     /// type does not implement <see cref="IIdRow"/>).
     /// </summary>
@@ -310,6 +387,14 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     [Obsolete(ObsoleteSyncMessage)]
     public virtual List<TRow> List(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
         ListAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual long Count(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        CountAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool Exists(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        ExistsAsync(configure, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
     public virtual TRow? GetBy<TValue>(Field keyField, TValue value, IUnitOfWork? uow = null) =>

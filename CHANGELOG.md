@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.5 (2026-05-04)
+
+### Added
+
+- `RepositoryBase<TRow>.CountAsync(Action<SqlQuery>, ...)` — returns
+  `Task<long>` (not `Task<int>`, to accommodate 64-bit `COUNT(*)` columns
+  on PostgreSQL / MySQL `BIGINT UNSIGNED`). Emits `SELECT COUNT(*) FROM
+  table WHERE ...` via `SqlHelper.ExecuteScalar`. Pass `_ => { }` to count
+  every row. Does NOT support `GROUP BY` / `HAVING` (would silently return
+  only the first group's count) — use `ListAsync` + LINQ `GroupBy` or a
+  manual subquery via `ExecuteAsync` for grouped counts.
+- `RepositoryBase<TRow>.ExistsAsync(Action<SqlQuery>, ...)` — returns
+  `Task<bool>`. Emits `SELECT 1 FROM table WHERE ...` plus a dialect-
+  specific row-limit clause (`TOP 1` on SQL Server, `LIMIT 1` on
+  MySQL/PostgreSQL/SQLite, `FETCH FIRST 1 ROWS ONLY` on Oracle) via
+  `SqlQuery.Take(1)`, so the engine can short-circuit at the first match.
+- Sync `[Obsolete]` wrappers (`Count` returns `long`, `Exists` returns
+  `bool`) following the existing migration pattern.
+- `SqlServiceBase.ExecuteScalarAsync<T>(string sql, IDictionary?, ...)` —
+  thin wrapper over `SqlHelper.ExecuteScalar` composed with `ExecuteAsync`
+  for connection lifetime + UoW participation. Returns `default(T)` when
+  the result is `null` / `DBNull.Value`; otherwise converts via
+  `Convert.ChangeType`. Cuts the typical 5-line raw-SQL boilerplate down
+  to one expression — added for GeniuzPOS-style codebases that read
+  scalars via raw SQL frequently.
+- `SqlServiceBase.ExecuteNonQueryAsync(string sql, IDictionary?, ...)` —
+  symmetric for `UPDATE` / `DELETE` / `INSERT` / DDL. Returns the affected-
+  row count reported by the provider. MySQL/MariaDB consumers should
+  apply the `Use Affected Rows=false` flag from the v0.7.4 MIGRATION
+  note since the count semantics for raw `UPDATE`/`DELETE` follow the
+  same matched-vs-changed-rows distinction.
+- Sync `[Obsolete]` wrappers (`ExecuteScalar<T>`, `ExecuteNonQuery`)
+  following the existing migration pattern.
+
+### Verified (integration tests against SQL Server 2022)
+
+- `CountAsync` returns 0 for empty table, total rows for empty configure,
+  exact counts for simple and composite WHERE clauses.
+- `ExistsAsync` returns false for empty table / no match, true for one or
+  many matching rows, and honors composite WHERE predicates.
+
+### Note
+
+These were originally proposed for 0.7.2 but deferred because the right
+Serenity API path wasn't immediately reachable. The implementation uses
+`SqlQuery().From(IRow).Select(...)` (not `From(string)`) so that field
+criteria like `Fld.Status == "Active"` bind to the correct table alias.
+
 ## 0.7.4 (2026-05-04)
 
 ### Added

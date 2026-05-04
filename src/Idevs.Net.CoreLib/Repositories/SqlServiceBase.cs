@@ -157,6 +157,77 @@ public abstract class SqlServiceBase
         scope.Commit();
     }
 
+    /// <summary>
+    /// Execute raw SQL that returns a single scalar value.
+    /// </summary>
+    /// <remarks>
+    /// Thin wrapper over <see cref="SqlHelper.ExecuteScalar(System.Data.IDbConnection, string, System.Collections.Generic.IDictionary{string, object}, Microsoft.Extensions.Logging.ILogger)"/>
+    /// composed with <see cref="ExecuteAsync{T}"/> for connection lifetime
+    /// + <see cref="IUnitOfWork"/> participation. Returns
+    /// <c>default(T)</c> when the result is <c>null</c> or
+    /// <see cref="DBNull.Value"/>; otherwise converts via
+    /// <see cref="Convert.ChangeType(object, Type)"/>.
+    /// <para>
+    /// MySQL/MariaDB consumers should set <c>Use Affected Rows=false</c> on
+    /// the connection string if the underlying SQL is an <c>UPDATE</c>
+    /// returning a count via <c>OUTPUT</c>/<c>RETURNING</c>; pure
+    /// <c>SELECT</c> scalars are unaffected by the matched-vs-changed-rows
+    /// distinction. See the v0.7.4 MIGRATION note.
+    /// </para>
+    /// </remarks>
+    protected Task<T?> ExecuteScalarAsync<T>(
+        string sql,
+        IDictionary<string, object?>? parameters = null,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(sql);
+        return ExecuteAsync((c, _) =>
+        {
+            var paramDict = parameters as IDictionary<string, object>;
+            if (parameters is not null && paramDict is null)
+                paramDict = parameters.ToDictionary(p => p.Key, p => p.Value!);
+
+            var result = SqlHelper.ExecuteScalar(c, sql, paramDict, logger: null);
+            if (result is null || result == DBNull.Value)
+                return Task.FromResult<T?>(default);
+
+            // Convert.ChangeType throws InvalidCastException for Nullable<T>
+            // targets. Resolve to the underlying value type before
+            // conversion, then cast back to T (which is nullable-aware).
+            var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+            return Task.FromResult<T?>((T)Convert.ChangeType(result, targetType)!);
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Execute raw SQL that returns an affected-row count
+    /// (<c>UPDATE</c> / <c>DELETE</c> / <c>INSERT</c> / DDL).
+    /// </summary>
+    /// <remarks>
+    /// On MySQL/MariaDB the count semantics depend on the
+    /// <c>Use Affected Rows</c> connection-string flag — see the v0.7.4
+    /// MIGRATION note. SQL Server / PostgreSQL / Oracle / SQLite report
+    /// matched-rows by default.
+    /// </remarks>
+    protected Task<int> ExecuteNonQueryAsync(
+        string sql,
+        IDictionary<string, object?>? parameters = null,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(sql);
+        return ExecuteAsync((c, _) =>
+        {
+            var paramDict = parameters as IDictionary<string, object>;
+            if (parameters is not null && paramDict is null)
+                paramDict = parameters.ToDictionary(p => p.Key, p => p.Value!);
+
+            var rows = SqlHelper.ExecuteNonQuery(c, sql, paramDict, logger: null);
+            return Task.FromResult(rows);
+        }, uow, ct);
+    }
+
     private const string ObsoleteSyncMessage =
         "Sync wrapper kept for migration. Prefer the *Async variant. " +
         "Will be removed once underlying SQL APIs become real-async (~1.0).";
@@ -178,6 +249,22 @@ public abstract class SqlServiceBase
         CommitOnSuccessAsync((u, _) => { work(u); return Task.CompletedTask; }, uow)
             .GetAwaiter().GetResult();
     }
+
+    /// <summary>Sync wrapper for <see cref="ExecuteScalarAsync{T}"/>.</summary>
+    [Obsolete(ObsoleteSyncMessage)]
+    protected T? ExecuteScalar<T>(
+        string sql,
+        IDictionary<string, object?>? parameters = null,
+        IUnitOfWork? uow = null) =>
+        ExecuteScalarAsync<T>(sql, parameters, uow).GetAwaiter().GetResult();
+
+    /// <summary>Sync wrapper for <see cref="ExecuteNonQueryAsync"/>.</summary>
+    [Obsolete(ObsoleteSyncMessage)]
+    protected int ExecuteNonQuery(
+        string sql,
+        IDictionary<string, object?>? parameters = null,
+        IUnitOfWork? uow = null) =>
+        ExecuteNonQueryAsync(sql, parameters, uow).GetAwaiter().GetResult();
 
     /// <summary>Creates a new <see cref="SqlQuery"/> pre-bound to this base's <see cref="Dialect"/>.</summary>
     protected SqlQuery SqlQuery() => new SqlQuery().Dialect(Dialect);
