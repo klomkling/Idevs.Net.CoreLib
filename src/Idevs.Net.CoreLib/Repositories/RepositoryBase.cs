@@ -53,6 +53,64 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     }
 
     /// <summary>
+    /// Count rows that match the configured query. Pass an empty configure
+    /// (<c>_ =&gt; { }</c>) to count every row in the table.
+    /// </summary>
+    /// <remarks>
+    /// Builds <c>SELECT COUNT(*) FROM table</c>, applies the caller's WHERE
+    /// (and any joins / group-by, etc.), and reads back a scalar. Pre-bound
+    /// to <see cref="SqlServiceBase.Dialect"/> via the <see cref="SqlServiceBase.SqlQuery"/>
+    /// factory.
+    /// </remarks>
+    public virtual Task<int> CountAsync(
+        Action<SqlQuery> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            // From(IRow) — not From(string) — registers the row's alias (T0
+            // by default) so field criteria like Fld.Status == "x" bind to
+            // the correct table reference.
+            var query = SqlQuery()
+                .From(new TRow())
+                .Select("COUNT(*)");
+            configure(query);
+            var result = SqlHelper.ExecuteScalar(c, query, logger: null);
+            return Task.FromResult(Convert.ToInt32(result));
+        }, uow, ct);
+    }
+
+    /// <summary>
+    /// Return <c>true</c> when at least one row matches the configured query.
+    /// </summary>
+    /// <remarks>
+    /// More efficient than <c>CountAsync(...) &gt; 0</c> for large tables —
+    /// emits <c>SELECT 1 FROM table WHERE ... LIMIT 1</c> so the engine can
+    /// short-circuit at the first match instead of counting every matching row.
+    /// </remarks>
+    public virtual Task<bool> ExistsAsync(
+        Action<SqlQuery> configure,
+        IUnitOfWork? uow = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        return ExecuteAsync((c, _) =>
+        {
+            var query = SqlQuery()
+                .From(new TRow())
+                .Select("1")
+                .Take(1);
+            configure(query);
+            var result = SqlHelper.ExecuteScalar(c, query, logger: null);
+            return Task.FromResult(result is not null && result != DBNull.Value);
+        }, uow, ct);
+    }
+
+    /// <summary>
     /// Insert <paramref name="row"/> and return the new identity (or 0 if the row
     /// type does not implement <see cref="IIdRow"/>).
     /// </summary>
@@ -310,6 +368,14 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     [Obsolete(ObsoleteSyncMessage)]
     public virtual List<TRow> List(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
         ListAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual int Count(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        CountAsync(configure, uow).GetAwaiter().GetResult();
+
+    [Obsolete(ObsoleteSyncMessage)]
+    public virtual bool Exists(Action<SqlQuery> configure, IUnitOfWork? uow = null) =>
+        ExistsAsync(configure, uow).GetAwaiter().GetResult();
 
     [Obsolete(ObsoleteSyncMessage)]
     public virtual TRow? GetBy<TValue>(Field keyField, TValue value, IUnitOfWork? uow = null) =>

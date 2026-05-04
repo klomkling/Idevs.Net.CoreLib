@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](#v074--v075--countasync--existsasync-helpers)
 - [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)
 - [v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)](#v072--v073--unit-of-work-helpers-beginunitofwork--commitonsuccessasync)
 - [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
@@ -12,6 +13,65 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers
+
+### What changed
+
+Two new read-side helpers on `RepositoryBase<TRow>` that complete the
+read surface alongside the existing `TryFirstAsync` / `ListAsync` /
+`GetByAsync`:
+
+| Helper | Emits | Use for |
+|---|---|---|
+| `CountAsync(Action<SqlQuery>, ...)` | `SELECT COUNT(*) FROM table WHERE ...` | Counting matching rows. Pass `_ => { }` for total. |
+| `ExistsAsync(Action<SqlQuery>, ...)` | `SELECT 1 FROM table WHERE ... LIMIT 1` | Existence check; short-circuits at first match. |
+
+Both share the same shape as `ListAsync` — caller adds `Where(...)` (and
+optional joins, group-by, etc.) inside the lambda.
+
+### Examples
+
+```csharp
+// Count
+var activeCount = await repo.CountAsync(q => q
+    .Where(SaleOrderRow.Fields.Status == "Active"), uow, ct);
+
+var todayPending = await repo.CountAsync(q => q
+    .Where(SaleOrderRow.Fields.OrderDate == DateTime.Today
+        && SaleOrderRow.Fields.Status == "Pending"), uow, ct);
+
+var totalRows = await repo.CountAsync(_ => { }, uow, ct);
+
+// Existence check (efficient on large tables — uses LIMIT 1)
+var hasOrder = await repo.ExistsAsync(q => q
+    .Where(SaleOrderRow.Fields.CustomerCode == code), uow, ct);
+```
+
+### Replacing existing patterns
+
+If your code currently does any of these, the new helpers are clearer:
+
+| Before | After |
+|---|---|
+| `(await repo.ListAsync(q => q.Where(...))).Count` | `await repo.CountAsync(q => q.Where(...))` (avoids materializing rows) |
+| `(await repo.TryFirstAsync(q => q.Where(...))) is not null` | `await repo.ExistsAsync(q => q.Where(...))` (smaller projection, LIMIT 1) |
+| Hand-built `SqlHelper.ExecuteScalar` for counts | `await repo.CountAsync(...)` |
+
+### Sync wrappers
+
+`Count(Action<SqlQuery>, IUnitOfWork?)` and `Exists(Action<SqlQuery>, IUnitOfWork?)`
+both exist and are marked `[Obsolete]` — use the async variants in new code.
+
+### MySQL note (does NOT apply here)
+
+The matched-rows-vs-changed-rows discrepancy from the v0.7.4 MIGRATION
+note only affects UPDATE/DELETE/INSERT row-count results. `CountAsync`
+and `ExistsAsync` are SELECT-based and return scalar values that are
+identical across providers. The `Use Affected Rows=false` flag has no
+effect on them.
 
 ---
 

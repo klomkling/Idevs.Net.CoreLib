@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.7.5 (2026-05-04)
+
+### Added
+
+- `RepositoryBase<TRow>.CountAsync(Action<SqlQuery>, ...)` — count rows
+  matching the configured query. Emits `SELECT COUNT(*) FROM table WHERE ...`
+  via `SqlHelper.ExecuteScalar`. Pass `_ => { }` to count every row.
+- `RepositoryBase<TRow>.ExistsAsync(Action<SqlQuery>, ...)` — check whether
+  any row matches. Emits `SELECT 1 FROM table WHERE ... LIMIT 1` so the
+  engine can short-circuit at the first match instead of counting all
+  matching rows.
+- Sync `[Obsolete]` wrappers (`Count`, `Exists`) following the existing
+  migration pattern.
+
+### Verified (integration tests against SQL Server 2022)
+
+- `CountAsync` returns 0 for empty table, total rows for empty configure,
+  exact counts for simple and composite WHERE clauses.
+- `ExistsAsync` returns false for empty table / no match, true for one or
+  many matching rows, and honors composite WHERE predicates.
+
+### Note
+
+These were originally proposed for 0.7.2 but deferred because the right
+Serenity API path wasn't immediately reachable. The implementation uses
+`SqlQuery().From(IRow).Select(...)` (not `From(string)`) so that field
+criteria like `Fld.Status == "Active"` bind to the correct table alias.
+
 ## 0.7.4 (2026-05-04)
 
 ### Added
