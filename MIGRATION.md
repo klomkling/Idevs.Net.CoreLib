@@ -89,6 +89,68 @@ int n = (int)await repo.CountAsync(_ => { });   // explicit narrowing
 `Exists(Action<SqlQuery>, IUnitOfWork?)` (returns `bool`) exist and are
 marked `[Obsolete]` — use the async variants in new code.
 
+### Bonus: raw-SQL helpers on `SqlServiceBase`
+
+For codebases that use raw SQL frequently (GeniuzPOS-style) two new
+helpers on `SqlServiceBase` cut the typical 5-line `ExecuteAsync` +
+`SqlHelper.ExecuteScalar/NonQuery` boilerplate to a single expression:
+
+| Helper | Returns | Use for |
+|---|---|---|
+| `ExecuteScalarAsync<T>(string sql, IDictionary<string, object?>? parameters = null, ...)` | `Task<T?>` | Raw `SELECT` returning a single value. Returns `default(T)` for `null`/`DBNull`. |
+| `ExecuteNonQueryAsync(string sql, IDictionary<string, object?>? parameters = null, ...)` | `Task<int>` | Raw `UPDATE` / `DELETE` / `INSERT` / DDL. Returns affected-row count. |
+
+Both compose with the same `IUnitOfWork? uow = null` and
+`CancellationToken ct = default` slots as every other helper.
+
+**Before:**
+
+```csharp
+public async Task<int> ArchiveOldOrdersAsync(DateTime cutoff,
+    IUnitOfWork? uow = null, CancellationToken ct = default)
+{
+    return await ExecuteAsync((c, _) =>
+    {
+        var n = SqlHelper.ExecuteNonQuery(c,
+            "DELETE FROM SaleOrders WHERE CreatedAt < @cutoff",
+            new Dictionary<string, object?> { ["@cutoff"] = cutoff });
+        return Task.FromResult(n);
+    }, uow, ct);
+}
+```
+
+**After:**
+
+```csharp
+public Task<int> ArchiveOldOrdersAsync(DateTime cutoff,
+    IUnitOfWork? uow = null, CancellationToken ct = default) =>
+    ExecuteNonQueryAsync(
+        "DELETE FROM SaleOrders WHERE CreatedAt < @cutoff",
+        new Dictionary<string, object?> { ["@cutoff"] = cutoff },
+        uow, ct);
+```
+
+#### MySQL note (DOES apply for `ExecuteNonQueryAsync`)
+
+The matched-rows-vs-changed-rows discrepancy from the v0.7.4 MIGRATION
+note also affects raw `UPDATE`/`DELETE` row counts returned by
+`ExecuteNonQueryAsync`. If you're on MySQL/MariaDB, ensure
+`Use Affected Rows=false;` is in your connection string so the count
+reflects matched-rows semantics consistent with SQL Server. Pure
+`SELECT` scalars returned by `ExecuteScalarAsync` are unaffected by
+this flag.
+
+#### What's intentionally NOT included
+
+- **`QueryAsync<T>` for typed-row raw SELECTs.** Dapper's
+  `c.Query<T>(sql, params)` is already a one-liner inside the existing
+  `ExecuteAsync` template; adding a wrapper would lock CoreLib into
+  Dapper as an explicit dependency. Will revisit if real demand emerges.
+- **Anonymous-object parameters (`new { x = 1 }`).** The dictionary form
+  matches Serenity's `SqlHelper` convention and avoids surprises around
+  how Dapper-style anonymous-object property names map to `@param`
+  placeholders.
+
 ### MySQL note (does NOT apply here)
 
 The matched-rows-vs-changed-rows discrepancy from the v0.7.4 MIGRATION

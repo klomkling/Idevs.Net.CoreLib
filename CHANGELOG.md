@@ -18,6 +18,21 @@
   `SqlQuery.Take(1)`, so the engine can short-circuit at the first match.
 - Sync `[Obsolete]` wrappers (`Count` returns `long`, `Exists` returns
   `bool`) following the existing migration pattern.
+- `SqlServiceBase.ExecuteScalarAsync<T>(string sql, IDictionary?, ...)` —
+  thin wrapper over `SqlHelper.ExecuteScalar` composed with `ExecuteAsync`
+  for connection lifetime + UoW participation. Returns `default(T)` when
+  the result is `null` / `DBNull.Value`; otherwise converts via
+  `Convert.ChangeType`. Cuts the typical 5-line raw-SQL boilerplate down
+  to one expression — added for GeniuzPOS-style codebases that read
+  scalars via raw SQL frequently.
+- `SqlServiceBase.ExecuteNonQueryAsync(string sql, IDictionary?, ...)` —
+  symmetric for `UPDATE` / `DELETE` / `INSERT` / DDL. Returns the affected-
+  row count reported by the provider. MySQL/MariaDB consumers should
+  apply the `Use Affected Rows=false` flag from the v0.7.4 MIGRATION
+  note since the count semantics for raw `UPDATE`/`DELETE` follow the
+  same matched-vs-changed-rows distinction.
+- Sync `[Obsolete]` wrappers (`ExecuteScalar<T>`, `ExecuteNonQuery`)
+  following the existing migration pattern.
 
 ### Verified (integration tests against SQL Server 2022)
 
