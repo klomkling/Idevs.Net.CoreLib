@@ -130,6 +130,80 @@ Server 2022 container. They live under `tests/Idevs.Net.CoreLib.Tests/Integratio
 and are tagged `[Trait("Category", "Integration")]`. Skip them with
 `dotnet test --filter "Category!=Integration"` if Docker isn't available.
 
+### Critical portability note for MySQL / MariaDB consumers
+
+The new criteria-based helpers (`UpdateAsync(Action<SqlUpdate>, ...)`,
+`UpdateManyAsync`, etc., and by extension the entity-row variants) all
+return rows affected as reported by the underlying ADO.NET provider. **MySQL
+and MariaDB report a different number than every other engine for UPDATE
+statements where the new value equals the existing value:**
+
+| Engine | `UPDATE … SET BlSent=1 WHERE Id=5` when row already has `BlSent=1` |
+|---|---|
+| SQL Server / PostgreSQL / Oracle / SQLite | `1` (matched-rows) |
+| MySQL / MariaDB **default** | `0` (changed-rows — the value didn't actually change) |
+| MySQL / MariaDB with `Use Affected Rows=false` | `1` (matched-rows — same as above) |
+
+If your code does anything like `affected > 0` to mean "row exists and is
+in the target state" (a common idempotent "mark as done" pattern), it
+silently breaks on MySQL: the second call to mark the same row returns
+`false`, which callers typically interpret as "operation failed" or "row
+not found".
+
+**Recommended fix for MySQL/MariaDB consumers (one-line change):** add
+`Use Affected Rows=false;` to your connection string. This brings MySQL
+into line with SQL Server semantics — `affected = matched-rows` regardless
+of whether values changed.
+
+**Before (problematic on MySQL):**
+
+```
+Server=<your-rds-host>.<region>.rds.amazonaws.com;Port=3306;Database=<db>;Uid=<user>;Pwd={secret};ConvertZeroDateTime=True;
+```
+
+**After (matched-rows semantics, portable across providers):**
+
+```
+Server=<your-rds-host>.<region>.rds.amazonaws.com;Port=3306;Database=<db>;Uid=<user>;Pwd={secret};ConvertZeroDateTime=True;Use Affected Rows=false;
+```
+
+Apply this to **every environment's connection string** (dev, staging,
+production) so behavior is uniform across deployments. Both `MySqlConnector`
+and `MySql.Data` providers honor this flag.
+
+#### Quick verification
+
+Run this once after the deploy:
+
+```sql
+-- Pick a row that already has the target value:
+UPDATE SaleOrders SET BlSent = 1 WHERE Id = 5 AND BlSent = 1;
+
+-- Expected with the flag set:    1 row(s) affected (matched mode)
+-- Without the flag (broken):     0 row(s) affected (changed mode)
+```
+
+#### Alternative pattern when you can't change the connection string
+
+If the connection string is locked down (managed config, customer-controlled,
+etc.), use a value-aware WHERE clause that won't match already-flipped rows.
+This is portable on every provider:
+
+```csharp
+// Instead of: WHERE Id = @id
+// Use:        WHERE Id = @id AND BlSent != true
+await UpdateAsync(q => q
+    .Set(SaleOrderRow.Fields.BlSent, true)
+    .Where(SaleOrderRow.Fields.Id == id
+        && SaleOrderRow.Fields.BlSent != true),
+    ExpectedRows.ZeroOrOne, uow, ct);
+```
+
+With this WHERE, `affected > 0` reliably means "I just transitioned this
+row from false → true" on every engine. The trade-off: `affected == 0`
+means *either* "already true" *or* "row missing" — distinguish with a
+follow-up `TryFirstAsync` only if your caller branches on it.
+
 ---
 
 ## v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)
