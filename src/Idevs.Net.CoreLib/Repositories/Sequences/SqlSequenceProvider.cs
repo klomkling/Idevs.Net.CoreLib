@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Idevs.ComponentModels;
 using Serenity.Data;
 
@@ -13,8 +14,10 @@ namespace Idevs.Repositories.Sequences;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Registered via <c>[Scoped(typeof(ISequenceProvider))]</c> for
-/// source-generator DI. Manual setups can call
+/// Registered via <c>[Scoped(ServiceType = typeof(ISequenceProvider))]</c>
+/// for source-generator DI (the named-property form is required —
+/// <see cref="ScopedAttribute"/> has no positional constructor for the
+/// service type). Manual setups can call
 /// <see cref="SequenceServiceCollectionExtensions.AddIdevsSequenceProvider"/>.
 /// </para>
 /// <para>
@@ -112,11 +115,20 @@ public sealed class SqlSequenceProvider(ISqlConnections sqlConnections)
                     NextValue = startValue,
                 }, uow, token).ConfigureAwait(false);
             }
-            catch
+            catch (DbException)
             {
-                // If a concurrent EnsureSequenceAsync won the create race,
-                // re-check and treat the operation as a no-op. Anything
-                // else (DB unreachable, schema mismatch) propagates.
+                // Narrowed catch: only DbException (covers SqlException,
+                // MySqlException, NpgsqlException, etc.). Non-database
+                // errors — OperationCanceledException, ArgumentException,
+                // NullReferenceException — propagate without being
+                // inspected, so configuration / cancellation bugs surface
+                // immediately instead of being swallowed by the race
+                // recovery path.
+                //
+                // Re-check the row: if a concurrent EnsureSequenceAsync
+                // won the create race, treat as a no-op. Otherwise (e.g.
+                // permission error, schema missing, transient connection
+                // failure with no row yet) rethrow.
                 var racing = await TryFirstAsync(
                     q => q.SelectTableFields().Where(Fld.SequenceKey == sequenceKey),
                     uow, token).ConfigureAwait(false);

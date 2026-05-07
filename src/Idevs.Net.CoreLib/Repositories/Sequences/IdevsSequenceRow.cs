@@ -14,7 +14,11 @@ namespace Idevs.Repositories.Sequences;
 /// underlying <c>IdevsSequences</c> table in their own migration
 /// pipeline; the schema is documented in MIGRATION.md (v0.7.6 → v0.7.7).
 /// </remarks>
-[ConnectionKey("Default"), Module("Idevs"), TableName("[IdevsSequences]")]
+// TableName intentionally unquoted — Serenity applies dialect-appropriate
+// identifier quoting at SQL emission time. SqlServer brackets, MySQL
+// backticks, and Postgres double-quotes are all derived from the active
+// ISqlDialect; embedding "[…]" here would break MySQL/Postgres consumers.
+[ConnectionKey("Default"), Module("Idevs"), TableName("IdevsSequences")]
 public sealed class IdevsSequenceRow : Row<IdevsSequenceRow.RowFields>
 {
     /// <summary>
