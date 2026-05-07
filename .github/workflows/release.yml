@@ -139,7 +139,10 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
+        # Match the PR CI step: skip integration tests on the hosted
+        # runner. Integration coverage runs locally before the version
+        # bump that triggers a release.
+        run: dotnet test --configuration Release --no-build --verbosity normal --filter "Category!=Integration"
 
       - name: Pack
         run: |
