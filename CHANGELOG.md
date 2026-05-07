@@ -1,5 +1,88 @@
 # Changelog
 
+## 0.7.6 (2026-05-07)
+
+### Added
+
+- `LockMode` enum with four members: `Update` (FOR UPDATE / UPDLOCK +
+  HOLDLOCK + ROWLOCK), `Share` (FOR SHARE / HOLDLOCK), `UpdateNoWait`
+  (FOR UPDATE NOWAIT — Postgres / MySQL 8+ / MariaDB 10.6+ / Oracle only;
+  SqlServer throws), and `UpdateSkip` (FOR UPDATE SKIP LOCKED / READPAST
+  on SqlServer — queue-consumer pattern).
+- `SqlQuery.ForUpdate(mode = LockMode.Update)` fluent extension that
+  flags a SELECT for row-level locking. The dialect-correct clause is
+  applied at execution time when the query is materialised through
+  Idevs repository helpers (`RepositoryBase<TRow>.TryFirstAsync` today;
+  more in 0.8.0). Direct Serenity execution paths
+  (`connection.TryFirst<TRow>(query)`) DO NOT honour the flag and
+  silently produce non-locking SQL — always go through Idevs helpers
+  when locking matters.
+- `SqlServiceBase.InNewTransactionAsync<T>(work, ct)` and the void
+  overload — explicit "fresh transaction" helper for short-lived
+  operations that must commit (or fail) independently of any ambient
+  `IUnitOfWork`. Use for sequence/document-number allocation, audit
+  log writes, and idempotency-key reservation. Replaces the implicit
+  `CommitOnSuccessAsync(work, uow: null, ct)` trick with a
+  self-documenting name.
+
+### Changed
+
+- `RepositoryBase<TRow>.TryFirstAsync` now detects the `ForUpdate()`
+  flag at execution time. When set, it materialises the SELECT itself,
+  injects the dialect-correct lock hint via the internal
+  `RowLockSqlBuilder`, executes through `SqlHelper.ExecuteReader`
+  (which honours Serenity's `WrappedConnection` transaction
+  propagation), and maps the result row via `SqlQuery.GetFromReader`.
+  Behaviour is unchanged for queries that don't call `ForUpdate()` —
+  the existing Serenity `TryFirst<TRow>` lambda path is preserved.
+- `TryFirstAsync` with a flagged query MUST be called inside an
+  active transaction. Calling it without a non-null `uow` throws
+  `InvalidOperationException` — taking a row lock outside a
+  transaction is meaningless on every supported engine.
+
+### Verified (xUnit + Testcontainers)
+
+- 27 unit tests cover `RowLockSqlBuilder` across SqlServer, MySQL/MariaDB,
+  Postgres, Oracle (ANSI fallback), and SQLite (always throws), plus
+  argument-validation edges.
+- 6 SqlServer integration tests (5 passing + 1 documented skip) verify:
+  `ForUpdate` without a transaction throws; inside a transaction
+  acquires the row lock and returns the row; a second locker blocks
+  until the first commits; `UpdateNoWait` throws as documented; and
+  the standard non-locking path is untouched.
+- `ConcurrentSequenceAllocationTests` pins the actual race fix that
+  motivated the work: 50 parallel allocators against the same
+  sequence row produce 50 distinct values.
+- `InNewTransactionAsyncTests` pins the independent-commit semantic:
+  inner writes survive an outer rollback; inner exceptions roll back
+  only the inner write.
+
+### Notes / known limitations
+
+- **`LockMode.UpdateNoWait` on SqlServer**: SqlServer has no in-query
+  NOWAIT hint. The library throws `NotSupportedException` rather than
+  emit incorrect SQL. Workaround: `SET LOCK_TIMEOUT 0` at the session
+  or transaction level before the locking SELECT, then catch SQL
+  error 1222 (lock-request timeout).
+- **`LockMode.UpdateSkip` on SqlServer**: emits
+  `WITH (UPDLOCK, HOLDLOCK, ROWLOCK, READPAST)`. READPAST requires
+  the active transaction to be in `READ COMMITTED` or `REPEATABLE READ`
+  isolation. The default isolation in some SqlServer container
+  configurations is incompatible — verify your transaction's isolation
+  before relying on `UpdateSkip` against SqlServer. Postgres and
+  MySQL don't have this caveat.
+- **SQLite**: row-level locking is not supported; every `LockMode`
+  throws `NotSupportedException`. Use `BEGIN IMMEDIATE` for a
+  database-wide write lock instead.
+- **Independent-commit trade-off in `InNewTransactionAsync`**: work
+  committed inside the helper does NOT roll back if the caller's outer
+  business transaction subsequently fails. This is intentional —
+  document-number allocations have to survive outer rollback (gaps in
+  the sequence are normal, duplicate numbers are catastrophic). For
+  anything where the inner write must roll back with the outer flow,
+  do NOT use `InNewTransactionAsync`; pass the caller's UoW through
+  and let the outer transaction own the commit.
+
 ## 0.7.5 (2026-05-04)
 
 ### Added
