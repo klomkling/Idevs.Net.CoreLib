@@ -531,3 +531,6 @@ docs/superpowers/*
 
 # Claude Code session/workspace files
 .claude/
+
+# graphify knowledge graph outputs
+graphify-out/
