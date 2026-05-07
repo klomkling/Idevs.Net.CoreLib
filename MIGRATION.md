@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](#v077--v078--optimistic-concurrency-on-updateasync)
 - [v0.7.6 → v0.7.7 — ISequenceProvider helper](#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](#v075--v076--row-lock-primitives--innewtransactionasync)
 - [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](#v074--v075--countasync--existsasync-helpers)
@@ -15,6 +16,183 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync
+
+### What changed
+
+Two additive types and a behavioural opt-in:
+
+| API | Returns / role |
+|---|---|
+| `[RowVersion]` attribute | Marker on a `long?` property; flags the row's version column. |
+| `OptimisticConcurrencyException` | Thrown by `UpdateAsync` when a guarded UPDATE affects 0 rows. Carries `TableName`, `RowId`, `CapturedVersion`. |
+
+When a row carries `[RowVersion]`, the three TRow-shaped UpdateAsync
+overloads on `RepositoryBase<TRow, TKey>` automatically apply the
+optimistic-concurrency guard:
+
+1. Capture the row's current `RowVersion` value.
+2. Add `WHERE RowVersion = @captured` to the UPDATE.
+3. Add `SET RowVersion = RowVersion + 1` to the SET list.
+4. Run with `ExpectedRows.Ignore` (we manually check affected count).
+5. If affected rows == 0, throw `OptimisticConcurrencyException`.
+6. Otherwise, write `captured + 1` back to `row.RowVersion` so the
+   caller can reuse the row for further updates without re-reading.
+
+Rows without `[RowVersion]` see zero behaviour change. The
+criteria-based `UpdateAsync(Action<SqlUpdate>, …)` overload on
+`RepositoryBase<TRow>` is also unchanged — that overload takes an
+arbitrary builder where the caller owns the WHERE.
+
+### Caller-side example
+
+```csharp
+public sealed class OrderRow : Row<OrderRow.RowFields>, IIdRow
+{
+    [Identity, IdProperty]
+    public int? Id { get => fields.Id[this]; set => fields.Id[this] = value; }
+
+    [Size(50), NotNull]
+    public string? CustomerCode
+    {
+        get => fields.CustomerCode[this];
+        set => fields.CustomerCode[this] = value;
+    }
+
+    [NotNull, RowVersion]                              // <-- one attribute
+    public long? RowVersion
+    {
+        get => fields.RowVersion[this];
+        set => fields.RowVersion[this] = value;
+    }
+
+    public sealed class RowFields : RowFieldsBase
+    {
+        public Int32Field Id;
+        public StringField CustomerCode;
+        public Int64Field RowVersion;
+    }
+}
+
+// Caller code — same shape as before, with one extra catch:
+var order = await repo.GetByIdAsync(orderId);
+order.CustomerCode = newCode;
+try
+{
+    await repo.UpdateAsync(order);
+}
+catch (OptimisticConcurrencyException)
+{
+    // Stale write. Re-read, re-apply, retry — pattern is consumer's choice.
+}
+```
+
+### Schema
+
+Application-managed `BIGINT`, portable across all supported engines.
+Add to existing tables that need optimistic concurrency:
+
+#### SqlServer
+
+```sql
+ALTER TABLE Orders ADD RowVersion BIGINT NOT NULL DEFAULT 0;
+```
+
+#### MySQL / MariaDB
+
+```sql
+ALTER TABLE Orders ADD COLUMN RowVersion BIGINT NOT NULL DEFAULT 0;
+```
+
+#### PostgreSQL
+
+```sql
+ALTER TABLE Orders ADD COLUMN RowVersion BIGINT NOT NULL DEFAULT 0;
+```
+
+The library does not use SqlServer's native `rowversion` / `timestamp`
+type. Reasons: not portable (`varbinary(8)` only exists on SqlServer),
+changes the field type story (would need `byte[]?` instead of `long?`),
+and a 64-bit application-managed counter has more than enough range
+(at one increment per nanosecond it would take ~292 years to exhaust).
+
+### The retry pattern
+
+The library does not ship a built-in retry helper — number of retries,
+backoff, and "what should the user see when retries fail" are all
+policy decisions. Use the standard manual shape:
+
+```csharp
+async Task<int> UpdateWithRetryAsync(int orderId, Action<OrderRow> mutate, int maxAttempts = 3)
+{
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        var order = await _repo.GetByIdAsync(orderId);
+        mutate(order);
+        try
+        {
+            await _repo.UpdateAsync(order);
+            return order.RowVersion!.Value;
+        }
+        catch (OptimisticConcurrencyException) when (attempt < maxAttempts)
+        {
+            // Re-read on next iteration. Polly callers can also catch
+            // OptimisticConcurrencyException and apply their own policy.
+        }
+    }
+
+    throw new OptimisticConcurrencyException(
+        tableName: "Orders", rowId: orderId, capturedVersion: -1);
+}
+```
+
+A built-in `RetryOnConcurrencyConflictAsync` may land in 0.8.0+ if
+real demand emerges; for now, document the manual pattern.
+
+### Validation — the library fails loud on misuse
+
+These all throw `InvalidOperationException` at the first guarded
+UPDATE call (and the result is cached so subsequent calls don't pay
+the reflection cost):
+
+| Misuse | Error |
+|---|---|
+| Two properties carry `[RowVersion]` | "Row type 'X' has 2 [RowVersion] properties (A, B); expected at most one." |
+| `[RowVersion]` on a non-`long?` property | "Property 'X.A' must be of type 'long?'; got 'int?'. Use `public long? A { get; set; }` …" |
+| `[RowVersion]` property has no matching `Field` in `RowFields` | "Property 'X.A' has no matching Field in RowFields. Add `public Int64Field A;` …" |
+| `[RowVersion]` field has `Updatable` flag cleared | "Field 'X.A' is not Updatable. The library increments this field on every guarded UPDATE; clearing the Updatable flag would prevent that." |
+| `row.RowVersion` is `null` at update time | "RowVersion is null on the row passed to UpdateAsync. Read the row before updating — null means the captured version is unknown." |
+
+The last one catches "constructed by hand" bugs early. If a caller
+populates a row from a cache or maps from a DTO without setting
+`RowVersion`, the call fails with a clear message instead of silently
+running an unguarded UPDATE.
+
+### Important caveats
+
+- **The criteria-based `UpdateAsync(Action<SqlUpdate>, …)` overload on
+  `RepositoryBase<TRow>` is NOT guarded.** If you use that overload on
+  a versioned row, you own the `WHERE RowVersion = …` clause. Add
+  it manually or use the row-shaped overloads.
+- **Backfill `RowVersion` on existing tables.** When you add the
+  column to existing tables with the DDL above, the `DEFAULT 0` fills
+  in for existing rows — they all get version 0. The first update on
+  any of those rows captures 0 and advances to 1. No data migration
+  needed.
+- **Reflection, but cached.** `[RowVersion]` is detected via
+  reflection at first lookup per row type, then cached as a `Field`
+  reference in a `ConcurrentDictionary<Type, Field?>`. Steady-state
+  cost is one dictionary read per UPDATE.
+- **No interference with `ISequenceProvider`.** Sequence rows
+  (`IdevsSequenceRow`) don't carry `[RowVersion]` and won't pick up
+  the guard. The two features are independent.
+- **`CreateAsync` doesn't set RowVersion.** Leave the property `null`
+  on the row instance you pass to `CreateAsync`; the database default
+  (`0`) takes over. Subsequent UpdateAsync calls capture 0 and
+  advance from there.
 
 ---
 

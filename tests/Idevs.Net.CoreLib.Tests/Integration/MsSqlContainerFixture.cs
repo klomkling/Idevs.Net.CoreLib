@@ -89,7 +89,27 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
                 SequenceKey NVARCHAR(100) NOT NULL PRIMARY KEY,
                 NextValue BIGINT NOT NULL
             );
+
+            IF OBJECT_ID('dbo.VersionedTestRows', 'U') IS NOT NULL
+                DROP TABLE dbo.VersionedTestRows;
+
+            CREATE TABLE dbo.VersionedTestRows (
+                Id INT IDENTITY(1,1) PRIMARY KEY,
+                Code NVARCHAR(50) NOT NULL,
+                Amount DECIMAL(18,4) NOT NULL DEFAULT 0,
+                RowVersion BIGINT NOT NULL DEFAULT 0
+            );
             """);
+    }
+
+    /// <summary>
+    /// Truncate the VersionedTestRows table — call between tests in
+    /// optimistic-concurrency suites for isolation.
+    /// </summary>
+    public void TruncateVersionedTable()
+    {
+        using var conn = SqlConnections.NewByKey("Default");
+        SqlHelper.ExecuteNonQuery(conn, "TRUNCATE TABLE dbo.VersionedTestRows;");
     }
 
     /// <summary>

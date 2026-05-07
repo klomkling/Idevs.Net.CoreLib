@@ -71,10 +71,133 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
     {
         ArgumentNullException.ThrowIfNull(row);
 
+        var rvField = RowVersionMetadata.Find(row);
+        if (rvField is null)
+        {
+            // No [RowVersion] field — preserve today's behaviour exactly.
+            return ExecuteAsync((c, _) =>
+            {
+                var affected = c.UpdateById(row);
+                return Task.FromResult(affected > 0);
+            }, uow, ct);
+        }
+
+        // [RowVersion] guarded path: assemble the SqlUpdate ourselves so we
+        // can inject SET RowVersion = RowVersion + 1 and WHERE RowVersion = @captured,
+        // run with ExpectedRows.Ignore (we'll check affected ourselves), and
+        // throw OptimisticConcurrencyException on conflict.
+        return UpdateGuardedAsync(row, rvField, fieldsToSet: null, excludeFields: null, uow, ct);
+    }
+
+    /// <summary>
+    /// Shared write path used by all three TRow-shaped UpdateAsync overloads
+    /// when the row carries a <see cref="RowVersionAttribute"/> field. Builds
+    /// a SqlUpdate, applies the caller's field-selection rules, layers the
+    /// RowVersion guard on top, and translates affected-rows == 0 into
+    /// <see cref="OptimisticConcurrencyException"/>.
+    /// </summary>
+    /// <remarks>
+    /// <c>fieldsToSet</c>: when non-null, only these fields go into SET
+    /// (used by the explicit-fields overload). When null, all
+    /// assigned/Updatable fields are included.
+    /// <c>excludeFields</c>: when non-null, these fields are excluded
+    /// from SET (used by UpdateExcludingAsync). Ignored when
+    /// <c>fieldsToSet</c> is non-null.
+    /// </remarks>
+    private Task<bool> UpdateGuardedAsync(
+        TRow row,
+        Field rvField,
+        Field[]? fieldsToSet,
+        HashSet<Field>? excludeFields,
+        IUnitOfWork? uow,
+        CancellationToken ct)
+    {
+        var idRow = (IIdRow)row;
+        var idField = idRow.IdField;
+        var idValue = idField.AsObject(row);
+        if (idValue is null)
+            throw new InvalidOperationException(
+                "Row's Id must be set before calling UpdateAsync on a [RowVersion]-guarded row.");
+
+        var capturedObj = rvField.AsObject(row);
+        if (capturedObj is null)
+            throw new InvalidOperationException(
+                $"[RowVersion] field '{row.Table}.{rvField.Name}' is null on the row passed to " +
+                "UpdateAsync. Read the row before updating — null means the captured version is " +
+                "unknown, which would silently disable the optimistic-concurrency guard.");
+        var captured = Convert.ToInt64(capturedObj);
+
+        // Compute the next version once, with overflow protection. Throwing
+        // here is preferable to silently wrapping past long.MaxValue and
+        // producing negative/colliding versions on the next allocator.
+        long nextVersion;
+        try { nextVersion = checked(captured + 1); }
+        catch (OverflowException ex)
+        {
+            throw new InvalidOperationException(
+                $"[RowVersion] field '{row.Table}.{rvField.Name}' is at long.MaxValue " +
+                $"({captured}) and cannot advance. The row is at the end of its version " +
+                "space; the table or row needs to be migrated to reset the counter.", ex);
+        }
+
         return ExecuteAsync((c, _) =>
         {
-            var affected = c.UpdateById(row);
-            return Task.FromResult(affected > 0);
+            var update = SqlUpdate(row.Table);
+
+            // Build the SET list per the caller's field-selection rules.
+            // RowVersion is set explicitly below to `nextVersion`, so callers
+            // who pass it in `fieldsToSet` (or omit it from `excludeFields`)
+            // don't get their value used — the guard always wins.
+            if (fieldsToSet is not null)
+            {
+                foreach (var f in fieldsToSet)
+                {
+                    if (ReferenceEquals(f, rvField)) continue; // set below
+                    update.Set(f, f.AsObject(row));
+                }
+            }
+            else
+            {
+                foreach (var f in row.GetFields())
+                {
+                    if (ReferenceEquals(f, idField)) continue;
+                    if (ReferenceEquals(f, rvField)) continue; // set below
+                    if (excludeFields is not null && excludeFields.Contains(f)) continue;
+                    if (!row.IsAssigned(f)) continue;
+                    if ((f.Flags & FieldFlags.NotMapped) != 0) continue;
+                    if ((f.Flags & FieldFlags.Updatable) != FieldFlags.Updatable) continue;
+                    update.Set(f, f.AsObject(row));
+                }
+            }
+
+            // SET RowVersion = @nextVersion (an app-computed constant).
+            // Equivalent to SET RowVersion = RowVersion + 1 because the WHERE
+            // clause below pins RowVersion to `captured`, so the matched row's
+            // current version + 1 IS nextVersion. The constant form is simpler
+            // and lets us write the value back to the row instance after the
+            // call without an extra round-trip.
+            update.Set(rvField, nextVersion);
+
+            update.Where(new BinaryCriteria(
+                new Criteria(idField),
+                CriteriaOperator.EQ,
+                new ValueCriteria(idValue)));
+            update.Where(new BinaryCriteria(
+                new Criteria(rvField),
+                CriteriaOperator.EQ,
+                new ValueCriteria(captured)));
+
+            // ExpectedRows.Ignore — we expect 0 (conflict) or 1 (success);
+            // either way it's not a "fail loudly on >1" scenario like the
+            // unguarded path.
+            var affected = update.Execute(c, ExpectedRows.Ignore);
+            if (affected == 0)
+                throw new OptimisticConcurrencyException(row.Table, idValue, captured);
+
+            // Row stayed put. Write the new RowVersion back so the caller can
+            // reuse the same instance for further updates without re-reading.
+            rvField.AsObject(row, (object?)nextVersion);
+            return Task.FromResult(true);
         }, uow, ct);
     }
 
@@ -134,6 +257,13 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
                 "it in the SET list. Drop to SqlUpdate via ExecuteAsync to bypass.",
                 nameof(fields));
 
+        // [RowVersion]-guarded path: route through the shared write path.
+        // The guard is applied even when `fields` doesn't include RowVersion —
+        // optimistic concurrency is non-negotiable for versioned rows.
+        var rvField = RowVersionMetadata.Find(row);
+        if (rvField is not null)
+            return UpdateGuardedAsync(row, rvField, fields, excludeFields: null, uow, ct);
+
         return ExecuteAsync((c, _) =>
         {
             var update = SqlUpdate(row.Table);
@@ -181,6 +311,13 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
                 "Row's Id must be set before calling UpdateExcludingAsync(row, excludeFields, ...).");
 
         var exclude = new HashSet<Field>(excludeFields);
+
+        // [RowVersion]-guarded path: route through the shared write path.
+        // The guard is applied even if RowVersion is in excludeFields —
+        // optimistic concurrency is non-negotiable, can't be excluded.
+        var rvField = RowVersionMetadata.Find(row);
+        if (rvField is not null)
+            return UpdateGuardedAsync(row, rvField, fieldsToSet: null, exclude, uow, ct);
 
         return ExecuteAsync((c, _) =>
         {

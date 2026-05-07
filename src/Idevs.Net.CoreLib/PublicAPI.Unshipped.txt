@@ -35,3 +35,10 @@ Idevs.Repositories.SqlServiceBase.ExecuteScalarAsync<T>(string sql, System.Colle
 Idevs.Repositories.SqlServiceBase.ExecuteNonQueryAsync(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
 Idevs.Repositories.SqlServiceBase.ExecuteScalar<T>(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null) -> T
 Idevs.Repositories.SqlServiceBase.ExecuteNonQuery(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null) -> int
+Idevs.Repositories.RowVersionAttribute
+Idevs.Repositories.RowVersionAttribute.RowVersionAttribute() -> void
+Idevs.Repositories.OptimisticConcurrencyException
+Idevs.Repositories.OptimisticConcurrencyException.OptimisticConcurrencyException(string tableName, object rowId, long capturedVersion) -> void
+Idevs.Repositories.OptimisticConcurrencyException.TableName.get -> string
+Idevs.Repositories.OptimisticConcurrencyException.RowId.get -> object
+Idevs.Repositories.OptimisticConcurrencyException.CapturedVersion.get -> long
