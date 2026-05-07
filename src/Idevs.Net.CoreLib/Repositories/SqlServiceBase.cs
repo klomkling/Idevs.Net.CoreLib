@@ -158,6 +158,59 @@ public abstract class SqlServiceBase
     }
 
     /// <summary>
+    /// Run <paramref name="work"/> in a fresh connection and transaction,
+    /// committing on success and rolling back on exception. Ignores any
+    /// ambient <see cref="IUnitOfWork"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Independent commit semantics — read this before using.</b></para>
+    /// <para>
+    /// Work committed by this helper does NOT roll back if the caller's outer
+    /// business transaction subsequently fails. This is the intended
+    /// behaviour: the helper exists so short-lived operations (sequence
+    /// allocation, audit log writes, idempotency-key reservation) can shorten
+    /// their lock window instead of holding it for the lifetime of the outer
+    /// transaction.
+    /// </para>
+    /// <para>
+    /// The trade-off: if the outer caller throws after this helper returns,
+    /// the effects committed here remain. For document-number / invoice-number
+    /// allocation that's the correct behaviour — gaps in the sequence are
+    /// acceptable, duplicate numbers are catastrophic. For anything where the
+    /// inner write must roll back with the outer flow, do NOT use this helper:
+    /// pass the caller's UoW through and let the outer transaction own the
+    /// commit.
+    /// </para>
+    /// </remarks>
+    protected async Task<T> InNewTransactionAsync<T>(
+        Func<IUnitOfWork, CancellationToken, Task<T>> work,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ct.ThrowIfCancellationRequested();
+
+        using var scope = BeginUnitOfWork(uow: null);
+        var result = await work(scope.Uow, ct).ConfigureAwait(false);
+        scope.Commit();
+        return result;
+    }
+
+    /// <summary>
+    /// Non-generic <see cref="InNewTransactionAsync{T}"/> overload for void work.
+    /// </summary>
+    protected async Task InNewTransactionAsync(
+        Func<IUnitOfWork, CancellationToken, Task> work,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(work);
+        ct.ThrowIfCancellationRequested();
+
+        using var scope = BeginUnitOfWork(uow: null);
+        await work(scope.Uow, ct).ConfigureAwait(false);
+        scope.Commit();
+    }
+
+    /// <summary>
     /// Execute raw SQL that returns a single scalar value.
     /// </summary>
     /// <remarks>
