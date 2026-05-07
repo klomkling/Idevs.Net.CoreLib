@@ -16,6 +16,15 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
     /// The query is pre-bound to <see cref="SqlServiceBase.Dialect"/> before
     /// <paramref name="configure"/> is invoked, so consumers don't need to call
     /// <c>q.Dialect(...)</c> themselves. Wraps Serenity's <c>Connection.TryFirst</c>.
+    /// <para>
+    /// When the configured query is flagged via
+    /// <see cref="SqlQueryLockExtensions.ForUpdate"/>, the SELECT is
+    /// materialised manually so the dialect-correct lock hint
+    /// (UPDLOCK/HOLDLOCK on SqlServer, FOR UPDATE on MySQL/Postgres) can be
+    /// injected. The locking path requires a non-null <paramref name="uow"/>
+    /// — taking a row lock outside a transaction is meaningless on every
+    /// supported engine.
+    /// </para>
     /// </remarks>
     public virtual Task<TRow?> TryFirstAsync(
         Action<SqlQuery> configure,
@@ -25,11 +34,45 @@ public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBa
         ArgumentNullException.ThrowIfNull(configure);
 
         return ExecuteAsync<TRow?>((c, _) =>
-            Task.FromResult<TRow?>(c.TryFirst<TRow>(q =>
+        {
+            // Bind a fresh row to the query up front so SelectTableFields()
+            // / WhereEqual(field,…) inside `configure` resolve against it. The
+            // same row is what GetFromReader populates after execution.
+            var row = new TRow();
+            var query = SqlQuery().From(row);
+            configure(query);
+
+            var lockMode = query.TryGetLockMode();
+            if (lockMode is null)
             {
-                q.Dialect(Dialect);
-                configure(q);
-            })), uow, ct);
+                // No lock — let Serenity's lambda-driven path handle execution
+                // and row mapping. configure runs again on its internal query;
+                // the call is idempotent so cost is negligible.
+                return Task.FromResult<TRow?>(c.TryFirst<TRow>(q =>
+                {
+                    q.Dialect(Dialect);
+                    configure(q);
+                }));
+            }
+
+            if (uow is null)
+                throw new InvalidOperationException(
+                    "ForUpdate() requires an active transaction. Pass a non-null uow, " +
+                    "or call inside InNewTransactionAsync.");
+
+            // Materialise SQL ourselves so we can inject the dialect-correct
+            // lock hint, then execute via SqlHelper which honours the active
+            // transaction on Serenity's WrappedConnection. Map the bound row
+            // using SqlQuery.GetFromReader.
+            var sql = RowLockSqlBuilder.Apply(query.ToString(), Dialect, lockMode.Value);
+
+            using var reader = SqlHelper.ExecuteReader(c, sql, query.Params, logger: null);
+            if (!reader.Read())
+                return Task.FromResult<TRow?>(null);
+
+            query.GetFromReader(reader);
+            return Task.FromResult<TRow?>(row);
+        }, uow, ct);
     }
 
     /// <summary>Return all rows that match the configured query.</summary>

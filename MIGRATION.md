@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](#v075--v076--row-lock-primitives--innewtransactionasync)
 - [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](#v074--v075--countasync--existsasync-helpers)
 - [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)
 - [v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)](#v072--v073--unit-of-work-helpers-beginunitofwork--commitonsuccessasync)
@@ -13,6 +14,160 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync
+
+### What changed
+
+Two new primitives that together unblock the classic SELECT-then-UPDATE
+race in caller code (e.g. `DocumentNumberRepository.GetNextDocNoAsync`):
+
+| Primitive | Where | What it does |
+|---|---|---|
+| `SqlQuery.ForUpdate(LockMode mode = Update)` | extension method | Marks the query for row-level locking. Hint applied dialect-correctly when materialised through Idevs repository helpers. |
+| `SqlServiceBase.InNewTransactionAsync<T>` | `protected` on `SqlServiceBase` | Runs work in a fresh connection + transaction, ignoring any ambient `IUnitOfWork`. Commits on success, rolls back on throw. |
+
+Plus a `LockMode` enum (`Update` / `Share` / `UpdateNoWait` / `UpdateSkip`)
+and behavioural changes to `RepositoryBase<TRow>.TryFirstAsync` (it now
+detects the `ForUpdate()` flag at execution time).
+
+### Why
+
+Before 0.7.6, locking a row for read-then-write required either dropping
+to raw Dapper or accepting that the lock window covers the entire
+caller's transaction. Both are footguns:
+
+```csharp
+// Before — race condition. Two concurrent callers can both read 41 and
+// both write 42, producing duplicate document numbers.
+public Task<long> GetNextDocNoAsync(IUnitOfWork uow, ...)
+{
+    var doc = await TryFirstAsync(q => q.SelectTableFields().Where(...), uow, ct);
+    doc.NextDocumentNo += 1;
+    await UpdateAsync(doc, uow, ct);
+    return doc.NextDocumentNo.Value;
+}
+```
+
+After 0.7.6:
+
+```csharp
+public Task<long> GetNextDocNoAsync(IUnitOfWork? uow, ...)
+{
+    // InNewTransactionAsync deliberately ignores the caller's uow so the
+    // lock window stays small. The number is allocated even if the
+    // outer business transaction subsequently rolls back — gaps are OK,
+    // duplicates are catastrophic.
+    return InNewTransactionAsync(async (innerUow, token) =>
+    {
+        var doc = await TryFirstAsync(
+            q => q.SelectTableFields()
+                  .Where(...)
+                  .ForUpdate(),                  // <-- new
+            innerUow, token);
+
+        doc.NextDocumentNo += 1;
+        await UpdateAsync(doc, innerUow, token);
+        return doc.NextDocumentNo.Value;
+    }, ct);
+}
+```
+
+### `LockMode` reference
+
+| Mode | SqlServer | MySQL / MariaDB | Postgres | Oracle | SQLite |
+|---|---|---|---|---|---|
+| `Update` | `WITH (UPDLOCK, HOLDLOCK, ROWLOCK)` | `FOR UPDATE` | `FOR UPDATE` | `FOR UPDATE` | throws |
+| `Share` | `WITH (HOLDLOCK, ROWLOCK)` | `LOCK IN SHARE MODE` | `FOR SHARE` | not portable; throws | throws |
+| `UpdateNoWait` | **throws** (no in-query NOWAIT) | `FOR UPDATE NOWAIT` (8.0+ / 10.6+) | `FOR UPDATE NOWAIT` | `FOR UPDATE NOWAIT` | throws |
+| `UpdateSkip` | `WITH (UPDLOCK, HOLDLOCK, ROWLOCK, READPAST)` | `FOR UPDATE SKIP LOCKED` (8.0+ / 10.6+) | `FOR UPDATE SKIP LOCKED` (9.5+) | `FOR UPDATE SKIP LOCKED` | throws |
+
+### `InNewTransactionAsync` semantics — read this before using
+
+The helper opens a **separate** connection and transaction. It commits on
+success and rolls back on exception, **regardless of any ambient**
+`IUnitOfWork` the caller has open.
+
+The trade-off is intentional: if the outer caller throws after this
+helper returns, the work committed inside the helper **remains**. For
+sequence allocation that's the correct behaviour — gaps are normal,
+duplicates are catastrophic. For anything where the inner write must
+roll back with the outer flow, do NOT use `InNewTransactionAsync`: pass
+the caller's UoW through and let the outer transaction own the commit.
+
+### Migrating existing call sites
+
+If you currently:
+
+| Pattern | Migration |
+|---|---|
+| Drop to raw Dapper for `SELECT … FOR UPDATE` | Use `q.ForUpdate()` on the existing `SqlQuery` builder. |
+| Use `CommitOnSuccessAsync(work, uow: null, ct)` to bypass an ambient UoW | Use `InNewTransactionAsync(work, ct)` — same behaviour, self-documenting name. |
+| Hand-roll connection + `BeginTransaction()` for sequence allocators | Use `InNewTransactionAsync` and put `q.ForUpdate()` on the SELECT inside the body. |
+
+The original `CommitOnSuccessAsync` overload is unchanged — keep using
+it for the case where you want to "join the caller's UoW or open a fresh
+one" (the default behaviour). `InNewTransactionAsync` is the new helper
+for the explicitly-fresh case.
+
+### Behavioural change to `TryFirstAsync`
+
+Queries that don't call `ForUpdate()` execute exactly as before — through
+Serenity's `connection.TryFirst<TRow>(q => …)` lambda path. Queries that
+DO call `ForUpdate()` take a different code path:
+
+1. The SELECT is materialised via `query.ToString()`.
+2. The dialect-correct lock hint is injected via the internal
+   `RowLockSqlBuilder`.
+3. Execution goes through `SqlHelper.ExecuteReader(connection, sql, params, logger)`
+   so transaction propagation through Serenity's `WrappedConnection`
+   is preserved.
+4. Row mapping uses `SqlQuery.GetFromReader(reader)` — the same
+   primitive Serenity's lambda path uses internally.
+
+The lock-aware path requires a non-null `uow`. Calling
+`TryFirstAsync(q => q.…ForUpdate(), uow: null)` throws
+`InvalidOperationException`.
+
+### Important caveats
+
+- **Direct Serenity execution paths do NOT honour `ForUpdate()`.** If
+  you write `connection.TryFirst<TRow>(q => q.…ForUpdate())`,
+  `connection.Query<TRow>(q => q.…ForUpdate())`, or any other Serenity
+  extension method that takes a `SqlQuery`, the flag is silently
+  ignored and the SELECT runs without a lock. Always call through
+  Idevs repository helpers when locking matters.
+- **`UpdateNoWait` is unsupported on SqlServer.** SqlServer has no
+  in-query NOWAIT hint. The library throws. Workaround:
+  `SET LOCK_TIMEOUT 0` at the session/transaction level before the
+  locking SELECT, then catch SQL error 1222.
+- **`UpdateSkip` requires READ COMMITTED or REPEATABLE READ on
+  SqlServer.** READPAST is rejected at higher isolation levels with
+  error 16957. Verify the active transaction's isolation level before
+  relying on `UpdateSkip` against SqlServer.
+- **Connection pool sizing.** `InNewTransactionAsync` opens a second
+  connection during the call. Verify peak concurrency × 2 ≤ your
+  configured `Max Pool Size`.
+- **No identity-return path for bulk operations.** If you need the
+  identity values from a multi-row operation, do not bulk-merge
+  through this helper.
+
+### Verifying production data
+
+If you suspect a race condition has fired silently before adopting this
+fix, run a duplicate check against your sequence-counter tables:
+
+```sql
+SELECT DocumentCode, NextDocumentNo, COUNT(*)
+FROM DocumentNumber
+GROUP BY DocumentCode, NextDocumentNo
+HAVING COUNT(*) > 1;
+```
+
+Any results indicate the race has produced duplicates that need
+backfilling before deployment.
 
 ---
 
