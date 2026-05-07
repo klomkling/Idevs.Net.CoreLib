@@ -88,14 +88,29 @@ public sealed class LockedTryFirstSqlServerTests : IDisposable
             await firstHoldsLock.Task;
 
             // While the first transaction holds the lock, a second locker should
-            // block (not return immediately). Same Task.Run reasoning as `first`.
-            var second = Task.Run(() => _repo.InNewTransactionAsync(async (uow, ct) =>
-                await _repo.TryFirstAsync(
-                    q => q.SelectTableFields().Where(Fld.Code == "B").ForUpdate(),
-                    uow, ct)));
+            // block. Two coordination points to make the assertion robust against
+            // thread-pool starvation on slow CI:
+            //   1. `secondStarted` fires once the second Task is actually running
+            //      (the SELECT is about to be issued). Waiting for this before
+            //      starting the timer eliminates "second hadn't even been
+            //      scheduled" false positives.
+            //   2. A generous 1.5s timeout — the SELECT itself is sub-millisecond
+            //      against an empty contention window, so any delay this side of
+            //      seconds is real lock-wait time.
+            var secondStarted = new TaskCompletionSource();
+            var second = Task.Run(async () =>
+            {
+                secondStarted.SetResult();
+                return await _repo.InNewTransactionAsync(async (uow, ct) =>
+                    await _repo.TryFirstAsync(
+                        q => q.SelectTableFields().Where(Fld.Code == "B").ForUpdate(),
+                        uow, ct));
+            });
+            await secondStarted.Task;
 
-            var winner = await Task.WhenAny(second, Task.Delay(300));
-            Assert.NotSame(second, winner); // second is still blocked
+            var timeout = Task.Delay(1500);
+            var winner = await Task.WhenAny(second, timeout);
+            Assert.Same(timeout, winner); // second is still blocked
 
             allowFirstToCommit.SetResult();
             await first;

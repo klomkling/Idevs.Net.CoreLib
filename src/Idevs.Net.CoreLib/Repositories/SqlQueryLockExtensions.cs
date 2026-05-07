@@ -5,11 +5,18 @@ namespace Idevs.Repositories;
 
 /// <summary>
 /// Fluent <see cref="SqlQuery"/> extension that flags a SELECT for row-level
-/// locking. The lock hint is materialised at execution time by Idevs
-/// repository helpers (<see cref="RepositoryBase{TRow}.TryFirstAsync"/>,
-/// <see cref="RepositoryBase{TRow}.ListAsync"/>).
+/// locking. The lock hint is materialised at execution time by
+/// <see cref="RepositoryBase{TRow}.TryFirstAsync"/>.
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>Currently honoured by:</b> <see cref="RepositoryBase{TRow}.TryFirstAsync"/> only.
+/// <c>ListAsync</c>, <c>CountAsync</c>, <c>ExistsAsync</c>, and <c>GetByIdAsync</c>
+/// run through Serenity's standard execution path and silently ignore the
+/// flag. Coverage will expand in a follow-up release; in the meantime, the
+/// document-number / sequence-allocation pattern that motivated this work
+/// only needs the single-row path.
+/// </para>
 /// <para>
 /// Direct Serenity execution paths — <c>connection.TryFirst&lt;TRow&gt;(query)</c>,
 /// <c>connection.Query&lt;TRow&gt;(query)</c>, etc. — DO NOT honour this flag
