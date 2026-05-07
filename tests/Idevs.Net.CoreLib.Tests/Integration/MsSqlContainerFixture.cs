@@ -68,7 +68,8 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
 
         SqlConnections = new DefaultSqlConnections(defaultConnectionStrings);
 
-        // Create schema for the integration test row.
+        // Create schema for the integration test row + the IdevsSequences
+        // table the SqlSequenceProvider depends on.
         using var conn = SqlConnections.NewByKey("Default");
         SqlHelper.ExecuteNonQuery(conn, """
             IF OBJECT_ID('dbo.IntegrationTestRows', 'U') IS NOT NULL
@@ -80,7 +81,25 @@ public sealed class MsSqlContainerFixture : IAsyncLifetime
                 Amount DECIMAL(18,4) NOT NULL DEFAULT 0,
                 Status NVARCHAR(20) NULL
             );
+
+            IF OBJECT_ID('dbo.IdevsSequences', 'U') IS NOT NULL
+                DROP TABLE dbo.IdevsSequences;
+
+            CREATE TABLE dbo.IdevsSequences (
+                SequenceKey NVARCHAR(100) NOT NULL PRIMARY KEY,
+                NextValue BIGINT NOT NULL
+            );
             """);
+    }
+
+    /// <summary>
+    /// Truncate the IdevsSequences table — call between tests in
+    /// SqlSequenceProvider integration suites for isolation.
+    /// </summary>
+    public void TruncateSequencesTable()
+    {
+        using var conn = SqlConnections.NewByKey("Default");
+        SqlHelper.ExecuteNonQuery(conn, "TRUNCATE TABLE dbo.IdevsSequences;");
     }
 
     public async Task DisposeAsync()

@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.7 (2026-05-07)
+
+### Added
+
+- `Idevs.Repositories.Sequences.ISequenceProvider` — atomic numeric
+  sequence allocator. Each call to `NextAsync(string sequenceKey, ct)`
+  returns a value that no other concurrent caller can return for the
+  same key. `NextRangeAsync(key, count, ct)` allocates a contiguous
+  block atomically (useful for bulk imports). `EnsureSequenceAsync(key,
+  startValue = 1, ct)` idempotently seeds a sequence row.
+- `SqlSequenceProvider` — default SQL-backed implementation, registered
+  via `[Scoped(ServiceType = typeof(ISequenceProvider))]`. Uses 0.7.6's
+  `InNewTransactionAsync` + `ForUpdate()` so the lock window is the
+  duration of the SELECT…FOR UPDATE + UPDATE on a single sequence row;
+  on a same-region database that's sub-millisecond. Backed by an
+  `IdevsSequences` table (`SequenceKey NVARCHAR(100) PRIMARY KEY`,
+  `NextValue BIGINT NOT NULL`); consumers create the table in their
+  own migration pipeline (schema in MIGRATION.md).
+- `IdevsSequenceRow` — public Serenity row backing the storage table.
+- `SequenceServiceCollectionExtensions.AddIdevsSequenceProvider()` —
+  manual DI registration for hosts that don't run the source generator
+  (test hosts, console apps).
+
+### Notes
+
+- Allocation is **independent of any ambient `IUnitOfWork`** by design.
+  A value committed inside `NextAsync` does NOT roll back if the outer
+  caller's business transaction subsequently fails. This is the
+  intended semantic for document-number / invoice-number / order-number
+  sequences — gaps are normal, duplicate numbers are catastrophic.
+- The interface returns `long`; callers format to whatever scheme their
+  domain requires (`INV-2026-00042`, `SO/2026/00001`, etc.). The
+  provider does not know about formatting.
+- See MIGRATION.md (v0.7.6 → v0.7.7) for the caller-side migration
+  pattern from the manual SELECT-then-UPDATE shape, including the
+  schema DDL for SqlServer / MySQL / PostgreSQL.
+
+### Verified (xUnit + Testcontainers vs SQL Server 2022)
+
+- 14 integration tests in `SqlSequenceProviderTests` covering: ensure
+  semantics (new key, existing key preserves NextValue, default vs
+  custom start value), `NextAsync` sequencing and per-key isolation,
+  argument validation (null/empty key throws, non-positive count
+  throws, missing key throws), `NextRangeAsync` block allocation
+  (advance count, large block of 1000), 50 concurrent allocators
+  produce 50 distinct values (the underlying race fix re-pinned at the
+  helper level), and outer-rollback survival.
+
 ## 0.7.6 (2026-05-07)
 
 ### Added
