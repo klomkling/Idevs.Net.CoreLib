@@ -1,0 +1,62 @@
+name: Integration Tests
+
+# Runs the [Trait("Category", "Integration")] suite that the regular CI
+# workflow filters out. Lives in a separate workflow for two reasons:
+#   1. Testcontainers pulls mcr.microsoft.com/mssql/server, which gets
+#      403'd by Microsoft's WAF on shared GitHub-hosted runner IPs from
+#      time to time. Decoupling from PR CI keeps PR merges moving when
+#      the registry is having a bad day.
+#   2. Integration tests are slower than unit tests by ~5-10x (image
+#      pull + container startup). Running them on every PR push would
+#      double CI time without proportional value — the unit suite
+#      already covers the dialect SQL builders deterministically.
+#
+# Triggered:
+#   - on every push to main (catches regressions within minutes of merge)
+#   - manually via workflow_dispatch (run before tagging a release, or
+#     re-run if a previous attempt failed at image pull)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Integration (Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Integration tests
+        # Inverse filter from ci.yml: Category=Integration only.
+        # If MCR is blocking and the suite fails at fixture init, the
+        # workflow is re-runnable from the Actions tab.
+        run: dotnet test --configuration Release --no-build --verbosity normal --filter "Category=Integration"

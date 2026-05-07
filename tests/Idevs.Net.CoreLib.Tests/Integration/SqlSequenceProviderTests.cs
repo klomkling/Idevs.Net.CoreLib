@@ -129,6 +129,36 @@ public sealed class SqlSequenceProviderTests : IDisposable
     }
 
     [Fact]
+    public async Task NextAsync_AtLongMaxValue_ThrowsExhaustionException()
+    {
+        // Seed at long.MaxValue: the FIRST NextAsync should succeed
+        // (returning long.MaxValue) and try to advance to MaxValue + 1,
+        // which is the overflow point.
+        await _sequences.EnsureSequenceAsync("DocNo:Overflow", startValue: long.MaxValue);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sequences.NextAsync("DocNo:Overflow"));
+
+        Assert.Contains("exhausted", ex.Message);
+        Assert.Contains("long.MaxValue", ex.Message);
+        Assert.IsType<OverflowException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task NextRangeAsync_OverflowAtLongMaxValue_ThrowsExhaustionException()
+    {
+        // Seed near the boundary: (MaxValue - 5) + 10 overflows.
+        await _sequences.EnsureSequenceAsync("DocNo:OverflowRange", startValue: long.MaxValue - 5);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sequences.NextRangeAsync("DocNo:OverflowRange", 10));
+
+        Assert.Contains("overflow", ex.Message);
+        Assert.Contains("long.MaxValue", ex.Message);
+        Assert.IsType<OverflowException>(ex.InnerException);
+    }
+
+    [Fact]
     public async Task NextRangeAsync_NonPositiveCount_Throws()
     {
         await _sequences.EnsureSequenceAsync("DocNo:Bulk3");

@@ -1,4 +1,3 @@
-using System.Data.Common;
 using Idevs.ComponentModels;
 using Serenity.Data;
 
@@ -49,8 +48,24 @@ public sealed class SqlSequenceProvider(ISqlConnections sqlConnections)
                 ?? throw NotSeeded(sequenceKey);
 
             var allocated = row.NextValue!.Value;
+
+            // Overflow protection: at long.MaxValue the unchecked `+ 1`
+            // would wrap to long.MinValue, producing negative allocations
+            // that would silently collide with future values once the
+            // counter wraps forward. We want loud failure, not silent
+            // corruption.
+            long advanced;
+            try { advanced = checked(allocated + 1); }
+            catch (OverflowException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Sequence '{sequenceKey}' has been exhausted: " +
+                    $"NextValue ({allocated}) is at long.MaxValue and cannot advance.",
+                    ex);
+            }
+
             await UpdateAsync(
-                u => u.Set(Fld.NextValue, allocated + 1)
+                u => u.Set(Fld.NextValue, advanced)
                       .Where(Fld.SequenceKey == sequenceKey),
                 ExpectedRows.One, uow, token).ConfigureAwait(false);
             return allocated;
@@ -76,8 +91,22 @@ public sealed class SqlSequenceProvider(ISqlConnections sqlConnections)
                 ?? throw NotSeeded(sequenceKey);
 
             var first = row.NextValue!.Value;
+
+            // Overflow protection — same reasoning as NextAsync but the
+            // jump is `+ count` instead of `+ 1`, so the threshold is
+            // closer to long.MaxValue.
+            long advanced;
+            try { advanced = checked(first + count); }
+            catch (OverflowException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Sequence '{sequenceKey}' would overflow: " +
+                    $"NextValue ({first}) + count ({count}) exceeds long.MaxValue.",
+                    ex);
+            }
+
             await UpdateAsync(
-                u => u.Set(Fld.NextValue, first + count)
+                u => u.Set(Fld.NextValue, advanced)
                       .Where(Fld.SequenceKey == sequenceKey),
                 ExpectedRows.One, uow, token).ConfigureAwait(false);
 
@@ -95,45 +124,20 @@ public sealed class SqlSequenceProvider(ISqlConnections sqlConnections)
 
         return InNewTransactionAsync(async (uow, token) =>
         {
-            // Plain TryFirstAsync (no ForUpdate) is fine here — concurrent
-            // EnsureSequenceAsync calls for the same key both see "no row",
-            // both attempt CreateAsync, the second hits the primary-key
-            // unique constraint and throws. Catching that path keeps the
-            // happy path free of the lock overhead. For a sequence that's
-            // about to be allocated against, the FIRST NextAsync will take
-            // the lock anyway; race here is irrelevant.
-            var existing = await TryFirstAsync(
-                q => q.SelectTableFields().Where(Fld.SequenceKey == sequenceKey),
-                uow, token).ConfigureAwait(false);
-            if (existing is not null) return;
-
-            try
+            // Single-statement dialect-aware UPSERT. No try/catch
+            // required: the statement is a no-op when the row already
+            // exists (no error, no transaction abort). This is the
+            // critical fix for PostgreSQL — the previous "INSERT then
+            // catch on PK violation" pattern aborted the surrounding
+            // transaction on PG (error 25P02), so the InNewTransactionAsync
+            // commit failed even when we'd correctly identified a race.
+            var sql = SequenceUpsertBuilder.Build(Dialect);
+            var parameters = new Dictionary<string, object?>
             {
-                await CreateAsync(new IdevsSequenceRow
-                {
-                    SequenceKey = sequenceKey,
-                    NextValue = startValue,
-                }, uow, token).ConfigureAwait(false);
-            }
-            catch (DbException)
-            {
-                // Narrowed catch: only DbException (covers SqlException,
-                // MySqlException, NpgsqlException, etc.). Non-database
-                // errors — OperationCanceledException, ArgumentException,
-                // NullReferenceException — propagate without being
-                // inspected, so configuration / cancellation bugs surface
-                // immediately instead of being swallowed by the race
-                // recovery path.
-                //
-                // Re-check the row: if a concurrent EnsureSequenceAsync
-                // won the create race, treat as a no-op. Otherwise (e.g.
-                // permission error, schema missing, transient connection
-                // failure with no row yet) rethrow.
-                var racing = await TryFirstAsync(
-                    q => q.SelectTableFields().Where(Fld.SequenceKey == sequenceKey),
-                    uow, token).ConfigureAwait(false);
-                if (racing is null) throw;
-            }
+                ["@key"] = sequenceKey,
+                ["@val"] = startValue,
+            };
+            await ExecuteNonQueryAsync(sql, parameters, uow, token).ConfigureAwait(false);
         }, ct);
     }
 
