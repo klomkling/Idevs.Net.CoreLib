@@ -211,8 +211,15 @@ Connection key is configurable via the virtual `ConnectionKey` property or the `
 For document/invoice/order-number allocation that must stay distinct across concurrent callers, use `ISequenceProvider` instead of writing the locking dance by hand:
 
 ```csharp
+public interface IDocumentNumberService
+{
+    Task<string> GetNextDocNoAsync(string docCode, CancellationToken ct = default);
+}
+
+// [Scoped] auto-registers via the I{ClassName} convention — the source
+// generator pairs DocumentNumberService with IDocumentNumberService.
 [Scoped]
-public sealed class DocumentNumberService(ISequenceProvider sequences)
+public sealed class DocumentNumberService(ISequenceProvider sequences) : IDocumentNumberService
 {
     public async Task<string> GetNextDocNoAsync(string docCode, CancellationToken ct = default)
     {

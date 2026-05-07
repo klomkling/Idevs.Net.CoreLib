@@ -43,8 +43,23 @@ internal static class SequenceUpsertBuilder
         // consumer quotes their CREATE TABLE differently, they'll need
         // to override this provider with one that matches their schema.
         if (IsSqlServer(serverType))
-            return "IF NOT EXISTS (SELECT 1 FROM IdevsSequences WHERE SequenceKey = @key) " +
-                   "INSERT INTO IdevsSequences (SequenceKey, NextValue) VALUES (@key, @val);";
+            // Atomic insert-if-not-exists with serializable-grade locking.
+            // The naive form `IF NOT EXISTS (SELECT ...) INSERT ...` is two
+            // statements and races under concurrency: two sessions can both
+            // see "no row", both attempt INSERT, the second hits a PK
+            // violation. The `INSERT ... SELECT ... WHERE NOT EXISTS`
+            // variant with WITH (UPDLOCK, HOLDLOCK) on the inner SELECT
+            // takes a key-range lock during the existence check that
+            // persists until the transaction commits — concurrent callers
+            // serialise on it and the second sees the row, so its WHERE
+            // NOT EXISTS evaluates false and the INSERT becomes a no-op.
+            // (We deliberately avoid MERGE: it has documented bugs across
+            // multiple SqlServer versions for race conditions and triggers.)
+            return "INSERT INTO IdevsSequences (SequenceKey, NextValue) " +
+                   "SELECT @key, @val " +
+                   "WHERE NOT EXISTS (" +
+                       "SELECT 1 FROM IdevsSequences WITH (UPDLOCK, HOLDLOCK) " +
+                       "WHERE SequenceKey = @key);";
 
         if (IsMySql(serverType))
             return "INSERT IGNORE INTO IdevsSequences (SequenceKey, NextValue) VALUES (@key, @val);";

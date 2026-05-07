@@ -180,10 +180,15 @@ Avoid raw user input in the key. The allocator does NOT sanitize — a
   reserve the block in one round trip; allocating one-at-a-time inside
   a loop is correct but issues N round trips.
 - **Concurrent `EnsureSequenceAsync`.** Two callers ensuring the same
-  key at the same time race on the primary-key insert. The
-  implementation catches the unique-constraint conflict and treats it
-  as a no-op — both callers return successfully without a second seed
-  attempt. Safe to call from app startup in load-balanced fleets.
+  key at the same time both succeed without raising an error. The
+  implementation issues a single dialect-aware no-error UPSERT per
+  call — `INSERT IGNORE` (MySQL/MariaDB), `INSERT ... ON CONFLICT
+  DO NOTHING` (PostgreSQL), `INSERT OR IGNORE` (SQLite), an
+  `INSERT ... WHERE NOT EXISTS` with `WITH (UPDLOCK, HOLDLOCK)` on
+  the existence check (SqlServer), or `MERGE` (Oracle). No
+  PK-violation exception is raised in any of these dialects, so the
+  surrounding transaction stays valid even under contention. Safe to
+  call from app startup in load-balanced fleets.
 
 ---
 

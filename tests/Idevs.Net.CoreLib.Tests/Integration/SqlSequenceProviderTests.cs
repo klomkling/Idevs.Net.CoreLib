@@ -131,9 +131,14 @@ public sealed class SqlSequenceProviderTests : IDisposable
     [Fact]
     public async Task NextAsync_AtLongMaxValue_ThrowsExhaustionException()
     {
-        // Seed at long.MaxValue: the FIRST NextAsync should succeed
-        // (returning long.MaxValue) and try to advance to MaxValue + 1,
-        // which is the overflow point.
+        // Seeded at long.MaxValue. The implementation advances NextValue
+        // BEFORE returning the allocated value, so it tries
+        // checked(long.MaxValue + 1) and throws OverflowException, which
+        // we wrap as InvalidOperationException("...exhausted..."). The
+        // last value (long.MaxValue) is therefore unallocatable — a
+        // deliberate trade-off for safety: refusing the very last value
+        // is preferable to handing it out and silently corrupting the
+        // next call.
         await _sequences.EnsureSequenceAsync("DocNo:Overflow", startValue: long.MaxValue);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -175,6 +180,36 @@ public sealed class SqlSequenceProviderTests : IDisposable
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _sequences.NextRangeAsync("DoesNotExist", 5));
         Assert.Contains("EnsureSequenceAsync", ex.Message);
+    }
+
+    /// <summary>
+    /// 50 concurrent <see cref="ISequenceProvider.EnsureSequenceAsync"/>
+    /// calls for the same key, all racing on the initial INSERT. Pins
+    /// the SqlServer atomic-upsert pattern (INSERT … SELECT … WHERE
+    /// NOT EXISTS WITH (UPDLOCK, HOLDLOCK)). The naive
+    /// IF NOT EXISTS … INSERT shape would intermittently fail here
+    /// with a primary-key violation.
+    /// </summary>
+    [Fact]
+    public async Task FiftyConcurrentEnsureCalls_AllSucceed_OneRowExists()
+    {
+        const int n = 50;
+
+        var tasks = Enumerable.Range(0, n)
+            .Select(_ => _sequences.EnsureSequenceAsync("DocNo:EnsureRace", startValue: 100))
+            .ToArray();
+
+        // All 50 callers must succeed — no caller observes a PK conflict
+        // even though they all attempt to seed the same row simultaneously.
+        await Task.WhenAll(tasks);
+
+        // Exactly one row exists and the seeded value won.
+        var allocated = await _sequences.NextAsync("DocNo:EnsureRace");
+        Assert.Equal(100L, allocated);
+
+        // Subsequent NextAsync continues from 101 — proving the second
+        // EnsureSequenceAsync call did NOT overwrite NextValue.
+        Assert.Equal(101L, await _sequences.NextAsync("DocNo:EnsureRace"));
     }
 
     /// <summary>
