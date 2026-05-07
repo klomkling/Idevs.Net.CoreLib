@@ -206,6 +206,41 @@ Three layered base classes for data access:
 
 Connection key is configurable via the virtual `ConnectionKey` property or the `[ConnectionKey("Warehouse")]` attribute (resolved on the derived class).
 
+#### Optimistic concurrency (0.7.8)
+
+Mark a `long?` property with `[RowVersion]` and the three TRow-shaped `UpdateAsync` overloads on `RepositoryBase<TRow, TKey>` automatically guard the UPDATE with `WHERE RowVersion = @captured` and `SET RowVersion = RowVersion + 1`. On a stale write the library throws `OptimisticConcurrencyException` carrying `TableName`, `RowId`, and `CapturedVersion`:
+
+```csharp
+public sealed class OrderRow : Row<OrderRow.RowFields>, IIdRow
+{
+    [Identity, IdProperty]
+    public int? Id { get => fields.Id[this]; set => fields.Id[this] = value; }
+
+    [Size(50), NotNull]
+    public string? CustomerCode { get => fields.CustomerCode[this]; set => fields.CustomerCode[this] = value; }
+
+    [NotNull, RowVersion]                      // <-- one attribute
+    public long? RowVersion { get => fields.RowVersion[this]; set => fields.RowVersion[this] = value; }
+
+    public sealed class RowFields : RowFieldsBase
+    {
+        public Int32Field Id;
+        public StringField CustomerCode;
+        public Int64Field RowVersion;
+    }
+}
+
+// Caller code:
+var order = await repo.GetByIdAsync(orderId);
+order.CustomerCode = newCode;
+try { await repo.UpdateAsync(order); }                         // RowVersion advances 0 → 1
+catch (OptimisticConcurrencyException) { /* re-read, retry */ }
+```
+
+Schema-side: a plain `BIGINT NOT NULL DEFAULT 0` column. Portable across SqlServer, MySQL/MariaDB, PostgreSQL, Oracle, SQLite. Adding it to an existing table backfills as version 0 — no data migration needed.
+
+Rows without `[RowVersion]` see no behaviour change. The criteria-based `UpdateAsync(Action<SqlUpdate>, …)` overload is unchanged — caller owns the WHERE there. See [MIGRATION.md](MIGRATION.md#v077--v078--optimistic-concurrency-on-updateasync) for the manual retry pattern, validation rules, and full schema DDL by engine.
+
 #### Sequence allocation (0.7.7)
 
 For document/invoice/order-number allocation that must stay distinct across concurrent callers, use `ISequenceProvider` instead of writing the locking dance by hand:
@@ -674,6 +709,7 @@ If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGene
 
 Detailed upgrade notes for every minor and major version live in [MIGRATION.md](MIGRATION.md). Latest transitions:
 
+- [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](MIGRATION.md#v077--v078--optimistic-concurrency-on-updateasync)
 - [v0.7.6 → v0.7.7 — ISequenceProvider helper](MIGRATION.md#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](MIGRATION.md#v075--v076--row-lock-primitives--innewtransactionasync)
 - [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](MIGRATION.md#v074--v075--countasync--existsasync-helpers)

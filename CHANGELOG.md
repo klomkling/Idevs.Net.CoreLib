@@ -1,5 +1,80 @@
 # Changelog
 
+## 0.7.8 (2026-05-08)
+
+### Added
+
+- `Idevs.Repositories.RowVersionAttribute` — opt-in marker for a
+  `long?` property that the library uses as the row's
+  optimistic-concurrency version counter. Apply once per row.
+- `Idevs.Repositories.OptimisticConcurrencyException` — thrown when a
+  guarded UPDATE affects zero rows. Carries `TableName`, `RowId`, and
+  `CapturedVersion` for diagnostics; intentionally does not carry the
+  current database version (re-reading the row is the only safe path
+  to recovery, exposing the current value here would invite naive
+  retries).
+
+### Changed
+
+- `RepositoryBase<TRow,TKey>.UpdateAsync(TRow row, …)` now detects a
+  `[RowVersion]` field on the row type. When present, the SQL gains
+  `WHERE RowVersion = @captured` and `SET RowVersion = RowVersion + 1`,
+  the call runs with `ExpectedRows.Ignore`, and 0 affected rows
+  becomes `OptimisticConcurrencyException`. After a successful update,
+  the new version is written back to the row instance so the caller
+  can reuse it for further updates without re-reading.
+- `UpdateAsync(TRow row, Field[] fields, …)` and
+  `UpdateExcludingAsync(TRow row, Field[] excludeFields, …)` apply the
+  same guard — opting out of RowVersion via field selection is not
+  possible by design (optimistic concurrency is non-negotiable for
+  versioned rows).
+- Rows without `[RowVersion]` are unchanged from 0.7.7 — no WHERE
+  clause added, no exception type changes, identical behaviour.
+
+### Validation (fail-loud at first lookup, cached forever)
+
+- More than one `[RowVersion]` property on a row throws
+  `InvalidOperationException` with the offending property names.
+- `[RowVersion]` on a non-`long?` property throws with a type-mismatch
+  message pointing at the right shape.
+- `[RowVersion]` property without a matching `Int64Field` in
+  `RowFields` throws with the exact field declaration the consumer
+  needs to add.
+- A `[RowVersion]` field with `FieldFlags.Updatable` cleared throws —
+  the library increments it on every guarded UPDATE, so making it
+  non-Updatable would silently disable the guard.
+- `null` `RowVersion` value at update time throws — the captured
+  version must be known, which means the caller must read the row
+  before updating. Catches "constructed by hand" bugs early.
+
+### Verified (xUnit + Testcontainers vs SQL Server 2022)
+
+- 8 integration tests in `OptimisticConcurrencyTests` cover: happy
+  path increment via all three TRow-shaped UpdateAsync overloads;
+  conflict detection on stale RowVersion (single-conflict + 50-way
+  stampede); manual retry pattern (5 concurrent +1 increments
+  resolved via re-read loop); precondition checks (null RowVersion);
+  non-versioned regression sanity test (rows without `[RowVersion]`
+  unchanged).
+
+### Notes
+
+- **No built-in retry helper.** Optimistic concurrency is a
+  policy-level concern (how many retries, how long to wait, what
+  conflicts mean for the business). Document the manual try/retry
+  pattern; revisit if real demand emerges. See MIGRATION.md (v0.7.7 →
+  v0.7.8) for the canonical retry shape.
+- **Application-managed `BIGINT`, not native `rowversion`.** The
+  schema is portable across SqlServer / MySQL / MariaDB / PostgreSQL
+  / Oracle / SQLite — a plain `BIGINT NOT NULL DEFAULT 0`. SqlServer's
+  native `rowversion` / `timestamp` type isn't used because it's
+  `varbinary(8)`, not portable, and a `bigint` counter has plenty of
+  range for any realistic workload.
+- **Criteria-based `UpdateAsync(Action<SqlUpdate>, …)` is unchanged.**
+  The caller owns the WHERE clause in that overload — adding magic
+  guards would surprise. Add the `WHERE RowVersion = ...` manually if
+  needed.
+
 ## 0.7.7 (2026-05-07)
 
 ### Added
