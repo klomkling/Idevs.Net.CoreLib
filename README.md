@@ -206,6 +206,34 @@ Three layered base classes for data access:
 
 Connection key is configurable via the virtual `ConnectionKey` property or the `[ConnectionKey("Warehouse")]` attribute (resolved on the derived class).
 
+#### Concurrency primitives (0.7.6)
+
+For SELECT-then-UPDATE patterns that must stay atomic across concurrent callers — sequence allocation, balance transfers, queue consumers — two new primitives:
+
+| Primitive | Where | What it does |
+|---|---|---|
+| `SqlQuery.ForUpdate(LockMode mode = Update)` | extension | Marks the query for row-level locking. Hint applied dialect-correctly when the query is materialised through Idevs repository helpers (`UPDLOCK/HOLDLOCK` on SqlServer, `FOR UPDATE` on MySQL/Postgres/Oracle). SQLite throws. Direct Serenity execution paths silently ignore the flag — go through Idevs helpers when locking matters. |
+| `SqlServiceBase.InNewTransactionAsync<T>(work, ct)` | `protected` | Runs `work` in a fresh connection and transaction, ignoring any ambient `IUnitOfWork`. Commits on success, rolls back on throw. Independent commit semantics: inner writes survive an outer rollback. |
+
+`LockMode` has four members: `Update` (default), `Share`, `UpdateNoWait`, `UpdateSkip`. See [MIGRATION.md](MIGRATION.md#v075--v076--row-lock-primitives--innewtransactionasync) for the full dialect matrix and engine-specific caveats (SqlServer has no in-query NOWAIT; SqlServer `UpdateSkip` requires READ COMMITTED isolation).
+
+```csharp
+// Atomic sequence allocation: SELECT ... FOR UPDATE inside a fresh
+// transaction, regardless of the caller's outer UoW. Allocated number
+// survives even if the caller's outer business transaction rolls back —
+// gaps are normal, duplicates are catastrophic.
+public Task<long> AllocateNextDocNoAsync(string code, CancellationToken ct = default) =>
+    InNewTransactionAsync(async (uow, token) =>
+    {
+        var row = await TryFirstAsync(
+            q => q.SelectTableFields().Where(Fld.DocCode == code).ForUpdate(),
+            uow, token);
+        row.NextDocNo += 1;
+        await UpdateAsync(row, uow, token);
+        return row.NextDocNo.Value;
+    }, ct);
+```
+
 #### Example
 
 ```csharp
@@ -619,6 +647,10 @@ If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGene
 
 Detailed upgrade notes for every minor and major version live in [MIGRATION.md](MIGRATION.md). Latest transitions:
 
+- [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](MIGRATION.md#v075--v076--row-lock-primitives--innewtransactionasync)
+- [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](MIGRATION.md#v074--v075--countasync--existsasync-helpers)
+- [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](MIGRATION.md#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)
+- [v0.7.2 → v0.7.3 — Unit of Work Helpers (BeginUnitOfWork + CommitOnSuccessAsync)](MIGRATION.md#v072--v073--unit-of-work-helpers-beginunitofwork--commitonsuccessasync)
 - [v0.7.1 → v0.7.2 — RepositoryBase Criteria-Based Update/Delete + TryFirst Alias](MIGRATION.md#v071--v072--repositorybase-criteria-based-updatedelete--tryfirst-alias)
 - [v0.6.x → v0.7.0 — Source-Generator DI Registration](MIGRATION.md#v06x--v070--source-generator-di-registration)
 - [v0.5.0 → v0.6.0 — RepositoryBase Redesign](MIGRATION.md#v050--v060--repositorybase-redesign)
