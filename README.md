@@ -206,6 +206,26 @@ Three layered base classes for data access:
 
 Connection key is configurable via the virtual `ConnectionKey` property or the `[ConnectionKey("Warehouse")]` attribute (resolved on the derived class).
 
+#### Sequence allocation (0.7.7)
+
+For document/invoice/order-number allocation that must stay distinct across concurrent callers, use `ISequenceProvider` instead of writing the locking dance by hand:
+
+```csharp
+[Scoped]
+public sealed class DocumentNumberService(ISequenceProvider sequences)
+{
+    public async Task<string> GetNextDocNoAsync(string docCode, CancellationToken ct = default)
+    {
+        var n = await sequences.NextAsync($"DocNo:{docCode}", ct);
+        return $"{docCode}-{n:00000}";
+    }
+}
+```
+
+Backed by a single `IdevsSequences` table the consumer creates in their migration pipeline (DDL in [MIGRATION.md](MIGRATION.md#v076--v077--isequenceprovider-helper)). Allocation is independent of any ambient `IUnitOfWork` by design — gaps in document numbers are normal, duplicates are catastrophic. `NextRangeAsync(key, count)` allocates a contiguous block atomically for bulk imports.
+
+`EnsureSequenceAsync(key, startValue: 1)` idempotently seeds a sequence row at app startup. Default registration is automatic via `[Scoped(ServiceType = typeof(ISequenceProvider))]`; manual DI hosts call `services.AddIdevsSequenceProvider()`.
+
 #### Concurrency primitives (0.7.6)
 
 For SELECT-then-UPDATE patterns that must stay atomic across concurrent callers — sequence allocation, balance transfers, queue consumers — two new primitives:
@@ -647,6 +667,7 @@ If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGene
 
 Detailed upgrade notes for every minor and major version live in [MIGRATION.md](MIGRATION.md). Latest transitions:
 
+- [v0.7.6 → v0.7.7 — ISequenceProvider helper](MIGRATION.md#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](MIGRATION.md#v075--v076--row-lock-primitives--innewtransactionasync)
 - [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](MIGRATION.md#v074--v075--countasync--existsasync-helpers)
 - [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](MIGRATION.md#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)

@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.6 → v0.7.7 — ISequenceProvider helper](#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](#v075--v076--row-lock-primitives--innewtransactionasync)
 - [v0.7.4 → v0.7.5 — CountAsync + ExistsAsync helpers](#v074--v075--countasync--existsasync-helpers)
 - [v0.7.3 → v0.7.4 — Explicit-fields Create/Update + NotMapped/Expression handling](#v073--v074--explicit-fields-createupdate--notmappedexpression-handling)
@@ -14,6 +15,175 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.6 → v0.7.7 — ISequenceProvider helper
+
+### What changed
+
+A higher-level helper for atomic sequence allocation. Eliminates the
+need to write the `InNewTransactionAsync` + `ForUpdate()` boilerplate
+in every consumer site that allocates document/invoice/order numbers.
+
+| API | Returns | What it does |
+|---|---|---|
+| `ISequenceProvider.NextAsync(string sequenceKey, ct)` | `Task<long>` | Allocate the next value; throws if the sequence isn't seeded. |
+| `ISequenceProvider.NextRangeAsync(string sequenceKey, int count, ct)` | `Task<IReadOnlyList<long>>` | Allocate `count` contiguous values atomically. |
+| `ISequenceProvider.EnsureSequenceAsync(string sequenceKey, long startValue = 1, ct)` | `Task` | Idempotently seed a sequence row. No-op if it already exists. |
+
+The default implementation (`SqlSequenceProvider`) is registered
+automatically via `[Scoped(ServiceType = typeof(ISequenceProvider))]`
+when the source generator runs. Manual DI hosts call
+`services.AddIdevsSequenceProvider()`.
+
+### Why
+
+The 0.7.6 primitives (`ForUpdate()` + `InNewTransactionAsync`) unblock
+the race; this helper turns the allocation pattern into a single line
+of caller code and removes the decision points (which uow? which lock
+mode? when to commit?) that produced the bug in the first place.
+
+### Schema
+
+Consumers create the storage table in their own migration pipeline.
+DDL by engine:
+
+#### SqlServer
+
+```sql
+CREATE TABLE [IdevsSequences] (
+    [SequenceKey] NVARCHAR(100) NOT NULL PRIMARY KEY,
+    [NextValue]   BIGINT        NOT NULL
+);
+```
+
+#### MySQL / MariaDB
+
+```sql
+CREATE TABLE IdevsSequences (
+    SequenceKey VARCHAR(100) NOT NULL PRIMARY KEY,
+    NextValue   BIGINT       NOT NULL
+) ENGINE=InnoDB;
+```
+
+#### PostgreSQL
+
+```sql
+CREATE TABLE IdevsSequences (
+    SequenceKey VARCHAR(100) NOT NULL PRIMARY KEY,
+    NextValue   BIGINT       NOT NULL
+);
+```
+
+The library does not ship migrations.
+
+### Migrating from manual SELECT-then-UPDATE
+
+Existing 37-callsite shape using the 0.7.6 primitives directly:
+
+```csharp
+// 0.7.6 — primitives wired by hand
+public Task<string> GetNextDocNoAsync(string docCode, CancellationToken ct = default) =>
+    InNewTransactionAsync(async (uow, token) =>
+    {
+        var row = await TryFirstAsync(
+            q => q.SelectTableFields()
+                  .Where(DocumentNumberRow.Fields.DocumentCode == docCode)
+                  .ForUpdate(),
+            uow, token);
+        if (row is null) throw new InvalidOperationException(...);
+
+        row.NextDocumentNo += 1;
+        await UpdateAsync(row, uow, token);
+        return Format(docCode, row.NextDocumentNo!.Value);
+    }, ct);
+```
+
+Becomes, in 0.7.7:
+
+```csharp
+// 0.7.7 — helper does the locking, transaction, and increment
+public sealed class DocumentNumberService(ISequenceProvider sequences)
+{
+    public async Task<string> GetNextDocNoAsync(
+        string docCode, CancellationToken ct = default)
+    {
+        var n = await sequences.NextAsync($"DocNo:{docCode}", ct);
+        return Format(docCode, n);
+    }
+}
+```
+
+### Seeding
+
+Before the first `NextAsync`, the sequence row must exist. Two options:
+
+```csharp
+// Option 1: at app startup, ensure all known sequences.
+await sequences.EnsureSequenceAsync("DocNo:SaleOrder", startValue: 1);
+await sequences.EnsureSequenceAsync("DocNo:Invoice", startValue: 1);
+
+// Option 2: in your migration script, INSERT directly:
+//   INSERT INTO IdevsSequences (SequenceKey, NextValue)
+//   VALUES ('DocNo:SaleOrder', 1), ('DocNo:Invoice', 1);
+```
+
+`EnsureSequenceAsync` is a no-op if the row already exists — calling
+it on every app startup is safe and idempotent. The `startValue`
+argument is ignored when the row exists; it does NOT reset the counter.
+
+### Caller signature change
+
+Note: the helper does NOT accept an `IUnitOfWork` parameter. Callers
+that previously threaded a `uow` through the allocation flow drop it
+at the `NextAsync` call site:
+
+| Before (0.7.6 caller) | After (0.7.7 caller) |
+|---|---|
+| `await GetNextDocNoAsync(uow, "SO", ct)` | `await sequences.NextAsync("DocNo:SO", ct)` |
+
+If the caller was passing `uow` to other operations in the same
+business flow (e.g. writing the SaleOrder row), keep doing that — only
+the sequence-allocation call drops the `uow`.
+
+### Sequence-key naming
+
+The library has no opinion on the key format. Recommended convention:
+namespace with colons, deepest segment first.
+
+| Pattern | Use |
+|---|---|
+| `"DocNo:SaleOrder"` | Per-document-type counters that don't restart. |
+| `"DocNo:Invoice:2026"` | Per-document-type, per-year counters. |
+| `"InternalId:Customer"` | Surrogate-key allocators. |
+
+Avoid raw user input in the key. The allocator does NOT sanitize — a
+`SequenceKey` is whatever string the caller passes.
+
+### Important caveats
+
+- **Independent commit semantics.** Inherited from 0.7.6's
+  `InNewTransactionAsync`. If your outer business transaction fails
+  AFTER `NextAsync` returns, the allocated number remains. For
+  document numbers that's correct (gaps are normal, duplicates are
+  catastrophic). For anything where the inner allocation must roll
+  back with the outer flow, do NOT use `ISequenceProvider` — implement
+  your own row using the caller's `uow`.
+- **Connection pool sizing.** Each `NextAsync` opens a separate
+  connection (via `InNewTransactionAsync`). At very high allocation
+  rates this is wasteful — the 0.8.0/0.9.0 work tracks adding a
+  HiLo-style batched provider, but for now verify peak concurrency × 2
+  ≤ your pool's `Max Pool Size`.
+- **No bulk-insert wiring.** If you're allocating a block to assign to
+  many rows in one `INSERT...VALUES (...)`, use `NextRangeAsync` to
+  reserve the block in one round trip; allocating one-at-a-time inside
+  a loop is correct but issues N round trips.
+- **Concurrent `EnsureSequenceAsync`.** Two callers ensuring the same
+  key at the same time race on the primary-key insert. The
+  implementation catches the unique-constraint conflict and treats it
+  as a no-op — both callers return successfully without a second seed
+  attempt. Safe to call from app startup in load-balanced fleets.
 
 ---
 
