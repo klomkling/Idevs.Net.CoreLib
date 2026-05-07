@@ -66,6 +66,13 @@ internal static class RowVersionMetadata
                 $"[RowVersion] property '{rowType.FullName}.{prop.Name}' has no matching " +
                 $"Field in RowFields. Add 'public Int64Field {prop.Name};' to the RowFields class.");
 
+        if ((field.Flags & FieldFlags.NotMapped) != 0)
+            throw new InvalidOperationException(
+                $"[RowVersion] field '{rowType.FullName}.{prop.Name}' has FieldFlags.NotMapped " +
+                "set. The library uses this column in both SET and WHERE on every guarded " +
+                "UPDATE, which would generate invalid SQL on a non-existent column. Remove " +
+                "the [NotMapped] attribute (or the [SetFieldFlags(NotMapped, …)] that sets it).");
+
         if ((field.Flags & FieldFlags.Updatable) != FieldFlags.Updatable)
             throw new InvalidOperationException(
                 $"[RowVersion] field '{rowType.FullName}.{prop.Name}' is not Updatable. " +

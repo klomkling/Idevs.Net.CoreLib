@@ -127,18 +127,32 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
                 "unknown, which would silently disable the optimistic-concurrency guard.");
         var captured = Convert.ToInt64(capturedObj);
 
+        // Compute the next version once, with overflow protection. Throwing
+        // here is preferable to silently wrapping past long.MaxValue and
+        // producing negative/colliding versions on the next allocator.
+        long nextVersion;
+        try { nextVersion = checked(captured + 1); }
+        catch (OverflowException ex)
+        {
+            throw new InvalidOperationException(
+                $"[RowVersion] field '{row.Table}.{rvField.Name}' is at long.MaxValue " +
+                $"({captured}) and cannot advance. The row is at the end of its version " +
+                "space; the table or row needs to be migrated to reset the counter.", ex);
+        }
+
         return ExecuteAsync((c, _) =>
         {
             var update = SqlUpdate(row.Table);
 
             // Build the SET list per the caller's field-selection rules.
-            // The RowVersion field is always set to `captured + 1` regardless,
-            // so an explicit-fields list that omits it is fine.
+            // RowVersion is set explicitly below to `nextVersion`, so callers
+            // who pass it in `fieldsToSet` (or omit it from `excludeFields`)
+            // don't get their value used — the guard always wins.
             if (fieldsToSet is not null)
             {
                 foreach (var f in fieldsToSet)
                 {
-                    if (ReferenceEquals(f, rvField)) continue; // we'll set it below
+                    if (ReferenceEquals(f, rvField)) continue; // set below
                     update.Set(f, f.AsObject(row));
                 }
             }
@@ -147,7 +161,7 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
                 foreach (var f in row.GetFields())
                 {
                     if (ReferenceEquals(f, idField)) continue;
-                    if (ReferenceEquals(f, rvField)) continue; // we'll set it below
+                    if (ReferenceEquals(f, rvField)) continue; // set below
                     if (excludeFields is not null && excludeFields.Contains(f)) continue;
                     if (!row.IsAssigned(f)) continue;
                     if ((f.Flags & FieldFlags.NotMapped) != 0) continue;
@@ -156,7 +170,13 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
                 }
             }
 
-            update.Set(rvField, captured + 1);
+            // SET RowVersion = @nextVersion (an app-computed constant).
+            // Equivalent to SET RowVersion = RowVersion + 1 because the WHERE
+            // clause below pins RowVersion to `captured`, so the matched row's
+            // current version + 1 IS nextVersion. The constant form is simpler
+            // and lets us write the value back to the row instance after the
+            // call without an extra round-trip.
+            update.Set(rvField, nextVersion);
 
             update.Where(new BinaryCriteria(
                 new Criteria(idField),
@@ -176,7 +196,7 @@ public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : Reposi
 
             // Row stayed put. Write the new RowVersion back so the caller can
             // reuse the same instance for further updates without re-reading.
-            rvField.AsObject(row, (object?)(captured + 1));
+            rvField.AsObject(row, (object?)nextVersion);
             return Task.FromResult(true);
         }, uow, ct);
     }
