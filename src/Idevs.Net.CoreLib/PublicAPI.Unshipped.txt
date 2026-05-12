@@ -96,3 +96,34 @@ Idevs.RepositoryBase<T>.SqlQuery.get -> Serenity.Data.SqlQuery
 Idevs.RepositoryBase<T>.SqlUpdate(string tableName) -> Serenity.Data.SqlUpdate
 Idevs.RepositoryBase<T>.Dispose() -> void
 virtual Idevs.RepositoryBase<T>.Dispose(bool disposing) -> void
+Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.Share = 1 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.Update = 0 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.UpdateNoWait = 2 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.UpdateSkip = 3 -> Idevs.Repositories.LockMode
+Idevs.Repositories.SqlQueryLockExtensions
+static Idevs.Repositories.SqlQueryLockExtensions.ForUpdate(this Serenity.Data.SqlQuery! query, Idevs.Repositories.LockMode mode = Idevs.Repositories.LockMode.Update) -> Serenity.Data.SqlQuery!
+Idevs.Repositories.SqlServiceBase.InNewTransactionAsync<T>(System.Func<Serenity.Data.IUnitOfWork!, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! work, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
+Idevs.Repositories.SqlServiceBase.InNewTransactionAsync(System.Func<Serenity.Data.IUnitOfWork!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! work, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.ISequenceProvider
+Idevs.Repositories.Sequences.ISequenceProvider.EnsureSequenceAsync(string! sequenceKey, long startValue = 1, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.ISequenceProvider.NextAsync(string! sequenceKey, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+Idevs.Repositories.Sequences.ISequenceProvider.NextRangeAsync(string! sequenceKey, int count, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<long>!>!
+Idevs.Repositories.Sequences.SequenceServiceCollectionExtensions
+static Idevs.Repositories.Sequences.SequenceServiceCollectionExtensions.AddIdevsSequenceProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Idevs.Repositories.Sequences.SqlSequenceProvider
+Idevs.Repositories.Sequences.SqlSequenceProvider.SqlSequenceProvider(Serenity.Data.ISqlConnections! sqlConnections) -> void
+Idevs.Repositories.Sequences.SqlSequenceProvider.EnsureSequenceAsync(string! sequenceKey, long startValue = 1, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.SqlSequenceProvider.NextAsync(string! sequenceKey, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+Idevs.Repositories.Sequences.SqlSequenceProvider.NextRangeAsync(string! sequenceKey, int count, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<long>!>!
+Idevs.Repositories.Sequences.IdevsSequenceRow
+Idevs.Repositories.Sequences.IdevsSequenceRow.IdevsSequenceRow() -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.NextValue.get -> long?
+Idevs.Repositories.Sequences.IdevsSequenceRow.NextValue.set -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.SequenceKey.get -> string?
+Idevs.Repositories.Sequences.IdevsSequenceRow.SequenceKey.set -> void
+static readonly Idevs.Repositories.Sequences.IdevsSequenceRow.Fields -> Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields!
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.RowFields() -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.NextValue -> Serenity.Data.Int64Field!
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.SequenceKey -> Serenity.Data.StringField!
