@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.8 → v0.7.9 — RepositoryBase rename + v0.3.3 legacy shim](#v078--v079--repositorybase-rename--v033-legacy-shim)
 - [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](#v077--v078--optimistic-concurrency-on-updateasync)
 - [v0.7.6 → v0.7.7 — ISequenceProvider helper](#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](#v075--v076--row-lock-primitives--innewtransactionasync)
@@ -16,6 +17,115 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.8 → v0.7.9 — RepositoryBase rename + v0.3.3 legacy shim
+
+### What changed
+
+Two coordinated moves so downstream projects can migrate gradually:
+
+| Before (v0.7.8) | After (v0.7.9) |
+|---|---|
+| `Idevs.Repositories.RepositoryBase<TRow>` | `Idevs.Repositories.RowRepositoryBase<TRow>` |
+| `Idevs.Repositories.RepositoryBase<TRow, TKey>` | `Idevs.Repositories.RowRepositoryBase<TRow, TKey>` |
+| *(removed in 0.6.0)* | `Idevs.RepositoryBase<T>` re-introduced as `[Obsolete]`, v0.3.3 body verbatim |
+
+The rename is mechanical: primary-constructor shape `(ISqlConnections)`,
+every method signature, every behaviour is identical. Only the type name
+changed. PublicAPI tracking handled via `*REMOVED*` markers on the
+shipped entries plus the new shipped-shape entries on the renamed type.
+
+The re-introduced `Idevs.RepositoryBase<T>` is the v0.3.3 plumbing-only
+class — `T` is the `ILogger<T>` category type (NOT a Serenity row). Its
+ctor is `(IServiceProvider, ILogger<T>)`. It exposes `ServiceProvider`,
+`ExceptionLog`, `SqlConnections`, `Localizer`, `Connection`, `Dialect`,
+and the `SqlQuery` / `SqlInsert(t)` / `SqlUpdate(t)` / `SqlDelete(t)`
+factories. Marked `[Obsolete]`; scheduled for removal in **v1.0**.
+
+### Why the rename matters
+
+`RepositoryBase` carried two completely incompatible meanings across the
+v0.3.x and v0.6.x+ generations — same name, different generic parameter
+semantics (`T` as logger category vs. `TRow` as a Serenity `IRow`). Same
+name, two shapes, is a footgun for any downstream project that touches
+both eras. Renaming the typed-row variant to `RowRepositoryBase<TRow>`
+removes the ambiguity.
+
+### What you need to do
+
+**New repositories** — derive from `RowRepositoryBase` from day one:
+
+```csharp
+using Idevs.Repositories;
+
+public class OrderRepository(ISqlConnections c)
+    : RowRepositoryBase<OrderRow, int>(c), IOrderRepository
+{
+}
+```
+
+**Existing v0.7.x repositories** — rename the base class. Nothing else
+moves:
+
+```diff
+-public class OrderRepository(ISqlConnections c)
+-    : RepositoryBase<OrderRow, int>(c), IOrderRepository { }
++public class OrderRepository(ISqlConnections c)
++    : RowRepositoryBase<OrderRow, int>(c), IOrderRepository { }
+```
+
+A regex/sed pass is safe. The `-i` flag differs between BSD sed (macOS)
+and GNU sed (most Linux + CI), so pick the variant for your platform:
+
+```bash
+# macOS (BSD sed) — empty string after -i
+grep -rln 'RepositoryBase<' --include='*.cs' \
+    | xargs sed -i '' 's/RepositoryBase</RowRepositoryBase</g'
+
+# Linux / CI (GNU sed) — no argument after -i
+grep -rln 'RepositoryBase<' --include='*.cs' \
+    | xargs sed -i 's/RepositoryBase</RowRepositoryBase</g'
+```
+
+If you need one snippet that runs on both (e.g., in a script shared with
+CI), use the explicit-backup form and clean up afterwards:
+
+```bash
+grep -rln 'RepositoryBase<' --include='*.cs' \
+    | xargs sed -i.bak 's/RepositoryBase</RowRepositoryBase</g' \
+    && find . -name '*.bak' -delete
+```
+
+Watch for two things during a mechanical replace:
+
+1. **Your own classes named `RepositoryBase*`** (e.g., `AppRepositoryBase`,
+   `RepositoryBaseTests`). The pattern above is generic-aware so it only
+   touches generic uses, but verify with a `git diff` review.
+2. **Code on the v0.3.3 API** — see the next section.
+
+**Existing v0.3.3 repositories** (`Idevs.RepositoryBase<TSelf>` pattern,
+ctor `(IServiceProvider, ILogger<T>)`) — keep them on the legacy class
+for now; they continue to compile. The `[Obsolete]` warning is the only
+behavioural change. Plan migration to `RowRepositoryBase` before v1.0.
+
+### Why the legacy shim is full v0.3.3 body, not a subclass
+
+The two `RepositoryBase` classes have incompatible ctors and protected
+surfaces (logger category vs. Serenity row; service-provider injection
+vs. `ISqlConnections`). A subclass shim cannot bridge them. The legacy
+class is restored verbatim so downstream code that calls
+`base(serviceProvider, logger)`, reads `Connection`, or composes
+`SqlQuery() / SqlInsert(table)` keeps working unmodified.
+
+### Removal timeline
+
+- **0.7.9** (this release) — rename ships. `RepositoryBase` (typed-row) is
+  gone from `Idevs.Repositories`. Legacy `Idevs.RepositoryBase<T>` ships
+  as `[Obsolete]`.
+- **0.8.x → 0.9.x** — `[Obsolete]` warnings continue. No behaviour change.
+- **1.0** — `Idevs.RepositoryBase<T>` removed.
 
 ---
 

@@ -3,7 +3,7 @@ namespace Idevs.Repositories;
 /// <summary>
 /// Marks a <see cref="long"/>? property on a Serenity row as that row's
 /// optimistic-concurrency version counter. The
-/// <see cref="RepositoryBase{TRow,TKey}.UpdateAsync(TRow, Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
+/// <see cref="RowRepositoryBase{TRow,TKey}.UpdateAsync(TRow, Serenity.Data.IUnitOfWork?, System.Threading.CancellationToken)"/>
 /// overloads detect this attribute and guard the UPDATE with a
 /// <c>WHERE RowVersion = @captured</c> + <c>SET RowVersion = RowVersion + 1</c>
 /// pair; on conflict they throw <see cref="OptimisticConcurrencyException"/>.

@@ -4,9 +4,9 @@ using Serenity.Data;
 
 namespace Idevs.Net.CoreLib.Tests.Repositories;
 
-public class RepositoryBaseTKeyTests
+public class RowRepositoryBaseTKeyTests
 {
-    private sealed class CapturingRepo : Idevs.Repositories.RepositoryBase<TestSampleRow, int>
+    private sealed class CapturingRepo : Idevs.Repositories.RowRepositoryBase<TestSampleRow, int>
     {
         public int ExecuteAsyncCallCount { get; private set; }
         public IUnitOfWork? LastUow { get; private set; }

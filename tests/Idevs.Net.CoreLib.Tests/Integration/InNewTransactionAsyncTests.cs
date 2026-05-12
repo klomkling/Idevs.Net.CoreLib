@@ -17,7 +17,7 @@ public sealed class InNewTransactionAsyncTests : IDisposable
     private static readonly IntegrationTestRow.RowFields Fld = IntegrationTestRow.Fields;
 
     private sealed class TestRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<IntegrationTestRow, int>(sqlConnections)
+        : RowRepositoryBase<IntegrationTestRow, int>(sqlConnections)
     {
         public Task<int> CreateInNewTxAsync(IntegrationTestRow row, CancellationToken ct = default) =>
             InNewTransactionAsync(async (uow, token) =>

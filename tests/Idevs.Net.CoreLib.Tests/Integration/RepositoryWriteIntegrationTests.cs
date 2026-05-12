@@ -17,7 +17,7 @@ public sealed class RepositoryWriteIntegrationTests : IDisposable
     private readonly TestRepository _repo;
 
     private sealed class TestRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<IntegrationTestRow, int>(sqlConnections);
+        : RowRepositoryBase<IntegrationTestRow, int>(sqlConnections);
 
     public RepositoryWriteIntegrationTests(MsSqlContainerFixture fixture)
     {
@@ -308,7 +308,7 @@ public sealed class RepositoryWriteIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// And the cure: <see cref="RepositoryBase{TRow}.CreateExcludingAsync"/>
+    /// And the cure: <see cref="RowRepositoryBase{TRow}.CreateExcludingAsync"/>
     /// lets the caller drop the Expression field even when it was assigned.
     /// </summary>
     [Fact]
@@ -357,7 +357,7 @@ public sealed class RepositoryWriteIntegrationTests : IDisposable
 
     /// <summary>
     /// And the cure on the UPDATE path:
-    /// <see cref="RepositoryBase{TRow, TKey}.UpdateExcludingAsync"/> drops
+    /// <see cref="RowRepositoryBase{TRow, TKey}.UpdateExcludingAsync"/> drops
     /// the assigned Expression field before building the SET list.
     /// </summary>
     [Fact]

@@ -4,11 +4,11 @@ namespace Idevs.Repositories;
 
 /// <summary>
 /// Typed repository base for a Serenity <see cref="IIdRow"/>. Adds Id-keyed
-/// CRUD shortcuts on top of <see cref="RepositoryBase{TRow}"/>.
+/// CRUD shortcuts on top of <see cref="RowRepositoryBase{TRow}"/>.
 /// </summary>
 /// <typeparam name="TRow">A Serenity row that implements <see cref="IIdRow"/>.</typeparam>
 /// <typeparam name="TKey">The Id value type (typically <see cref="int"/> or <see cref="long"/>).</typeparam>
-public class RepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : RepositoryBase<TRow>(sqlConnections)
+public class RowRepositoryBase<TRow, TKey>(ISqlConnections sqlConnections) : RowRepositoryBase<TRow>(sqlConnections)
     where TRow : class, IRow, IIdRow, new()
 {
     /// <summary>Fetch a single row by its Id, or null if not found.</summary>

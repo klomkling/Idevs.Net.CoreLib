@@ -18,7 +18,7 @@ public sealed class LockedTryFirstSqlServerTests : IDisposable
     private static readonly IntegrationTestRow.RowFields Fld = IntegrationTestRow.Fields;
 
     private sealed class TestRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<IntegrationTestRow, int>(sqlConnections)
+        : RowRepositoryBase<IntegrationTestRow, int>(sqlConnections)
     {
         // Exposes protected InNewTransactionAsync to tests. In production,
         // consumers call InNewTransactionAsync from inside their own repo

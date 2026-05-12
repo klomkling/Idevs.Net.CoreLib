@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.7.9 (2026-05-12)
+
+### Changed
+
+- Renamed `Idevs.Repositories.RepositoryBase<TRow>` → `RowRepositoryBase<TRow>`
+  and `Idevs.Repositories.RepositoryBase<TRow, TKey>` → `RowRepositoryBase<TRow, TKey>`.
+  Behaviour is identical; only the type name changed. The `*REMOVED*` /
+  added entries are tracked in `PublicAPI.Unshipped.txt`.
+
+### Added
+
+- Re-introduced `Idevs.RepositoryBase<T>` (the v0.3.3 plumbing-only base
+  where `T` is the `ILogger<T>` category) as an `[Obsolete]` legacy class.
+  Body is identical to v0.3.3 — `ServiceProvider`, `ExceptionLog`,
+  `SqlConnections`, `Localizer`, `Connection`, `Dialect`, and the
+  `SqlQuery` / `SqlInsert(t)` / `SqlUpdate(t)` / `SqlDelete(t)` factories.
+  Downstream projects still on the v0.3.3 shape (notably PowerACC) compile
+  unchanged under `using Idevs;`. Scheduled for removal in v1.0.
+
+### Migration
+
+- New repositories: derive from `Idevs.Repositories.RowRepositoryBase<TRow>` /
+  `RowRepositoryBase<TRow, TKey>`.
+- Existing repositories on the v0.7.x API: rename the base class — the
+  primary-constructor shape `(ISqlConnections)` and every method signature
+  are unchanged.
+- Existing repositories on the v0.3.3 API: keep using `Idevs.RepositoryBase<T>`
+  during migration. Move to `RowRepositoryBase` before v1.0.
+
 ## 0.7.8 (2026-05-08)
 
 ### Added

@@ -5,10 +5,10 @@ namespace Idevs.Net.CoreLib.Tests.Repositories;
 public class ObsoleteSyncWrapperTests
 {
     [Theory]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow>), "First")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow>), "List")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow>), "GetBy")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow>), "Create")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow>), "First")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow>), "List")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow>), "GetBy")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow>), "Create")]
     public void SyncWrapper_HasObsoleteAttribute(Type baseType, string methodName)
     {
         var method = baseType
@@ -20,10 +20,10 @@ public class ObsoleteSyncWrapperTests
     }
 
     [Theory]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow, int>), "GetById")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow, int>), "GetByIds")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow, int>), "Update")]
-    [InlineData(typeof(Idevs.Repositories.RepositoryBase<TestSampleRow, int>), "DeleteById")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow, int>), "GetById")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow, int>), "GetByIds")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow, int>), "Update")]
+    [InlineData(typeof(Idevs.Repositories.RowRepositoryBase<TestSampleRow, int>), "DeleteById")]
     public void TKeySyncWrapper_HasObsoleteAttribute(Type baseType, string methodName)
     {
         var method = baseType

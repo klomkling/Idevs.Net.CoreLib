@@ -7,7 +7,7 @@ namespace Idevs.Repositories;
 /// <summary>
 /// Per-row-type lookup for the <see cref="RowVersionAttribute"/> field,
 /// cached forever after first resolution. Internal — consumers go
-/// through <see cref="RepositoryBase{TRow,TKey}"/> overloads.
+/// through <see cref="RowRepositoryBase{TRow,TKey}"/> overloads.
 /// </summary>
 /// <remarks>
 /// Reflection runs at most once per <c>TRow</c>. After that every

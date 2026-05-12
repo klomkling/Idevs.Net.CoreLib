@@ -9,28 +9,28 @@ Idevs.Repositories.SqlServiceBase.CommitOnSuccessAsync<T>(System.Func<Serenity.D
 Idevs.Repositories.SqlServiceBase.CommitOnSuccessAsync(System.Func<Serenity.Data.IUnitOfWork, System.Threading.CancellationToken, System.Threading.Tasks.Task> work, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task
 Idevs.Repositories.SqlServiceBase.CommitOnSuccess<T>(System.Func<Serenity.Data.IUnitOfWork, T> work, Serenity.Data.IUnitOfWork uow = null) -> T
 Idevs.Repositories.SqlServiceBase.CommitOnSuccess(System.Action<Serenity.Data.IUnitOfWork> work, Serenity.Data.IUnitOfWork uow = null) -> void
-virtual Idevs.Repositories.RepositoryBase<TRow>.TryFirstAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
-virtual Idevs.Repositories.RepositoryBase<TRow>.UpdateAsync(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
-virtual Idevs.Repositories.RepositoryBase<TRow>.UpdateManyAsync(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
-virtual Idevs.Repositories.RepositoryBase<TRow>.DeleteAsync(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
-virtual Idevs.Repositories.RepositoryBase<TRow>.DeleteManyAsync(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
-virtual Idevs.Repositories.RepositoryBase<TRow>.TryFirst(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> TRow
-virtual Idevs.Repositories.RepositoryBase<TRow>.Update(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null) -> int
-virtual Idevs.Repositories.RepositoryBase<TRow>.UpdateMany(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.IUnitOfWork uow = null) -> int
-virtual Idevs.Repositories.RepositoryBase<TRow>.Delete(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null) -> int
-virtual Idevs.Repositories.RepositoryBase<TRow>.DeleteMany(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.IUnitOfWork uow = null) -> int
-virtual Idevs.Repositories.RepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
-virtual Idevs.Repositories.RepositoryBase<TRow>.Create(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> long
-virtual Idevs.Repositories.RepositoryBase<TRow>.CreateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
-virtual Idevs.Repositories.RepositoryBase<TRow>.CreateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> long
-virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
-virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> bool
-virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
-virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> bool
-virtual Idevs.Repositories.RepositoryBase<TRow>.CountAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
-virtual Idevs.Repositories.RepositoryBase<TRow>.ExistsAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
-virtual Idevs.Repositories.RepositoryBase<TRow>.Count(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> long
-virtual Idevs.Repositories.RepositoryBase<TRow>.Exists(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.TryFirstAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.UpdateAsync(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.UpdateManyAsync(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.DeleteAsync(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.DeleteManyAsync(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.TryFirst(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Update(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null) -> int
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.UpdateMany(System.Action<Serenity.Data.SqlUpdate> configure, Serenity.Data.IUnitOfWork uow = null) -> int
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Delete(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.ExpectedRows expectedRows = Serenity.Data.ExpectedRows.One, Serenity.Data.IUnitOfWork uow = null) -> int
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.DeleteMany(System.Action<Serenity.Data.SqlDelete> configure, Serenity.Data.IUnitOfWork uow = null) -> int
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Create(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.CreateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.CreateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.Field[] fields, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.UpdateExcludingAsync(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.UpdateExcluding(TRow row, Serenity.Data.Field[] excludeFields, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.CountAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.ExistsAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Count(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Exists(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> bool
 Idevs.Repositories.SqlServiceBase.ExecuteScalarAsync<T>(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>
 Idevs.Repositories.SqlServiceBase.ExecuteNonQueryAsync(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>
 Idevs.Repositories.SqlServiceBase.ExecuteScalar<T>(string sql, System.Collections.Generic.IDictionary<string, object> parameters = null, Serenity.Data.IUnitOfWork uow = null) -> T
@@ -42,3 +42,88 @@ Idevs.Repositories.OptimisticConcurrencyException.OptimisticConcurrencyException
 Idevs.Repositories.OptimisticConcurrencyException.TableName.get -> string
 Idevs.Repositories.OptimisticConcurrencyException.RowId.get -> object
 Idevs.Repositories.OptimisticConcurrencyException.CapturedVersion.get -> long
+*REMOVED*Idevs.Repositories.RepositoryBase<TRow, TKey>
+*REMOVED*Idevs.Repositories.RepositoryBase<TRow, TKey>.RepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+*REMOVED*Idevs.Repositories.RepositoryBase<TRow>
+*REMOVED*Idevs.Repositories.RepositoryBase<TRow>.RepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.DeleteById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> bool
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.DeleteByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> TRow
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIds(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.GetByIdsAsync(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.IUnitOfWork uow = null) -> bool
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.Create(TRow row, Serenity.Data.IUnitOfWork uow = null) -> long
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.First(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> TRow
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.FirstAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.GetBy<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null) -> TRow
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.GetByAsync<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.List(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+*REMOVED*virtual Idevs.Repositories.RepositoryBase<TRow>.ListAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+Idevs.Repositories.RowRepositoryBase<TRow, TKey>
+Idevs.Repositories.RowRepositoryBase<TRow, TKey>.RowRepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+Idevs.Repositories.RowRepositoryBase<TRow>
+Idevs.Repositories.RowRepositoryBase<TRow>.RowRepositoryBase(Serenity.Data.ISqlConnections sqlConnections) -> void
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.DeleteById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.DeleteByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.GetById(TKey id, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.GetByIdAsync(TKey id, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.GetByIds(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.GetByIdsAsync(System.Collections.Generic.IEnumerable<TKey> ids, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.Update(TRow row, Serenity.Data.IUnitOfWork uow = null) -> bool
+virtual Idevs.Repositories.RowRepositoryBase<TRow, TKey>.UpdateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.Create(TRow row, Serenity.Data.IUnitOfWork uow = null) -> long
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.CreateAsync(TRow row, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.First(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.FirstAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.GetBy<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null) -> TRow
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.GetByAsync<TValue>(Serenity.Data.Field keyField, TValue value, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.List(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null) -> System.Collections.Generic.List<TRow>
+virtual Idevs.Repositories.RowRepositoryBase<TRow>.ListAsync(System.Action<Serenity.Data.SqlQuery> configure, Serenity.Data.IUnitOfWork uow = null, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<TRow>>
+Idevs.RepositoryBase<T>
+Idevs.RepositoryBase<T>.RepositoryBase(System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<T> logger) -> void
+Idevs.RepositoryBase<T>.Connection.get -> System.Data.IDbConnection
+Idevs.RepositoryBase<T>.Dialect.get -> Serenity.Data.ISqlDialect
+Idevs.RepositoryBase<T>.ExceptionLog.get -> Microsoft.Extensions.Logging.ILogger<T>
+Idevs.RepositoryBase<T>.Localizer.get -> Serenity.ITextLocalizer
+Idevs.RepositoryBase<T>.ServiceProvider.get -> System.IServiceProvider
+Idevs.RepositoryBase<T>.SqlConnections.get -> Serenity.Data.ISqlConnections
+Idevs.RepositoryBase<T>.SqlDelete(string tableName) -> Serenity.Data.SqlDelete
+Idevs.RepositoryBase<T>.SqlInsert(string tableName) -> Serenity.Data.SqlInsert
+Idevs.RepositoryBase<T>.SqlQuery.get -> Serenity.Data.SqlQuery
+Idevs.RepositoryBase<T>.SqlUpdate(string tableName) -> Serenity.Data.SqlUpdate
+Idevs.RepositoryBase<T>.Dispose() -> void
+virtual Idevs.RepositoryBase<T>.Dispose(bool disposing) -> void
+Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.Share = 1 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.Update = 0 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.UpdateNoWait = 2 -> Idevs.Repositories.LockMode
+Idevs.Repositories.LockMode.UpdateSkip = 3 -> Idevs.Repositories.LockMode
+Idevs.Repositories.SqlQueryLockExtensions
+static Idevs.Repositories.SqlQueryLockExtensions.ForUpdate(this Serenity.Data.SqlQuery! query, Idevs.Repositories.LockMode mode = Idevs.Repositories.LockMode.Update) -> Serenity.Data.SqlQuery!
+Idevs.Repositories.SqlServiceBase.InNewTransactionAsync<T>(System.Func<Serenity.Data.IUnitOfWork!, System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! work, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
+Idevs.Repositories.SqlServiceBase.InNewTransactionAsync(System.Func<Serenity.Data.IUnitOfWork!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! work, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.ISequenceProvider
+Idevs.Repositories.Sequences.ISequenceProvider.EnsureSequenceAsync(string! sequenceKey, long startValue = 1, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.ISequenceProvider.NextAsync(string! sequenceKey, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+Idevs.Repositories.Sequences.ISequenceProvider.NextRangeAsync(string! sequenceKey, int count, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<long>!>!
+Idevs.Repositories.Sequences.SequenceServiceCollectionExtensions
+static Idevs.Repositories.Sequences.SequenceServiceCollectionExtensions.AddIdevsSequenceProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Idevs.Repositories.Sequences.SqlSequenceProvider
+Idevs.Repositories.Sequences.SqlSequenceProvider.SqlSequenceProvider(Serenity.Data.ISqlConnections! sqlConnections) -> void
+Idevs.Repositories.Sequences.SqlSequenceProvider.EnsureSequenceAsync(string! sequenceKey, long startValue = 1, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Idevs.Repositories.Sequences.SqlSequenceProvider.NextAsync(string! sequenceKey, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+Idevs.Repositories.Sequences.SqlSequenceProvider.NextRangeAsync(string! sequenceKey, int count, System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<long>!>!
+Idevs.Repositories.Sequences.IdevsSequenceRow
+Idevs.Repositories.Sequences.IdevsSequenceRow.IdevsSequenceRow() -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.NextValue.get -> long?
+Idevs.Repositories.Sequences.IdevsSequenceRow.NextValue.set -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.SequenceKey.get -> string?
+Idevs.Repositories.Sequences.IdevsSequenceRow.SequenceKey.set -> void
+static readonly Idevs.Repositories.Sequences.IdevsSequenceRow.Fields -> Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields!
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.RowFields() -> void
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.NextValue -> Serenity.Data.Int64Field!
+Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.SequenceKey -> Serenity.Data.StringField!

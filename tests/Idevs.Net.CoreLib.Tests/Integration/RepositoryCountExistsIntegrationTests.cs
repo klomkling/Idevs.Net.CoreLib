@@ -19,7 +19,7 @@ public sealed class RepositoryCountExistsIntegrationTests : IDisposable
     private readonly TestRepository _repo;
 
     private sealed class TestRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<IntegrationTestRow, int>(sqlConnections);
+        : RowRepositoryBase<IntegrationTestRow, int>(sqlConnections);
 
     public RepositoryCountExistsIntegrationTests(MsSqlContainerFixture fixture)
     {

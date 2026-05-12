@@ -29,7 +29,7 @@ namespace Idevs.Repositories.Sequences;
 /// </remarks>
 [Scoped(ServiceType = typeof(ISequenceProvider))]
 public sealed class SqlSequenceProvider(ISqlConnections sqlConnections)
-    : RepositoryBase<IdevsSequenceRow>(sqlConnections), ISequenceProvider
+    : RowRepositoryBase<IdevsSequenceRow>(sqlConnections), ISequenceProvider
 {
     private static readonly IdevsSequenceRow.RowFields Fld = IdevsSequenceRow.Fields;
 

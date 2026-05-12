@@ -17,7 +17,7 @@ public sealed class RawSqlHelperIntegrationTests : IDisposable
     private readonly TestService _svc;
 
     /// <summary>Test subject — re-exposes the protected raw-SQL helpers.</summary>
-    private sealed class TestService : RepositoryBase<IntegrationTestRow, int>
+    private sealed class TestService : RowRepositoryBase<IntegrationTestRow, int>
     {
         public TestService(ISqlConnections c) : base(c) { }
 

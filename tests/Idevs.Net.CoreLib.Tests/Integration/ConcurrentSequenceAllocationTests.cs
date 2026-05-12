@@ -25,7 +25,7 @@ public sealed class ConcurrentSequenceAllocationTests : IDisposable
     /// counter value (decimal here, but the pattern is identical for long).
     /// </summary>
     private sealed class SequenceRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<IntegrationTestRow, int>(sqlConnections)
+        : RowRepositoryBase<IntegrationTestRow, int>(sqlConnections)
     {
         public Task<long> AllocateNextAsync(string sequenceKey, CancellationToken ct = default) =>
             InNewTransactionAsync(async (uow, token) =>
