@@ -94,3 +94,5 @@ Idevs.RepositoryBase<T>.SqlDelete(string tableName) -> Serenity.Data.SqlDelete
 Idevs.RepositoryBase<T>.SqlInsert(string tableName) -> Serenity.Data.SqlInsert
 Idevs.RepositoryBase<T>.SqlQuery.get -> Serenity.Data.SqlQuery
 Idevs.RepositoryBase<T>.SqlUpdate(string tableName) -> Serenity.Data.SqlUpdate
+Idevs.RepositoryBase<T>.Dispose() -> void
+virtual Idevs.RepositoryBase<T>.Dispose(bool disposing) -> void

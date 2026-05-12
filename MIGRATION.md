@@ -76,12 +76,26 @@ moves:
 +    : RowRepositoryBase<OrderRow, int>(c), IOrderRepository { }
 ```
 
-A regex/sed pass is safe:
+A regex/sed pass is safe. The `-i` flag differs between BSD sed (macOS)
+and GNU sed (most Linux + CI), so pick the variant for your platform:
 
 ```bash
-# In your downstream repo
+# macOS (BSD sed) — empty string after -i
 grep -rln 'RepositoryBase<' --include='*.cs' \
     | xargs sed -i '' 's/RepositoryBase</RowRepositoryBase</g'
+
+# Linux / CI (GNU sed) — no argument after -i
+grep -rln 'RepositoryBase<' --include='*.cs' \
+    | xargs sed -i 's/RepositoryBase</RowRepositoryBase</g'
+```
+
+If you need one snippet that runs on both (e.g., in a script shared with
+CI), use the explicit-backup form and clean up afterwards:
+
+```bash
+grep -rln 'RepositoryBase<' --include='*.cs' \
+    | xargs sed -i.bak 's/RepositoryBase</RowRepositoryBase</g' \
+    && find . -name '*.bak' -delete
 ```
 
 Watch for two things during a mechanical replace:
