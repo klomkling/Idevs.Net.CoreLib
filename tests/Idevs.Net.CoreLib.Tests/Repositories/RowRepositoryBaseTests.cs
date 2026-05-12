@@ -4,11 +4,11 @@ using Serenity.Data;
 
 namespace Idevs.Net.CoreLib.Tests.Repositories;
 
-public class RepositoryBaseTests
+public class RowRepositoryBaseTests
 {
     // A test subject that overrides ExecuteAsync so we can verify dispatch
     // without depending on Serenity SQL extension methods over a mock connection.
-    private sealed class CapturingRepo : Idevs.Repositories.RepositoryBase<TestSampleRow>
+    private sealed class CapturingRepo : Idevs.Repositories.RowRepositoryBase<TestSampleRow>
     {
         public int ExecuteAsyncCallCount { get; private set; }
         public IUnitOfWork? LastUow { get; private set; }

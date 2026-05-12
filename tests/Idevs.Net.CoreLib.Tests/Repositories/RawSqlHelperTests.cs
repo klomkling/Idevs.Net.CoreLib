@@ -13,7 +13,7 @@ namespace Idevs.Net.CoreLib.Tests.Repositories;
 /// </summary>
 public class RawSqlHelperTests
 {
-    private sealed class TestService : Idevs.Repositories.RepositoryBase<TestSampleRow>
+    private sealed class TestService : Idevs.Repositories.RowRepositoryBase<TestSampleRow>
     {
         public int ExecuteAsyncCallCount { get; private set; }
         public IUnitOfWork? LastUow { get; private set; }

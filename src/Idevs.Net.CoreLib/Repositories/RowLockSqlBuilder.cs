@@ -7,7 +7,7 @@ namespace Idevs.Repositories;
 /// Applies dialect-specific row-lock hints to a materialised SELECT statement.
 /// Internal — callers go through
 /// <see cref="SqlQueryLockExtensions.ForUpdate"/> on a query that is then
-/// materialised by <see cref="RepositoryBase{TRow}.TryFirstAsync"/> or a
+/// materialised by <see cref="RowRepositoryBase{TRow}.TryFirstAsync"/> or a
 /// sibling helper.
 /// </summary>
 internal static class RowLockSqlBuilder

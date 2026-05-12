@@ -8,7 +8,7 @@ namespace Idevs.Repositories;
 /// template inherited from <see cref="SqlServiceBase"/>.
 /// </summary>
 /// <typeparam name="TRow">A Serenity row type.</typeparam>
-public class RepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBase(sqlConnections)
+public class RowRepositoryBase<TRow>(ISqlConnections sqlConnections) : SqlServiceBase(sqlConnections)
     where TRow : class, IRow, new()
 {
     /// <summary>Return the first row that matches the configured query, or null.</summary>

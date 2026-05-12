@@ -6,11 +6,11 @@ namespace Idevs.Repositories;
 /// <summary>
 /// Fluent <see cref="SqlQuery"/> extension that flags a SELECT for row-level
 /// locking. The lock hint is materialised at execution time by
-/// <see cref="RepositoryBase{TRow}.TryFirstAsync"/>.
+/// <see cref="RowRepositoryBase{TRow}.TryFirstAsync"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Currently honoured by:</b> <see cref="RepositoryBase{TRow}.TryFirstAsync"/> only.
+/// <b>Currently honoured by:</b> <see cref="RowRepositoryBase{TRow}.TryFirstAsync"/> only.
 /// <c>ListAsync</c>, <c>CountAsync</c>, <c>ExistsAsync</c>, and <c>GetByIdAsync</c>
 /// run through Serenity's standard execution path and silently ignore the
 /// flag. Coverage will expand in a follow-up release; in the meantime, the

@@ -5,7 +5,7 @@ namespace Idevs.Net.CoreLib.Tests.Integration;
 
 /// <summary>
 /// Integration coverage for the <see cref="RowVersionAttribute"/>-driven
-/// optimistic-concurrency guard on <see cref="RepositoryBase{TRow,TKey}"/>'s
+/// optimistic-concurrency guard on <see cref="RowRepositoryBase{TRow,TKey}"/>'s
 /// three TRow-shaped UpdateAsync overloads. Verifies the happy path,
 /// the conflict-detection path, the manual retry loop, and confirms
 /// rows without [RowVersion] are unchanged from 0.7.7 behavior.
@@ -19,7 +19,7 @@ public sealed class OptimisticConcurrencyTests : IDisposable
     private static readonly VersionedTestRow.RowFields Fld = VersionedTestRow.Fields;
 
     private sealed class TestRepository(ISqlConnections sqlConnections)
-        : RepositoryBase<VersionedTestRow, int>(sqlConnections);
+        : RowRepositoryBase<VersionedTestRow, int>(sqlConnections);
 
     public OptimisticConcurrencyTests(MsSqlContainerFixture fixture)
     {
@@ -236,7 +236,7 @@ public sealed class OptimisticConcurrencyTests : IDisposable
         // behave exactly as in 0.7.7: no exception type changes, no
         // WHERE-RowVersion clause emitted. Quick sanity test against
         // the existing IntegrationTestRow infrastructure.
-        var unversionedRepo = new RepositoryBase<IntegrationTestRow, int>(_fixture.SqlConnections);
+        var unversionedRepo = new RowRepositoryBase<IntegrationTestRow, int>(_fixture.SqlConnections);
 
         var newId = (int)await unversionedRepo.CreateAsync(new IntegrationTestRow { Code = "Plain", Amount = 1m });
         var row = await unversionedRepo.GetByIdAsync(newId);

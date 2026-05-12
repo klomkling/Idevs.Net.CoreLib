@@ -10,7 +10,7 @@ public class UnitOfWorkHelperTests
     // Test subject that exposes BeginUnitOfWork / CommitOnSuccessAsync via a
     // public surface. Overriding ExecuteAsync isn't needed because the helpers
     // talk to UnitOfWork directly.
-    private sealed class TestService : Idevs.Repositories.RepositoryBase<TestSampleRow>
+    private sealed class TestService : Idevs.Repositories.RowRepositoryBase<TestSampleRow>
     {
         public TestService(ISqlConnections c) : base(c) { }
 

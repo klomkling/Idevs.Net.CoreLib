@@ -116,7 +116,7 @@ using Idevs.Repositories;
 using Serenity.Data; // ISqlConnections, IRow, IIdRow
 
 public abstract class AppRepositoryBase<TRow, TKey>(ISqlConnections c)
-    : RepositoryBase<TRow, TKey>(c), IScopedService
+    : RowRepositoryBase<TRow, TKey>(c), IScopedService
     where TRow : class, IRow, IIdRow, new()
 {
 }
@@ -192,7 +192,7 @@ Three layered base classes for data access:
 
 - **`SqlServiceBase`** — for services that need raw SQL access without being a typed repository. Provides `ISqlConnections`, lazy `Dialect`, dialect-pre-bound `SqlQuery()` / `SqlInsert(t)` / `SqlUpdate(t)` factories, a `SqlDelete(t)` factory (Serenity's `SqlDelete` exposes no chainable `Dialect()` setter, so the active connection's dialect is used at `Execute` time), and a uniform `ExecuteAsync<T>` template that manages connection lifetime and composes with an optional `UnitOfWork`.
 
-- **`RepositoryBase<TRow>`** — typed read/list/getby/create/update/delete on a Serenity `IRow`:
+- **`RowRepositoryBase<TRow>`** — typed read/list/getby/create/update/delete on a Serenity `IRow`. (Renamed in 0.7.9 from `RepositoryBase<TRow>`; the v0.3.3-shaped `Idevs.RepositoryBase<T>` is still shipped as `[Obsolete]` for downstream migration.)
 
   | Group | Methods |
   |---|---|
@@ -202,13 +202,13 @@ Three layered base classes for data access:
 
   `UpdateAsync` and `DeleteAsync` default to `ExpectedRows.One` so a wrong WHERE clause fails loudly — use the `*Many` variants or pass `ExpectedRows.Ignore` for batch operations. `CreateAsync` is an insert and has no row-count assertion: it returns the new identity for rows that implement `IIdRow`, or `0` otherwise.
 
-- **`RepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`: `GetByIdAsync(TKey)`, `GetByIdsAsync(IEnumerable<TKey>)`, `UpdateAsync(TRow row)` (entity-by-id), `DeleteByIdAsync(TKey)`. Inherits all criteria-based methods from `RepositoryBase<TRow>`. The `UpdateAsync(TRow)` and `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
+- **`RowRepositoryBase<TRow, TKey>`** — adds Id-keyed CRUD on `IIdRow`: `GetByIdAsync(TKey)`, `GetByIdsAsync(IEnumerable<TKey>)`, `UpdateAsync(TRow row)` (entity-by-id), `DeleteByIdAsync(TKey)`. Inherits all criteria-based methods from `RowRepositoryBase<TRow>`. The `UpdateAsync(TRow)` and `UpdateAsync(Action<SqlUpdate>, ...)` overloads coexist by signature.
 
 Connection key is configurable via the virtual `ConnectionKey` property or the `[ConnectionKey("Warehouse")]` attribute (resolved on the derived class).
 
 #### Optimistic concurrency (0.7.8)
 
-Mark a `long?` property with `[RowVersion]` and the three TRow-shaped `UpdateAsync` overloads on `RepositoryBase<TRow, TKey>` automatically guard the UPDATE with `WHERE RowVersion = @captured` and `SET RowVersion = RowVersion + 1`. On a stale write the library throws `OptimisticConcurrencyException` carrying `TableName`, `RowId`, and `CapturedVersion`:
+Mark a `long?` property with `[RowVersion]` and the three TRow-shaped `UpdateAsync` overloads on `RowRepositoryBase<TRow, TKey>` automatically guard the UPDATE with `WHERE RowVersion = @captured` and `SET RowVersion = RowVersion + 1`. On a stale write the library throws `OptimisticConcurrencyException` carrying `TableName`, `RowId`, and `CapturedVersion`:
 
 ```csharp
 public sealed class OrderRow : Row<OrderRow.RowFields>, IIdRow
@@ -314,7 +314,7 @@ public interface IMappingLotRepository
 
 [Scoped(typeof(IMappingLotRepository))]
 public class MappingLotRepository(ISqlConnections c)
-    : RepositoryBase<MappingLotSelectionRow>(c), IMappingLotRepository
+    : RowRepositoryBase<MappingLotSelectionRow>(c), IMappingLotRepository
 {
     private static readonly MappingLotSelectionRow.RowFields cFld = MappingLotSelectionRow.Fields;
 
@@ -709,6 +709,7 @@ If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGene
 
 Detailed upgrade notes for every minor and major version live in [MIGRATION.md](MIGRATION.md). Latest transitions:
 
+- [v0.7.8 → v0.7.9 — RepositoryBase rename + v0.3.3 legacy shim](MIGRATION.md#v078--v079--repositorybase-rename--v033-legacy-shim)
 - [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](MIGRATION.md#v077--v078--optimistic-concurrency-on-updateasync)
 - [v0.7.6 → v0.7.7 — ISequenceProvider helper](MIGRATION.md#v076--v077--isequenceprovider-helper)
 - [v0.7.5 → v0.7.6 — Row-lock primitives + InNewTransactionAsync](MIGRATION.md#v075--v076--row-lock-primitives--innewtransactionasync)
