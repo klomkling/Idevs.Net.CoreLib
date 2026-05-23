@@ -52,11 +52,17 @@
         <!--
           Pin to the major matching this Idevs.Net.CoreLib version.
           0.7.x / 0.8.x / 0.9.x → @idevs/corelib 1.x (Serenity 8.8.9 lane, net8).
-          When this package bumps to 1.0.0 (Serenity 10 / net10 lane), update
-          the range to ">=2.0.0 <3.0.0".
+          Equivalent to ">=1.0.0 <2.0.0" via npm's partial-version shorthand
+          (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#dependencies).
+          Use this bare "@1" form rather than ">=1.0.0 <2.0.0" or "^1.0.0" so
+          the command is safe across shells:
+            - "<" / ">" are cmd.exe redirection operators on Windows.
+            - "^" is cmd.exe's escape character on Windows.
+          When this package bumps to 1.0.0 (Serenity 10 / net10 lane), change
+          the suffix to "@2".
           See: https://github.com/klomkling/idevs.corelib/blob/main/MIGRATION.md
         -->
-        <Exec Command="npm install &quot;@idevs/corelib@&gt;=1.0.0 &lt;2.0.0&quot; --no-save"
+        <Exec Command="npm install @idevs/corelib@1 --no-save"
               WorkingDirectory="$(ProjectDir)" />
     </Target>
 

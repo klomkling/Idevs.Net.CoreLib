@@ -4,12 +4,14 @@
 
 ### Changed
 
-- **`Idevs.Net.CoreLib.targets`** — `npm install @idevs/corelib` now pins the
-  range to `>=1.0.0 <2.0.0`. Previously the install resolved to the `latest`
-  npm dist-tag, which would have pulled `@idevs/corelib 2.x` (Serenity 10
-  lane) the moment it shipped, breaking CI on net8 / Serenity 8.8.9
-  consumers. The pin guarantees 0.7.x consumers stay on the matching client
-  major.
+- **`Idevs.Net.CoreLib.targets`** — `npm install @idevs/corelib` now pins to
+  the 1.x major (`@idevs/corelib@1`, npm's partial-version shorthand for
+  `>=1.0.0 <2.0.0`). Previously the install resolved to the `latest` npm
+  dist-tag, which would have pulled `@idevs/corelib 2.x` (Serenity 10 lane)
+  the moment it shipped, breaking CI on net8 / Serenity 8.8.9 consumers.
+  The bare `@1` form is used (instead of `">=1.0.0 <2.0.0"` or `^1.0.0`) so
+  the MSBuild `<Exec>` command stays safe on Windows, where `cmd.exe` treats
+  `<`/`>` as redirection operators and `^` as an escape character.
 - **`Idevs.Net.CoreLib.targets`** — `CopyContentToProject` now passes
   `SkipUnchangedFiles="true"` to the `<Copy>` task. Unchanged CSS files are
   skipped per-file by size + timestamp, so subsequent builds no longer
