@@ -49,18 +49,33 @@
             DependsOnTargets="_IdevsCoreLibDetectNpm"
             Condition="'$(IdevsCoreLibInstallNpmPackage)' == 'true' And '$(_IdevsCoreLibNpmAvailable)' == 'true' And !Exists('$(_IdevsCoreLibPackageMarker)')">
         <Message Text="Installing @idevs/corelib via npm (set IdevsCoreLibInstallNpmPackage=false to opt out)..." Importance="high" />
-        <Exec Command="npm install @idevs/corelib --no-save"
+        <!--
+          Pin to the major matching this Idevs.Net.CoreLib version.
+          0.7.x / 0.8.x / 0.9.x → @idevs/corelib 1.x (Serenity 8.8.9 lane, net8).
+          When this package bumps to 1.0.0 (Serenity 10 / net10 lane), update
+          the range to ">=2.0.0 <3.0.0".
+          See: https://github.com/klomkling/idevs.corelib/blob/main/MIGRATION.md
+        -->
+        <Exec Command="npm install &quot;@idevs/corelib@&gt;=1.0.0 &lt;2.0.0&quot; --no-save"
               WorkingDirectory="$(ProjectDir)" />
     </Target>
 
     <Target Name="CopyContentToProject"
             BeforeTargets="Build"
             Condition="Exists('$(ProjectDir)node_modules/@idevs/corelib/css')">
-        <Message Text="Copying @idevs/corelib content to wwwroot" Importance="normal" />
         <ItemGroup>
             <ContentFiles Include="$(ProjectDir)node_modules/@idevs/corelib/css/*.css" />
         </ItemGroup>
+        <Message Text="Copying @idevs/corelib content to wwwroot (changed files only)" Importance="normal" />
+        <!--
+          SkipUnchangedFiles compares source/destination size + timestamp per file
+          and skips copies that are already current. Cheaper and more granular
+          than wiring MSBuild Inputs/Outputs against a target-body ItemGroup
+          (which evaluates to empty at skip-check time and never triggers an
+          incremental skip).
+        -->
         <Copy SourceFiles="@(ContentFiles)"
-              DestinationFolder="$(ProjectDir)wwwroot/lib/Idevs/Content/" />
+              DestinationFolder="$(ProjectDir)wwwroot/lib/Idevs/Content/"
+              SkipUnchangedFiles="true" />
     </Target>
 </Project>
