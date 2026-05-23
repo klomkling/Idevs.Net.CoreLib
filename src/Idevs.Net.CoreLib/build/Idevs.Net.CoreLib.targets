@@ -49,18 +49,39 @@
             DependsOnTargets="_IdevsCoreLibDetectNpm"
             Condition="'$(IdevsCoreLibInstallNpmPackage)' == 'true' And '$(_IdevsCoreLibNpmAvailable)' == 'true' And !Exists('$(_IdevsCoreLibPackageMarker)')">
         <Message Text="Installing @idevs/corelib via npm (set IdevsCoreLibInstallNpmPackage=false to opt out)..." Importance="high" />
-        <Exec Command="npm install @idevs/corelib --no-save"
+        <!--
+          Pin to the major matching this Idevs.Net.CoreLib version.
+          0.7.x / 0.8.x / 0.9.x → @idevs/corelib 1.x (Serenity 8.8.9 lane, net8).
+          Equivalent to ">=1.0.0 <2.0.0" via npm's partial-version shorthand
+          (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#dependencies).
+          Use this bare "@1" form rather than ">=1.0.0 <2.0.0" or "^1.0.0" so
+          the command is safe across shells:
+            - "<" / ">" are cmd.exe redirection operators on Windows.
+            - "^" is cmd.exe's escape character on Windows.
+          When this package bumps to 1.0.0 (Serenity 10 / net10 lane), change
+          the suffix to "@2".
+          See: https://github.com/klomkling/idevs.corelib/blob/main/MIGRATION.md
+        -->
+        <Exec Command="npm install @idevs/corelib@1 --no-save"
               WorkingDirectory="$(ProjectDir)" />
     </Target>
 
     <Target Name="CopyContentToProject"
             BeforeTargets="Build"
             Condition="Exists('$(ProjectDir)node_modules/@idevs/corelib/css')">
-        <Message Text="Copying @idevs/corelib content to wwwroot" Importance="normal" />
         <ItemGroup>
             <ContentFiles Include="$(ProjectDir)node_modules/@idevs/corelib/css/*.css" />
         </ItemGroup>
+        <Message Text="Copying @idevs/corelib content to wwwroot (changed files only)" Importance="normal" />
+        <!--
+          SkipUnchangedFiles compares source/destination size + timestamp per file
+          and skips copies that are already current. Cheaper and more granular
+          than wiring MSBuild Inputs/Outputs against a target-body ItemGroup
+          (which evaluates to empty at skip-check time and never triggers an
+          incremental skip).
+        -->
         <Copy SourceFiles="@(ContentFiles)"
-              DestinationFolder="$(ProjectDir)wwwroot/lib/Idevs/Content/" />
+              DestinationFolder="$(ProjectDir)wwwroot/lib/Idevs/Content/"
+              SkipUnchangedFiles="true" />
     </Target>
 </Project>
