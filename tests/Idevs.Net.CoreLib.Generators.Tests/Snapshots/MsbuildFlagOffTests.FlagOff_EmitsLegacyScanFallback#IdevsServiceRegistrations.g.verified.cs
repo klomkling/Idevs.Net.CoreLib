@@ -12,7 +12,8 @@ public static class IdevsServiceRegistrations
     public static IServiceCollection AddIdevsServices(this IServiceCollection services)
     {
         services.AddIdevsCorelibCore();
-        services.AddIdevsCorelibLegacyScan();
+
+        services.AddScoped<global::Demo.IFoo, global::Demo.Foo>();
 
         return services;
     }
