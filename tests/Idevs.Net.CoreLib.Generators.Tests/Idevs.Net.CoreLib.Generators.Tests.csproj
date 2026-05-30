@@ -41,6 +41,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Idevs.Net.CoreLib.Generators/Idevs.Net.CoreLib.Generators.csproj" />
     <ProjectReference Include="../../src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj" />
+    <ProjectReference Include="../../src/Idevs.Net.CoreLib.CodeFixes/Idevs.Net.CoreLib.CodeFixes.csproj" />
   </ItemGroup>
 
 </Project>
