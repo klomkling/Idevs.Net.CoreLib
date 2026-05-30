@@ -81,6 +81,15 @@
           Pack="true"
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />
+
+    <ProjectReference Include="..\Idevs.Net.CoreLib.CodeFixes\Idevs.Net.CoreLib.CodeFixes.csproj"
+                      PrivateAssets="all"
+                      ReferenceOutputAssembly="false" />
+
+    <None Include="..\Idevs.Net.CoreLib.CodeFixes\bin\$(Configuration)\netstandard2.0\Idevs.Net.CoreLib.CodeFixes.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
   </ItemGroup>
 
 </Project>
