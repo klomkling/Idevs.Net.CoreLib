@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.8.0 (2026-05-31)
+
+### Added
+
+- Four Roslyn misuse analyzers (`Idevs.DI` category, `.editorconfig`-configurable):
+  - `IDEVSGEN100` (Warning) — method opens 2+ DB connections without a shared UnitOfWork.
+  - `IDEVSGEN101` (Warning) — catch block logs and rethrows (let the top-level handler log).
+  - `IDEVSGEN102` (Warning) — `Task`-returning method wraps sync work in `Task.FromResult`.
+  - `IDEVSGEN103` (Info) — manual `MAX()+1` sequence; **codefix** scaffolds the `ISequenceProvider.NextAsync` call (you supply the key and make the method async).
+
+### Removed (breaking)
+
+- `ServiceExtensions.AddIdevsCorelibServices()` and `RegisterServices()` — use the
+  source-generated `AddIdevsServices()`.
+- `CoreLibBootstrapper.AddIdevsCorelibLegacyScan()` and the runtime reflection scan.
+- The `IdevsCoreLibUseSourceGenerator=false` MSBuild escape hatch; source-generated
+  DI is now the only runtime registration path.
+
+### Notes
+
+- Legacy `[ScopedRegistration]`/`[SingletonRegistration]`/`[TransientRegistration]`
+  attributes still work via the generator (`IDEVSGEN010`); they become errors in
+  0.9.0 and are removed in 1.0.0.
+- Still on the Serenity 8.8.9 / `0.x` lane; npm `@idevs/corelib` 1.x pin unchanged.
+
 ## 0.7.10 (2026-05-23)
 
 ### Changed

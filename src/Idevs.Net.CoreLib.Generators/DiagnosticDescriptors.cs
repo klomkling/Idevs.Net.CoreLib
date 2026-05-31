@@ -64,4 +64,28 @@ internal static class DiagnosticDescriptors
             "IDEVSGEN010",
             "Legacy attribute usage",
             "Type '{0}' uses a legacy registration attribute. Migrate to the current attribute or marker interface.");
+
+    public static readonly DiagnosticDescriptor MultipleConnectionsWithoutUnitOfWork =
+        IdevsDiagnostics.CreateWarning(
+            "IDEVSGEN100",
+            "Multiple connections without a UnitOfWork",
+            "Method '{0}' opens {1} database connections without a shared UnitOfWork; share one connection/UnitOfWork instead.");
+
+    public static readonly DiagnosticDescriptor SwallowLogRethrow =
+        IdevsDiagnostics.CreateWarning(
+            "IDEVSGEN101",
+            "Catch logs and rethrows",
+            "Catch block logs and rethrows; let the top-level handler log it instead.");
+
+    public static readonly DiagnosticDescriptor SyncOverAsync =
+        IdevsDiagnostics.CreateWarning(
+            "IDEVSGEN102",
+            "Synchronous work wrapped in Task.FromResult",
+            "'{0}' wraps synchronous work in Task.FromResult; provide a genuinely async implementation.");
+
+    public static readonly DiagnosticDescriptor ManualSequence =
+        IdevsDiagnostics.CreateInfo(
+            "IDEVSGEN103",
+            "Manual sequence allocation",
+            "Manual sequence allocation detected; use ISequenceProvider.NextAsync for atomic, gap-tolerant numbering.");
 }

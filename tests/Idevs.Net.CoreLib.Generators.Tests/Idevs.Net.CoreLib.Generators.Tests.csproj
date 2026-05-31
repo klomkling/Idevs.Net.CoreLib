@@ -10,8 +10,13 @@
       but our generator targets 4.7.0. The 4.7.0 line is a strict superset; the
       runtime resolution is correct, but NU1608 fires per package. Out of our
       control until the testing-xunit package is updated upstream.
+
+      CS0618: XUnitVerifier is marked [Obsolete] in the 1.1.2 Roslyn SDK testing
+      packages with a migration guide URL but no replacement type in this version.
+      The type still compiles and functions correctly; suppress until the package
+      ships a non-obsolete successor.
     -->
-    <NoWarn>$(NoWarn);NU1608</NoWarn>
+    <NoWarn>$(NoWarn);NU1608;CS0618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,12 +33,15 @@
     <PackageReference Include="Verify.Xunit" />
     <PackageReference Include="Verify.SourceGenerators" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../src/Idevs.Net.CoreLib.Generators/Idevs.Net.CoreLib.Generators.csproj" />
     <ProjectReference Include="../../src/Idevs.Net.CoreLib/Idevs.Net.CoreLib.csproj" />
+    <ProjectReference Include="../../src/Idevs.Net.CoreLib.CodeFixes/Idevs.Net.CoreLib.CodeFixes.csproj" />
   </ItemGroup>
 
 </Project>
