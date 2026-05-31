@@ -166,7 +166,7 @@ From **0.8.0**, `Idevs.Net.CoreLib` bundles four Roslyn misuse analyzers (catego
 | `IDEVSGEN100` | Warning | A method opens two or more database connections without a shared `UnitOfWork`. |
 | `IDEVSGEN101` | Warning | A `catch` block logs (`ILogger.LogError`/`LogCritical`) and rethrows — let the top-level handler log it. |
 | `IDEVSGEN102` | Warning | A `Task`-returning method wraps synchronous work in `Task.FromResult(...)` instead of being genuinely async. |
-| `IDEVSGEN103` | Info | Hand-rolled `MAX()+1` sequence allocation — a **codefix** rewrites it to `ISequenceProvider.NextAsync`. |
+| `IDEVSGEN103` | Info | Hand-rolled `MAX()+1` sequence allocation — a **codefix** scaffolds the call to `ISequenceProvider.NextAsync` (you supply the key and make the method async). |
 
 Tune any analyzer's severity in `.editorconfig`, e.g.:
 

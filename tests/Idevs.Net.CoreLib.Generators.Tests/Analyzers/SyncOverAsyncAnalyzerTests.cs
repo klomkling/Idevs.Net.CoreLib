@@ -22,6 +22,33 @@ public class S {
     }
 
     [Fact]
+    public async Task BlockBodySingleReturn_Flagged()
+    {
+        var src = @"
+using System.Threading.Tasks;
+public class S {
+    private int Compute() => 1;
+    public Task<int> {|#0:GetAsync|}() { return Task.FromResult(Compute()); }
+}";
+        var expected = new DiagnosticResult("IDEVSGEN102", DiagnosticSeverity.Warning).WithLocation(0).WithArguments("GetAsync");
+        await new Verify<SyncOverAsyncAnalyzer>.Test { TestCode = src, ExpectedDiagnostics = { expected } }.RunAsync();
+    }
+
+    [Fact]
+    public async Task MultiStatementBody_NotFlagged()
+    {
+        // The single-return guard is intentional: a method doing other work before
+        // returning Task.FromResult is out of scope.
+        var src = @"
+using System.Threading.Tasks;
+public class S {
+    private int Compute() => 1;
+    public Task<int> GetAsync() { var x = Compute(); return Task.FromResult(x); }
+}";
+        await new Verify<SyncOverAsyncAnalyzer>.Test { TestCode = src }.RunAsync();
+    }
+
+    [Fact]
     public async Task FromResultOfValue_NotFlagged()
     {
         var src = @"

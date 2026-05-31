@@ -12,6 +12,7 @@ public class MultipleConnectionsAnalyzerTests
     private const string Stubs = @"
 public interface ISqlConnections { System.Data.IDbConnection NewByKey(string key); }
 public sealed class UnitOfWorkScope : System.IDisposable { public void Dispose() {} }
+public sealed class SqlConnection : System.IDisposable { public SqlConnection(string cs = ""x"") {} public void Dispose() {} }
 ";
 
     [Fact]
@@ -42,6 +43,49 @@ public class Repo {
         var a = _c.NewByKey(""Default"");
         var b = _c.NewByKey(""Default"");
     }
+}";
+        await new Verify<MultipleConnectionsAnalyzer>.Test { TestCode = src }.RunAsync();
+    }
+
+    [Fact]
+    public async Task TwoObjectCreatedConnections_Flagged()
+    {
+        var src = Stubs + @"
+public class Repo {
+    public void {|#0:Work|}() {
+        var a = new SqlConnection();
+        var b = new SqlConnection();
+    }
+}";
+        var expected = new DiagnosticResult("IDEVSGEN100", Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+            .WithLocation(0).WithArguments("Work", "2");
+        await new Verify<MultipleConnectionsAnalyzer>.Test { TestCode = src, ExpectedDiagnostics = { expected } }
+            .RunAsync();
+    }
+
+    [Fact]
+    public async Task MixedFactoryAndObjectCreation_Flagged()
+    {
+        var src = Stubs + @"
+public class Repo {
+    private ISqlConnections _c = null!;
+    public void {|#0:Work|}() {
+        var a = _c.NewByKey(""Default"");
+        var b = new SqlConnection();
+    }
+}";
+        var expected = new DiagnosticResult("IDEVSGEN100", Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+            .WithLocation(0).WithArguments("Work", "2");
+        await new Verify<MultipleConnectionsAnalyzer>.Test { TestCode = src, ExpectedDiagnostics = { expected } }
+            .RunAsync();
+    }
+
+    [Fact]
+    public async Task SingleObjectCreatedConnection_NotFlagged()
+    {
+        var src = Stubs + @"
+public class Repo {
+    public void Work() { var a = new SqlConnection(); }
 }";
         await new Verify<MultipleConnectionsAnalyzer>.Test { TestCode = src }.RunAsync();
     }

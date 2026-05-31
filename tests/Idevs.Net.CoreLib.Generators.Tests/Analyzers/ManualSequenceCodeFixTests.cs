@@ -30,7 +30,13 @@ public class S {
             TestCode = before,
             FixedCode = after,
             ExpectedDiagnostics = { expected },
+            // The fix is a deliberately-incomplete scaffold: it references an
+            // injected `sequenceProvider`, a placeholder key, and (here) uses await
+            // in a sync method — so the fixed code does not compile by design.
+            // CompilerDiagnostics.None tolerates that; CodeActionEquivalenceKey pins
+            // the action's title so the "manual follow-up" contract can't silently change.
             CompilerDiagnostics = CompilerDiagnostics.None,
+            CodeActionEquivalenceKey = "Scaffold ISequenceProvider.NextAsync (inject provider, name key, make async)",
         }.RunAsync();
     }
 }

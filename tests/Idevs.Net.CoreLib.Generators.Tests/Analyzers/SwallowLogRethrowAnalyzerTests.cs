@@ -9,7 +9,7 @@ namespace Idevs.Net.CoreLib.Generators.Tests.Analyzers;
 public class SwallowLogRethrowAnalyzerTests
 {
     private const string Stubs = @"
-public interface ILogger { void LogError(System.Exception e, string m); void LogCritical(System.Exception e, string m); }
+public interface ILogger { void LogError(System.Exception e, string m); void LogCritical(System.Exception e, string m); void LogInformation(string m); }
 ";
 
     [Fact]
@@ -24,6 +24,35 @@ public class S {
 }";
         var expected = new DiagnosticResult("IDEVSGEN101", DiagnosticSeverity.Warning).WithLocation(0);
         await new Verify<SwallowLogRethrowAnalyzer>.Test { TestCode = src, ExpectedDiagnostics = { expected } }.RunAsync();
+    }
+
+    [Fact]
+    public async Task LogAndRethrowExplicitVariable_Flagged()
+    {
+        // `throw ex;` (the stack-trace-destroying form) must be flagged too.
+        var src = Stubs + @"
+public class S {
+    private ILogger _log = null!;
+    public void M() {
+        try { } {|#0:catch|} (System.Exception ex) { _log.LogCritical(ex, ""x""); throw ex; }
+    }
+}";
+        var expected = new DiagnosticResult("IDEVSGEN101", DiagnosticSeverity.Warning).WithLocation(0);
+        await new Verify<SwallowLogRethrowAnalyzer>.Test { TestCode = src, ExpectedDiagnostics = { expected } }.RunAsync();
+    }
+
+    [Fact]
+    public async Task LogInformationAndRethrow_NotFlagged()
+    {
+        // Only LogError/LogCritical count — an info-level log + rethrow is not flagged.
+        var src = Stubs + @"
+public class S {
+    private ILogger _log = null!;
+    public void M() {
+        try { } catch (System.Exception ex) { _log.LogInformation(""x""); throw; }
+    }
+}";
+        await new Verify<SwallowLogRethrowAnalyzer>.Test { TestCode = src }.RunAsync();
     }
 
     [Fact]

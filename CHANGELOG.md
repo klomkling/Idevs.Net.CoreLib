@@ -8,7 +8,7 @@
   - `IDEVSGEN100` (Warning) — method opens 2+ DB connections without a shared UnitOfWork.
   - `IDEVSGEN101` (Warning) — catch block logs and rethrows (let the top-level handler log).
   - `IDEVSGEN102` (Warning) — `Task`-returning method wraps sync work in `Task.FromResult`.
-  - `IDEVSGEN103` (Info) — manual `MAX()+1` sequence; **codefix** rewrites to `ISequenceProvider.NextAsync`.
+  - `IDEVSGEN103` (Info) — manual `MAX()+1` sequence; **codefix** scaffolds the `ISequenceProvider.NextAsync` call (you supply the key and make the method async).
 
 ### Removed (breaking)
 
