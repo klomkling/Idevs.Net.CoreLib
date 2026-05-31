@@ -288,7 +288,8 @@ public sealed class IdevsServiceRegistrationGenerator : IIncrementalGenerator
             }
         }
 
-        // IDEVSGEN010: Legacy attribute usage — warn but continue.
+        // IDEVSGEN010: Legacy attribute usage — report (Error as of 0.9.0) but
+        // continue emission, so an .editorconfig downgrade still registers the type.
         if (info.LifetimeAttrs.Count == 1 && info.LifetimeAttrs[0].IsLegacy)
         {
             ctx.ReportDiagnostic(Diagnostic.Create(

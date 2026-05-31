@@ -45,8 +45,12 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 ### Notes
 - The attribute *types* remain (still `[Obsolete]` warnings, CS0618) and are
   removed entirely in 1.0.0. Only the generator's discovery diagnostic tightened.
-- Packages bumped: `Idevs.Net.CoreLib` → `0.9.0` (the others stay at `0.8.0` and
-  float to the new main package via their dependency range).
+- Packages bumped: `Idevs.Net.CoreLib` → `0.9.0`; the others stay at `0.8.0`.
+  Direct `Idevs.Net.CoreLib` consumers get the error at `0.9.0`. If you reference
+  **only** a satellite package (`.Autofac` / `.Serilog`) you'll keep the
+  warning-level generator until you add a direct `Idevs.Net.CoreLib` `0.9.0`
+  reference — NuGet resolves the satellite's `>= 0.8.0` dependency to the lowest
+  match (`0.8.0`).
 
 ---
 

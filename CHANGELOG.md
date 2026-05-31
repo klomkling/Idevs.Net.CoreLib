@@ -19,8 +19,12 @@
   unsuppressable CS0619 that `[Obsolete(error: true)]` would cause.
 - Only `Idevs.Net.CoreLib` is republished (`0.9.0`); the bundled generator is
   rebuilt with it. `Idevs.Net.CoreLib.Autofac` / `.Serilog` /
-  `.Generators.Abstractions` / `.CodeFixes` stay at `0.8.0` and float to the new
-  main package via their dependency range.
+  `.Generators.Abstractions` / `.CodeFixes` stay at `0.8.0`. Consumers that
+  reference `Idevs.Net.CoreLib` directly get the error at `0.9.0`. A consumer that
+  references **only** a satellite package (e.g. `.Autofac` 0.8.0) keeps the
+  warning-level generator until it also references `Idevs.Net.CoreLib` `0.9.0` —
+  NuGet resolves the lowest version satisfying the `>= 0.8.0` dependency, which is
+  `0.8.0`. Add a direct `Idevs.Net.CoreLib` `0.9.0` reference to opt in.
 - Still on the Serenity 8.8.9 / `0.x` lane.
 
 ## 0.8.0 (2026-05-31)
