@@ -44,6 +44,10 @@ public sealed class MultipleConnectionsAnalyzer : DiagnosticAnalyzer
             opens.ToString()));
     }
 
+    // Unresolved-symbol posture (deliberately opposite of GEN101/GEN102): a
+    // connection open whose type can't bind is NOT counted. This analyzer leans
+    // conservative — under-report rather than risk a false positive on the
+    // open-count threshold for an unrelated `*.NewByKey(...)` or `new *Connection()`.
     private static bool IsConnectionOpen(SyntaxNode node, SemanticModel model)
     {
         switch (node)

@@ -26,8 +26,11 @@ public sealed class SyncOverAsyncAnalyzer : DiagnosticAnalyzer
     {
         var method = (MethodDeclarationSyntax)context.Node;
 
+        // Exact name match: both Task and Task<T> report Name == "Task", so this
+        // covers the generic case without matching unrelated user types like
+        // TaskQueue/TaskResult.
         var returnType = context.SemanticModel.GetTypeInfo(method.ReturnType).Type;
-        if (returnType is null || !returnType.Name.StartsWith("Task", System.StringComparison.Ordinal))
+        if (returnType is null || returnType.Name != "Task")
             return;
 
         var inner = ExtractSingleReturnExpression(method);
@@ -57,6 +60,9 @@ public sealed class SyncOverAsyncAnalyzer : DiagnosticAnalyzer
     {
         if (inv.Expression is not MemberAccessExpressionSyntax ma || ma.Name.Identifier.Text != "FromResult")
             return false;
+        // Unresolved-symbol posture: lean toward flagging. If the symbol can't bind
+        // (incomplete compilation), treat `X.FromResult(call())` as Task.FromResult
+        // rather than silently skipping a likely-real occurrence.
         var symbol = model.GetSymbolInfo(inv).Symbol;
         return symbol is null || symbol.ContainingType?.Name == "Task";
     }

@@ -52,6 +52,9 @@ public sealed class SwallowLogRethrowAnalyzer : DiagnosticAnalyzer
         if (name != "LogError" && name != "LogCritical")
             return false;
 
+        // Unresolved-receiver posture: lean toward flagging. A LogError/LogCritical
+        // call whose receiver type can't bind is treated as a logger call so a real
+        // log-and-rethrow isn't missed on an incomplete compilation.
         var receiverType = model.GetTypeInfo(ma.Expression).Type;
         if (receiverType is null)
             return true;

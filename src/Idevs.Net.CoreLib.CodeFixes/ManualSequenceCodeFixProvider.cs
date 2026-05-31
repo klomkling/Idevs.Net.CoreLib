@@ -25,7 +25,10 @@ public sealed class ManualSequenceCodeFixProvider : CodeFixProvider
 
     public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticId);
 
-    public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
+    // No Fix-All: each site needs a distinct sequence key and its own async
+    // conversion, so a batch rewrite would be actively harmful — and BatchFixer
+    // would merge edits against one captured root and drop all but one anyway.
+    public override FixAllProvider? GetFixAllProvider() => null;
 
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
