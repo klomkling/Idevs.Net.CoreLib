@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <PackageId>Idevs.Net.CoreLib.Autofac</PackageId>
-    <Version>0.7.8</Version>
+    <Version>0.8.0</Version>
     <Description>Optional Autofac integration for Idevs.Net.CoreLib.</Description>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>

@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.7.x → v0.8.0 — Reflection Removal + Misuse Analyzers](#v07x--v080--reflection-removal--misuse-analyzers)
 - [v0.7.8 → v0.7.9 — RepositoryBase rename + v0.3.3 legacy shim](#v078--v079--repositorybase-rename--v033-legacy-shim)
 - [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](#v077--v078--optimistic-concurrency-on-updateasync)
 - [v0.7.6 → v0.7.7 — ISequenceProvider helper](#v076--v077--isequenceprovider-helper)
@@ -17,6 +18,26 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.7.x → v0.8.0 — Reflection Removal + Misuse Analyzers
+
+### Breaking
+
+- Replace `services.AddIdevsCorelibServices()` (or `RegisterServices()`) with the
+  source-generated `services.AddIdevsServices()`.
+- `AddIdevsCorelibLegacyScan()` is gone. If you relied on
+  `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` to use the
+  runtime reflection scan, remove that property and adopt the source generator. Ensure
+  every previously-scanned type carries a `[Scoped]`/`[Singleton]`/`[Transient]`
+  attribute or a marker interface so the generator registers it.
+
+### New analyzers
+
+- Build warnings `IDEVSGEN100–102` and suggestion `IDEVSGEN103` may appear. Triage,
+  fix, or set severity in `.editorconfig`
+  (e.g. `dotnet_diagnostic.IDEVSGEN100.severity = none`).
 
 ---
 
