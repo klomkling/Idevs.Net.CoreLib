@@ -54,6 +54,10 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit" Version="1.1.2" />
+    <!-- Transitive pin: the CodeAnalysis testing packages drag in the vulnerable
+         System.Formats.Asn1 5.0.0 (GHSA-447r-wph3-92pm). Force the patched line.
+         Test-only; never shipped. -->
+    <PackageVersion Include="System.Formats.Asn1" Version="8.0.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>

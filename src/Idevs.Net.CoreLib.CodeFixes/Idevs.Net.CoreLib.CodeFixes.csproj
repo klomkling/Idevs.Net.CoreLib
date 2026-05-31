@@ -4,6 +4,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <IsRoslynComponent>true</IsRoslynComponent>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Bundled into Idevs.Net.CoreLib's analyzers/dotnet/cs; never packed standalone. -->
+    <IsPackable>false</IsPackable>
     <Version>0.8.0</Version>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
