@@ -127,3 +127,7 @@ Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields
 Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.RowFields() -> void
 Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.NextValue -> Serenity.Data.Int64Field!
 Idevs.Repositories.Sequences.IdevsSequenceRow.RowFields.SequenceKey -> Serenity.Data.StringField!
+*REMOVED*Idevs.Extensions.ServiceExtensions
+*REMOVED*static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibLegacyScan(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+*REMOVED*static Idevs.Extensions.ServiceExtensions.AddIdevsCorelibServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
+*REMOVED*static Idevs.Extensions.ServiceExtensions.RegisterServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection

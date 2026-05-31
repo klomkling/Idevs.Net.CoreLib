@@ -134,7 +134,6 @@ Idevs.Extensions.NumberExtensions
 Idevs.Extensions.NumberExtensions.extension(decimal)
 Idevs.Extensions.NumberExtensions.extension(decimal).RoundNumber(short roundMethod = 0, int decimals = 2) -> decimal
 Idevs.Extensions.NumberExtensions.extension(decimal).RoundVat(int decimals = 2) -> decimal
-Idevs.Extensions.ServiceExtensions
 Idevs.Extensions.TextLocalizerExtension
 Idevs.Extensions.TextLocalizerExtension.extension(string)
 Idevs.Extensions.TextLocalizerExtension.extension(string).TranslateData(string moduleName, Serenity.ITextLocalizer localizer) -> string
@@ -472,14 +471,11 @@ static Idevs.ChromeHelper.DownloadChromeAsync(System.Threading.CancellationToken
 static Idevs.ChromeHelper.GetChromePath() -> string
 static Idevs.ChromeHelper.IsChromeDownloaded() -> bool
 static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibCore(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static Idevs.Extensions.CoreLibBootstrapper.AddIdevsCorelibLegacyScan(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Idevs.Extensions.EntityQueryExtensions.Set<T>(this T self, Serenity.Data.IRow row, params Serenity.Data.Field[] exclude) -> T
 static Idevs.Extensions.EnumExtensions.GetDescription<T>(this T enumValue) -> string
 static Idevs.Extensions.ModelExtensions.TrimModel<T>(System.Collections.Generic.IEnumerable<T> collection, bool emptyStringToNull = false) -> System.Collections.Generic.IEnumerable<T>
 static Idevs.Extensions.ModelExtensions.TrimModel<T>(this T model, bool emptyStringToNull = false) -> T
 static Idevs.Extensions.NumberExtensions.ToThaiBahtText(this string strNumber, bool IsTrillion = false) -> string
-static Idevs.Extensions.ServiceExtensions.AddIdevsCorelibServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
-static Idevs.Extensions.ServiceExtensions.RegisterServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection
 static Idevs.Extensions.TextLocalizerExtension.Translate(this Serenity.ITextLocalizer localizer, string moduleName, string key) -> string
 static Idevs.Helpers.PdfOptionsBuilder.CreateBusiness(PuppeteerSharp.Media.PaperFormat format = null) -> PuppeteerSharp.PdfOptions
 static Idevs.Helpers.PdfOptionsBuilder.CreateClean(PuppeteerSharp.Media.PaperFormat format = null, (string top, string bottom, string left, string right)? margins = null) -> PuppeteerSharp.PdfOptions
