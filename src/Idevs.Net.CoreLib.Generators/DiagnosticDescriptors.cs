@@ -59,8 +59,13 @@ internal static class DiagnosticDescriptors
             "Registrar is internal",
             "Type '{0}' is an internal registrar. Consider making it public so consumers can invoke it.");
 
+    // 0.9.0: promoted Warning -> Error. Using a legacy registration attribute now
+    // fails the build by default; downgrade via .editorconfig
+    // (dotnet_diagnostic.IDEVSGEN010.severity = warning) during migration. The
+    // generator still registers the type, so a downgraded build keeps working.
+    // The attribute types are removed in 1.0.0.
     public static readonly DiagnosticDescriptor LegacyAttributeUsage =
-        IdevsDiagnostics.CreateWarning(
+        IdevsDiagnostics.CreateError(
             "IDEVSGEN010",
             "Legacy attribute usage",
             "Type '{0}' uses a legacy registration attribute. Migrate to the current attribute or marker interface.");

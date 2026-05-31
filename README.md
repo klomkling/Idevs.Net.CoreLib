@@ -155,7 +155,7 @@ The generator emits 10 diagnostics (`IDEVSGEN001`–`IDEVSGEN010`) for misuse �
 
 #### Legacy attributes
 
-`[ScopedRegistration]`, `[SingletonRegiatration]`, `[TransientRegistration]` are still recognized but `[Obsolete]`. The generator emits `IDEVSGEN010` (legacy attribute usage) suggesting the standard names.
+`[ScopedRegistration]`, `[SingletonRegiatration]`, `[TransientRegistration]` are still recognized but `[Obsolete]`. As of **0.9.0** the generator's `IDEVSGEN010` (legacy attribute usage) is an **error** by default — migrate to `[Scoped]` / `[Singleton]` / `[Transient]` or the marker interfaces. During migration you can downgrade it in `.editorconfig` (`dotnet_diagnostic.IDEVSGEN010.severity = warning`); the generator still registers the type, so a downgraded build keeps working. The attribute types are removed in 1.0.0.
 
 ### Analyzers
 
@@ -716,7 +716,7 @@ Titles below come straight from `DiagnosticDescriptors.cs`; the *Notes* column i
 | `IDEVSGEN007` | Error | Attribute service type conflicts with generic marker | The attribute's named service type conflicts with `IScopedService<T>`, `ISingletonService<T>`, or `ITransientService<T>`. |
 | `IDEVSGEN008` | Error | Registrar missing public constructor | `IIdevsServiceRegistrar` implementation needs an accessible public parameterless ctor. |
 | `IDEVSGEN009` | Warning | Registrar is internal | Consider making the registrar `public` so consumers can invoke it. |
-| `IDEVSGEN010` | Warning | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. |
+| `IDEVSGEN010` | Error | Legacy attribute usage | Migrate `[ScopedRegistration]` etc. to `[Scoped]` / `[Singleton]` / `[Transient]`. Downgrade via `.editorconfig` during migration. |
 
 If the generator misbehaves on a specific build, set `<IdevsCoreLibUseSourceGenerator>false</IdevsCoreLibUseSourceGenerator>` in the consumer csproj to fall back to runtime scanning, then file an issue with a repro.
 

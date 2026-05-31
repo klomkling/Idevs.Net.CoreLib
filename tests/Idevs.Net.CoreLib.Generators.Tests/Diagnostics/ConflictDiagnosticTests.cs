@@ -168,6 +168,8 @@ public class ConflictDiagnosticTests
             """;
 
         var result = RunGenerator(source);
-        AssertSingleDiagnostic(result, "IDEVSGEN010", DiagnosticSeverity.Warning);
+        // 0.9.0: legacy registration attributes are an error by default
+        // (downgradable via .editorconfig during migration; types removed in 1.0.0).
+        AssertSingleDiagnostic(result, "IDEVSGEN010", DiagnosticSeverity.Error);
     }
 }

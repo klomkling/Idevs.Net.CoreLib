@@ -4,6 +4,7 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 
 ## Contents
 
+- [v0.8.0 → v0.9.0 — Legacy registration attributes are now an error](#v080--v090--legacy-registration-attributes-are-now-an-error)
 - [v0.7.x → v0.8.0 — Reflection Removal + Misuse Analyzers](#v07x--v080--reflection-removal--misuse-analyzers)
 - [v0.7.8 → v0.7.9 — RepositoryBase rename + v0.3.3 legacy shim](#v078--v079--repositorybase-rename--v033-legacy-shim)
 - [v0.7.7 → v0.7.8 — Optimistic concurrency on UpdateAsync](#v077--v078--optimistic-concurrency-on-updateasync)
@@ -18,6 +19,38 @@ Consolidated upgrade notes for `Idevs.Net.CoreLib`. Newest first.
 - [v0.3.x → v0.5.0 — Package Layout & DI Changes](#v03x--v050--package-layout--di-changes)
 - [v0.1.x → v0.2.0 — Autofac Integration](#v01x--v020--autofac-integration)
 - [v0.0.x → v0.1.x — Service Registration & Chrome Setup](#v00x--v01x--service-registration--chrome-setup)
+
+---
+
+## v0.8.0 → v0.9.0 — Legacy registration attributes are now an error
+
+### Breaking
+- The generator diagnostic `IDEVSGEN010` (legacy registration-attribute usage) is
+  promoted from **warning to error**. Applying `[ScopedRegistration]`,
+  `[SingletonRegiatration]`, or `[TransientRegistration]` now fails the build by
+  default.
+
+### Migration
+- Replace the legacy attributes with `[Scoped]` / `[Singleton]` / `[Transient]`
+  (from `Idevs.ComponentModels`) or a marker interface
+  (`IScopedService` / `ISingletonService` / `ITransientService`).
+- Mid-migration soak: downgrade in `.editorconfig` to keep building while you
+  migrate —
+  ```ini
+  dotnet_diagnostic.IDEVSGEN010.severity = warning
+  ```
+  The generator still registers legacy-attributed types, so a downgraded build
+  keeps working.
+
+### Notes
+- The attribute *types* remain (still `[Obsolete]` warnings, CS0618) and are
+  removed entirely in 1.0.0. Only the generator's discovery diagnostic tightened.
+- Packages bumped: `Idevs.Net.CoreLib` → `0.9.0`; the others stay at `0.8.0`.
+  Direct `Idevs.Net.CoreLib` consumers get the error at `0.9.0`. If you reference
+  **only** a satellite package (`.Autofac` / `.Serilog`) you'll keep the
+  warning-level generator until you add a direct `Idevs.Net.CoreLib` `0.9.0`
+  reference — NuGet resolves the satellite's `>= 0.8.0` dependency to the lowest
+  match (`0.8.0`).
 
 ---
 
