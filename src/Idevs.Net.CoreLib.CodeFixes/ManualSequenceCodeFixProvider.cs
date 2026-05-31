@@ -16,7 +16,12 @@ namespace Idevs.Net.CoreLib.CodeFixes;
 public sealed class ManualSequenceCodeFixProvider : CodeFixProvider
 {
     private const string DiagnosticId = "IDEVSGEN103";
-    private const string Title = "Use ISequenceProvider.NextAsync";
+
+    // The fix scaffolds the call site only: it references an injected
+    // `sequenceProvider` and a placeholder key the developer must supply, and (in a
+    // sync method) requires making the method async. The title signals this manual
+    // follow-up so applying it is never mistaken for a complete, compiling rewrite.
+    private const string Title = "Scaffold ISequenceProvider.NextAsync (inject provider, name key, make async)";
 
     public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(DiagnosticId);
 
